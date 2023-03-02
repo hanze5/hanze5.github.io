@@ -554,6 +554,179 @@
   
   
   <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="http://hanze5.github.io/2021/12/31/4.makefile%E6%98%AF%E4%B8%AA%E5%95%A5/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/images/my_avatar.png">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="也许不会有人进来吧">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+                
+                <a class="post-title-link" href="/2021/12/31/4.makefile%E6%98%AF%E4%B8%AA%E5%95%A5/" itemprop="url">makefile是个啥</a></h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2021-12-31T18:07:00+08:00">
+                2021-12-31
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E5%AD%A6%E6%97%A0%E6%AD%A2%E5%A2%83/" itemprop="url" rel="index">
+                    <span itemprop="name">学无止境</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+          
+
+          
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        
+          
+            <p>GCC编译</p>
+<ol>
+<li><p>安装GCC编译器</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">sudo apt intsall build-essential</span><br></pre></td></tr></table></figure>
+</li>
+<li><p>GCC工作流程<img src="/images/4/1677748615935.png" alt="1677748615935">预处理阶段会去掉注释，再把头文件内容拷贝到cpp文件中，再替换宏。可用下面这个语句。查看对cpp文件预处理过后的文件<code>-E</code>选项意味着 预处理指定文件而不进行编译。</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">gcc -E test.c -o test.i</span><br></pre></td></tr></table></figure>
+<figure class="highlight plaintext"><figcaption><span>编译指定源文件但是不进行汇编。</span></figcaption><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"></span><br><span class="line">```shell</span><br><span class="line">gcc -S test.c -o test.S</span><br></pre></td></tr></table></figure>
+<figure class="highlight plaintext"><figcaption><span>表示编译、汇编指定的源文件，但是不进行链接，也就是生成目标文件。</span></figcaption><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"></span><br><span class="line">```shell</span><br><span class="line">gcc -c test.S -o test.o</span><br></pre></td></tr></table></figure>
+<p>什么都不加的化会直接生成可执行文件</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">gcc test.c -o a.out</span><br></pre></td></tr></table></figure>
+<p>| -g   | 该程序可以被调试器调试     |<br>| —— | :————————————- |<br>| -D   | 在程序编译的时候指定一个宏 |<br>| -w   | 不产生任何警告信息         |<br>| -l   | 编译时使用指定的库         |<br>| -L   | 编译时搜索库的路径         |</p>
+<p>等等。</p>
+</li>
+</ol>
+<h1 id="Makefile"><a href="#Makefile" class="headerlink" title="Makefile"></a>Makefile</h1><h2 id="简介"><a href="#简介" class="headerlink" title="简介"></a>简介</h2><p> 一个工程中的源文件不计其数(一个项目有有很多的文件)，现在的项目基本都是按模块进行划分的，而这些模块存放在若干目录中。makefile中定义了一系列的规则(这些规则定义了一系列如何编译程序的操作，比如哪些文件需要编译、哪些临时文件需要及时的清除等)，如此以来我们只需要通过make命令就可以一键编译源程序了。所以常常说makefile带来的最大的好处就是”自动化编译”，因为只需要一个make命令，整个工程完全自动编译，极大的提高了软件开发效率。</p>
+<p>make是一个命令工具，它能够解释Makefile文件中的指令，一般来说大多数IDE都具备这样的功能。</p>
+<p>原文链接：<a target="_blank" rel="noopener" href="https://blog.csdn.net/weixin_46120107/article/details/126149556">https://blog.csdn.net/weixin_46120107/article/details/126149556</a></p>
+<h2 id="makefile的编写的规则"><a href="#makefile的编写的规则" class="headerlink" title="makefile的编写的规则"></a>makefile的编写的规则</h2><figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta prompt_">#</span><span class="language-bash">目标。。。:依赖。。。</span></span><br><span class="line"><span class="meta prompt_"># </span><span class="language-bash">   命令  （shell命令）</span></span><br><span class="line"><span class="meta prompt_"># </span><span class="language-bash">   。。。</span></span><br><span class="line"><span class="meta prompt_">#</span><span class="language-bash">例如：</span></span><br><span class="line">app: a.c b.c c.c d.c main.c</span><br><span class="line">	gcc a.c b.c c.c d.c main.c -o app</span><br><span class="line"><span class="meta prompt_">#</span><span class="language-bash">第一行说明了需要依赖哪些文件，第二行是具体的命令</span></span><br></pre></td></tr></table></figure>
+<p>目标:最终要生成的文件(伪目标除外)<br>依赖:生成目标所需要的文件或目标(这里的目标是子目标)<br>命令:通过执行命令来操作依赖来生成目标</p>
+<p>个人认为就是一系列编译指令组成的一个脚本。</p>
+<p><img src="/images/4/1677750491136.png" alt="1677750491136">上面这个例子，app所需的依赖由其他规则生成，所以要先检查其他规则并执行其他规则。并且他会比较依赖文件的时间，以此检查改动，从而再次make的时候就只执行改变的部分。</p>
+<p><strong><em>不想一点一点写了，下面一看就懂！！！</em></strong></p>
+<p>变量的定义方式如下：</p>
+<p><img src="/images/4/1677751001217.png" alt="1677751001217"></p>
+<p>CC变量是自带的。</p>
+<p>（待更新。。。）</p>
+<p><a target="_blank" rel="noopener" href="https://blog.csdn.net/weixin_46120107/article/details/126149556?ops_request_misc=%7B%22request%5Fid%22%3A%22167774541916800182767941%22%2C%22scm%22%3A%2220140713.130102334.pc%5Fblog.%22%7D&amp;request_id=167774541916800182767941&amp;biz_id=0&amp;utm_medium=distribute.pc_search_result.none-task-blog-2~blog~first_rank_ecpm_v1~rank_v31_ecpm-4-126149556-null-null.blog_rank_default&amp;utm_term=c%2B%2B&amp;spm=1018.2226.3001.4450">参考(12条消息) C++项目实战-makefile<em>c++ makefile</em>干饭小白的博客-CSDN博客</a></p>
+
+          
+        
+      
+    </div>
+    
+    
+    
+
+    
+
+    
+
+    
+
+    <footer class="post-footer">
+      
+
+      
+
+      
+
+      
+      
+        <div class="post-eof"></div>
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+      
+    
+      
+      
+      
+        
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
     <link itemprop="mainEntityOfPage" href="http://hanze5.github.io/2021/12/28/3.C-%E5%AE%9E%E6%88%981%E2%80%94%E2%80%94%E5%85%88%E6%8A%8A%E9%A1%B9%E7%9B%AE%E8%B7%91%E8%B5%B7%E6%9D%A5/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
@@ -595,6 +768,28 @@
             
           </span>
 
+          
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E5%AD%A6%E6%97%A0%E6%AD%A2%E5%A2%83/" itemprop="url" rel="index">
+                    <span itemprop="name">学无止境</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
           
 
           
@@ -1233,7 +1428,7 @@
               
                 <a href="/">
               
-                  <span class="site-state-item-count">5</span>
+                  <span class="site-state-item-count">6</span>
                   <span class="site-state-item-name">日志</span>
                 </a>
               </div>
@@ -1255,7 +1450,7 @@
               
               <div class="site-state-item site-state-tags">
                 <a href="/tags/index.html">
-                  <span class="site-state-item-count">3</span>
+                  <span class="site-state-item-count">4</span>
                   <span class="site-state-item-name">标签</span>
                 </a>
               </div>
