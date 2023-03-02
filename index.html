@@ -252,7 +252,7 @@
   
   
   <div class="post-block">
-    <link itemprop="mainEntityOfPage" href="http://hanze5.github.io/2023/02/13/3.%E5%8A%9B%E6%89%A3%E7%BB%8F%E9%AA%8C%E6%95%99%E8%AE%AD/">
+    <link itemprop="mainEntityOfPage" href="http://hanze5.github.io/2023/02/13/%E5%8A%9B%E6%89%A3%E7%BB%8F%E9%AA%8C%E6%95%99%E8%AE%AD/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
       <meta itemprop="name" content="">
@@ -271,7 +271,7 @@
         
           <h1 class="post-title" itemprop="name headline">
                 
-                <a class="post-title-link" href="/2023/02/13/3.%E5%8A%9B%E6%89%A3%E7%BB%8F%E9%AA%8C%E6%95%99%E8%AE%AD/" itemprop="url">力扣刷题经验教训（持续更新）</a></h1>
+                <a class="post-title-link" href="/2023/02/13/%E5%8A%9B%E6%89%A3%E7%BB%8F%E9%AA%8C%E6%95%99%E8%AE%AD/" itemprop="url">力扣刷题经验教训（持续更新）</a></h1>
         
 
         <div class="post-meta">
@@ -554,6 +554,164 @@
   
   
   <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="http://hanze5.github.io/2021/12/28/3.C-%E5%AE%9E%E6%88%981%E2%80%94%E2%80%94%E5%85%88%E6%8A%8A%E9%A1%B9%E7%9B%AE%E8%B7%91%E8%B5%B7%E6%9D%A5/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/images/my_avatar.png">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="也许不会有人进来吧">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+                
+                <a class="post-title-link" href="/2021/12/28/3.C-%E5%AE%9E%E6%88%981%E2%80%94%E2%80%94%E5%85%88%E6%8A%8A%E9%A1%B9%E7%9B%AE%E8%B7%91%E8%B5%B7%E6%9D%A5/" itemprop="url">C++实战1——先把项目跑起来</a></h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2021-12-28T16:47:43+08:00">
+                2021-12-28
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+
+          
+            
+          
+
+          
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        
+          
+            <p>参考问文章：</p>
+<p><a target="_blank" rel="noopener" href="https://www.ipangbo.cn/linux/272.html#:~:text=Ubuntu22.04使用apt安装MySQL8指南 当今，MySQL8的文档还停留在支持Ubuntu 20.04上，甚至使用官方的 mysql-apt-config 安装也会提示不支持。 但是使用apt却可以很顺利地在Ubuntu,22.04的实体机%2F虚拟机%2F容器上安装MySQL8。 使用apt的安装过程轻松又愉快，只需 sudo apt install mysql-server">Ubuntu22.04使用apt安装MySQL8指南 – 气势磅礴 (ipangbo.cn)</a></p>
+<p>环境：</p>
+<p>​    vmware 16 pro</p>
+<p>​    ubuntu 22.04</p>
+<ol>
+<li>安装mysql,及开发工具</li>
+</ol>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">sudo apt install mysql-server</span><br><span class="line">sudo apt install musql-client</span><br><span class="line">sudo apt-get install libmysqlclient-dev</span><br><span class="line"><span class="meta prompt_">#</span><span class="language-bash">检查是否安装成功</span></span><br><span class="line">sudo service mysql status</span><br></pre></td></tr></table></figure>
+<p><img src="/images/3/1677744637196.png" alt="1677744637196"></p>
+<ol>
+<li><p>正常root权限可以直接通过mysql指令进入数据库。</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">mysql&gt; SHOW DATABASES;</span><br></pre></td></tr></table></figure>
+<p>Mysql安装成功后，默认的root用户密码为空，你可以使用以下命令来创建root用户的密码：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">mysqladmin -u root password &quot;new_password&quot;;</span><br><span class="line">#接着可以使用 进入数据库 mysql -h 主机名 -u 用户名 -p  登录本地可忽略 -h选项</span><br><span class="line">mysql -u root -p </span><br></pre></td></tr></table></figure>
+</li>
+<li><p>创建数据库 </p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line">mysql&gt; create database webserver;</span><br><span class="line">Query OK, 1 row affected (0.00 sec)</span><br><span class="line"></span><br><span class="line">mysql&gt; use webserver;</span><br><span class="line">Database changed</span><br><span class="line">//创建user表</span><br><span class="line">mysql&gt; CREATE TABLE user(</span><br><span class="line">    -&gt;     username char(50) NULL,</span><br><span class="line">    -&gt;     password char(50) NULL</span><br><span class="line">    -&gt; )ENGINE=InnoDB;</span><br><span class="line">Query OK, 0 rows affected (0.01 sec)</span><br><span class="line"></span><br><span class="line">mysql&gt; INSERT INTO user(username, password) VALUES(&#x27;nowcoder&#x27;, &#x27;nowcoder&#x27;);</span><br><span class="line">Query OK, 1 row affected (0.01 sec)</span><br></pre></td></tr></table></figure>
+</li>
+</ol>
+<ol>
+<li><p>克隆代码</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br></pre></td><td class="code"><pre><span class="line">git clone https://github.com/gaojingcome/WebServer.git</span><br><span class="line"><span class="meta prompt_">#</span><span class="language-bash">代码目录树如下</span></span><br><span class="line">dawnlake@dawnlake-virtual-machine:~/workspace/C++/WebServer$ tree</span><br><span class="line">.</span><br><span class="line">├── build</span><br><span class="line">│   └── Makefile</span><br><span class="line">├── code</span><br><span class="line">│   ├── buffer</span><br><span class="line">│   │   ├── buffer.cpp</span><br><span class="line">│   │   └── buffer.h</span><br><span class="line">│   ├── config</span><br><span class="line">│   │   └── config.h</span><br><span class="line">│   ├── http</span><br><span class="line">│   │   ├── httpconn.cpp</span><br><span class="line">│   │   ├── httpconn.h</span><br><span class="line">│   │   ├── httprequest.cpp</span><br><span class="line">│   │   ├── httprequest.h</span><br><span class="line">│   │   ├── httpresponse.cpp</span><br><span class="line">│   │   ├── httpresponse.h</span><br><span class="line">│   │   └── readme.md</span><br><span class="line">│   ├── log</span><br><span class="line">│   │   ├── blockqueue.h</span><br><span class="line">│   │   ├── log.cpp</span><br><span class="line">│   │   ├── log.h</span><br><span class="line">│   │   └── readme.md</span><br><span class="line">│   ├── main.cpp</span><br><span class="line">│   ├── pool</span><br><span class="line">│   │   ├── readme.md</span><br><span class="line">│   │   ├── sqlconnpool.cpp</span><br><span class="line">│   │   ├── sqlconnpool.h</span><br><span class="line">│   │   ├── sqlconnRAII.h</span><br><span class="line">│   │   └── threadpool.h</span><br><span class="line">│   ├── readme.md</span><br><span class="line">│   ├── server</span><br><span class="line">│   │   ├── epoller.cpp</span><br><span class="line">│   │   ├── epoller.h</span><br><span class="line">│   │   ├── webserver.cpp</span><br><span class="line">│   │   └── webserver.h</span><br><span class="line">│   └── timer</span><br><span class="line">│       ├── heaptimer.cpp</span><br><span class="line">│       ├── heaptimer.h</span><br><span class="line">│       └── readme.md</span><br><span class="line">├── LICENSE</span><br><span class="line">├── Makefile</span><br><span class="line">├── readme.assest</span><br><span class="line">│   └── 压力测试.png</span><br><span class="line">├── readme.md</span><br><span class="line">├── resources</span><br><span class="line">│   ├── 400.html</span><br><span class="line">│   ├── 403.html</span><br><span class="line">│   ├── 404.html</span><br><span class="line">│   ├── 405.html</span><br><span class="line">│   ├── css</span><br><span class="line">│   │   ├── animate.css</span><br><span class="line">│   │   ├── bootstrap.min.css</span><br><span class="line">│   │   ├── font-awesome.min.css</span><br><span class="line">│   │   ├── magnific-popup.css</span><br><span class="line">│   │   └── style.css</span><br><span class="line">│   ├── error.html</span><br><span class="line">│   ├── fonts</span><br><span class="line">│   │   ├── FontAwesome.otf</span><br><span class="line">│   │   ├── fontawesome-webfont.eot</span><br><span class="line">│   │   ├── fontawesome-webfont.svg</span><br><span class="line">│   │   ├── fontawesome-webfont.ttf</span><br><span class="line">│   │   ├── fontawesome-webfont.woff</span><br><span class="line">│   │   └── fontawesome-webfont.woff2</span><br><span class="line">│   ├── images</span><br><span class="line">│   │   ├── favicon.ico</span><br><span class="line">│   │   ├── instagram-image1.jpg</span><br><span class="line">│   │   ├── instagram-image2.jpg</span><br><span class="line">│   │   ├── instagram-image3.jpg</span><br><span class="line">│   │   ├── instagram-image4.jpg</span><br><span class="line">│   │   ├── instagram-image5.jpg</span><br><span class="line">│   │   └── profile-image.jpg</span><br><span class="line">│   ├── index.html</span><br><span class="line">│   ├── js</span><br><span class="line">│   │   ├── bootstrap.min.js</span><br><span class="line">│   │   ├── custom.js</span><br><span class="line">│   │   ├── jquery.js</span><br><span class="line">│   │   ├── jquery.magnific-popup.min.js</span><br><span class="line">│   │   ├── magnific-popup-options.js</span><br><span class="line">│   │   ├── smoothscroll.js</span><br><span class="line">│   │   └── wow.min.js</span><br><span class="line">│   ├── login.html</span><br><span class="line">│   ├── picture.html</span><br><span class="line">│   ├── register.html</span><br><span class="line">│   ├── video</span><br><span class="line">│   │   └── xxx.mp4</span><br><span class="line">│   ├── video.html</span><br><span class="line">│   └── welcome.html</span><br><span class="line">├── test</span><br><span class="line">│   ├── Makefile</span><br><span class="line">│   ├── readme.md</span><br><span class="line">│   └── test.cpp</span><br><span class="line">└── webbench-1.5</span><br><span class="line">    ├── Makefile</span><br><span class="line">    ├── socket.c</span><br><span class="line">    └── webbench.c</span><br></pre></td></tr></table></figure>
+</li>
+<li><p>编译之后执行可运行程序<img src="/images/3/1677746577228.png" alt="1677746577228">然后可以从外部主机，访问虚拟机的ip地址加端口号<img src="/images/3/1677746955685.png" alt="1677746955685"></p>
+</li>
+<li><p>main函数代码比较简单</p>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;unistd.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&quot;server/webserver.h&quot;</span></span></span><br><span class="line"></span><br><span class="line"><span class="function"><span class="type">int</span> <span class="title">main</span><span class="params">()</span> </span>&#123;</span><br><span class="line">    <span class="comment">/* 守护进程 后台运行 */</span></span><br><span class="line">    <span class="comment">//daemon(1, 0); </span></span><br><span class="line"></span><br><span class="line">    <span class="function">WebServer <span class="title">server</span><span class="params">(</span></span></span><br><span class="line"><span class="params"><span class="function">        <span class="number">1316</span>, <span class="number">3</span>, <span class="number">60000</span>, <span class="literal">false</span>,             <span class="comment">/* 端口 ET模式 timeoutMs 优雅退出  */</span></span></span></span><br><span class="line"><span class="params"><span class="function">        <span class="number">3306</span>, <span class="string">&quot;nowcoder&quot;</span>, <span class="string">&quot;nowcoder&quot;</span>, <span class="string">&quot;webserver&quot;</span>, <span class="comment">/* Mysql配置  端口号 ， 用户名 ， 密码 ， 数据库名*/</span></span></span></span><br><span class="line"><span class="params"><span class="function">        <span class="number">12</span>, <span class="number">6</span>, <span class="literal">true</span>, <span class="number">1</span>, <span class="number">1024</span>)</span></span>;             <span class="comment">/* 连接池数量 线程池数量 日志开关 日志等级 日志异步队列容量 */</span></span><br><span class="line">    server.<span class="built_in">Start</span>();</span><br><span class="line">&#125; </span><br><span class="line">  </span><br></pre></td></tr></table></figure>
+</li>
+</ol>
+<ol>
+<li>​    </li>
+<li></li>
+<li></li>
+</ol>
+
+          
+        
+      
+    </div>
+    
+    
+    
+
+    
+
+    
+
+    
+
+    <footer class="post-footer">
+      
+
+      
+
+      
+
+      
+      
+        <div class="post-eof"></div>
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+      
+    
+      
+      
+      
+        
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
     <link itemprop="mainEntityOfPage" href="http://hanze5.github.io/2021/12/06/2.%E5%85%B3%E4%BA%8EFPGA%E5%85%A8%E5%B1%80%E5%B8%83%E7%BA%BF/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
@@ -652,8 +810,8 @@
 <table>
 <thead>
 <tr>
-<th><img src="/images/2.cover1.png" alt="封面1"></th>
-<th><img src="/images/2.cover2.png" alt="封面2"></th>
+<th><img src="/images/2/2.cover1.png" alt="封面1"></th>
+<th><img src="/images/2/2.cover2.png" alt="封面2"></th>
 </tr>
 </thead>
 <tbody>
@@ -676,7 +834,7 @@
 <li>antifuse是一种具有非编程状态的，两端之间具有极高的电阻。当在端之间施加一个极高的电压，两端就会被打通产生低电阻连接，这种连接是持久性的。编程antifuse需要额外的电路来提供可编程的高电压和高电流。使得antifuse本身的体积很小但是，加上额外的电路就不那么小了。</li>
 <li>浮动门编程技术使用一种特殊技术，该技术在紫外线可擦EPROM和电可擦EEPROM中被发现。EPROM的主要优点是快速可编程性。另外，他也不需要额外的持久性存储在芯片通电时对其进行编程。然而，这种技术的加工步骤更为复杂且需要更多的高祖晶体管。</li>
 </ul>
-<h3 id="1-3-路由结构"><a href="#1-3-路由结构" class="headerlink" title="1.3 路由结构"></a>1.3 路由结构</h3><p>FPGA路由结构是对可编程switch和wiring segment的放置，以实现内部的编程性的逻辑互连。图3.1展示了一个典型的路由结构的模型。<br><img src="/images/2.FPGA路由结构.png" alt>  </p>
+<h3 id="1-3-路由结构"><a href="#1-3-路由结构" class="headerlink" title="1.3 路由结构"></a>1.3 路由结构</h3><p>FPGA路由结构是对可编程switch和wiring segment的放置，以实现内部的编程性的逻辑互连。图3.1展示了一个典型的路由结构的模型。<br><img src="/images/2/2.FPGA路由结构.png" alt>  </p>
 <p>一个wire segment是一条由可编程switch连接的线路，一条wire segment中可能会包含一个或多个switch。每个wire segment的末端都会附着一个switch。</p>
 <ul>
 <li>一个 track 是形成一条线段的一条或多条wire segment的序列；</li>
@@ -685,27 +843,178 @@
 <p>图3.1中还包含着两种基础的结构：switch block和connection block。</p>
 <ul>
 <li>一个switch block 提供水平和垂直线段之间的互连，当然也可以是水平与水平。</li>
-<li>一个connection block在channel中提供逻辑块的输入和输出和wire segment的连接。<br><img src="/images/2.switch_block和connection_block.png" alt></li>
+<li>一个connection block在channel中提供逻辑块的输入和输出和wire segment的连接。<br><img src="/images/2/2.switch_block和connection_block.png" alt></li>
 </ul>
 <p>如图3.2所示，FPGA普遍拥有的两个重要的内部互连块。这些块内部的switch的数量对可路由性来说至关重要。switch数量越多路由选择就越多，但会影响路由质量和体积。<br>这些switch的数量及分布叫做FPGA的灵活性。switch block的灵活性记为$F_s$,connection block的灵活性记为$F_c$。$F_s$可以被定义为switch block提供给每个进入的wire segment的可以连接的总数。$F_c$可以被定义为channel中每个逻辑块可以连接的wire数。接下来展示两个商业FPGA的路由架构，它们分别来自Xilinx和Actel。</p>
-<h4 id="The-Xilinx-Routing-Architecture"><a href="#The-Xilinx-Routing-Architecture" class="headerlink" title="The Xilinx Routing Architecture"></a>The Xilinx Routing Architecture</h4><p><img src="/images/2.结构Xilinx_3000_FPGA.png" alt><br>逻辑块通过connection_block与channel连接。由于使用的是SRAM编程技术所以连接点体积比较大，在 Xilinx 3000的$F_c$为2~3（有5条track通过block）。逻辑块的四个边上都有connection block，它们将不同的总共11个pin连接到wire segment。当pin被连接到水平或垂直的wire segment上之后，每个sire可以连接另一侧的15个可能的wire segment中的5~6个。Xilinx 3000的architecture提供了4种wire segment：</p>
+<h4 id="The-Xilinx-Routing-Architecture"><a href="#The-Xilinx-Routing-Architecture" class="headerlink" title="The Xilinx Routing Architecture"></a>The Xilinx Routing Architecture</h4><p><img src="/images/2/2.结构Xilinx_3000_FPGA.png" alt><br>逻辑块通过connection_block与channel连接。由于使用的是SRAM编程技术所以连接点体积比较大，在 Xilinx 3000的$F_c$为2~3（有5条track通过block）。逻辑块的四个边上都有connection block，它们将不同的总共11个pin连接到wire segment。当pin被连接到水平或垂直的wire segment上之后，每个sire可以连接另一侧的15个可能的wire segment中的5~6个。Xilinx 3000的architecture提供了4种wire segment：</p>
 <ul>
 <li>General-purpose interconnect由通过switch block的wire segment组成。</li>
 <li>Direct interconnect 由逻辑块直接与相邻最近的邻居逻辑块之间的互连。</li>
 <li>Long lines，跨越芯片级的长度，提供high-fanout 均匀延迟连接。</li>
 <li>Clock line，是跨越整个芯片的单个线网，由高驱动缓冲器驱动。（没理解）。</li>
 </ul>
-<h4 id="The-Actel-Routing-Architecture"><a href="#The-Actel-Routing-Architecture" class="headerlink" title="The  Actel  Routing  Architecture"></a>The  Actel  Routing  Architecture</h4><p><img src="/images/2.结构Actel_FPGA.png" alt><br>Actel的路由结构是非对称式的，水平方向要比垂直方向有更多的track。Actel FPGA的输入和输出引脚的连接性是不同的。对于输入引脚，每个引脚可以连接对应这一侧的channel种的所有track，。而输出引脚横跨逻辑块上面2个channel和下面2个channel，它可以连接它跨过的这四个channel中包含的所有channel。在Actel中没有独立可分离的switch block。相对应的起到该功能的东西分布在整个水平的channel中。所有的垂直的track都可以与入射的水平track相连接。每个水平的channel由22个track组成，每个track可划分成不同长度的segment。垂直的segment共有3种类型：输入段，输出端，和通过整个芯片高度或者重要部分的freeway。这允许比输出端允许的垂直距离更长。</p>
+<h4 id="The-Actel-Routing-Architecture"><a href="#The-Actel-Routing-Architecture" class="headerlink" title="The  Actel  Routing  Architecture"></a>The  Actel  Routing  Architecture</h4><p><img src="/images/2/2.结构Actel_FPGA.png" alt><br>Actel的路由结构是非对称式的，水平方向要比垂直方向有更多的track。Actel FPGA的输入和输出引脚的连接性是不同的。对于输入引脚，每个引脚可以连接对应这一侧的channel种的所有track，。而输出引脚横跨逻辑块上面2个channel和下面2个channel，它可以连接它跨过的这四个channel中包含的所有channel。在Actel中没有独立可分离的switch block。相对应的起到该功能的东西分布在整个水平的channel中。所有的垂直的track都可以与入射的水平track相连接。每个水平的channel由22个track组成，每个track可划分成不同长度的segment。垂直的segment共有3种类型：输入段，输出端，和通过整个芯片高度或者重要部分的freeway。这允许比输出端允许的垂直距离更长。</p>
 <h2 id="2-Physical-Design-Automation-of-FPGAs"><a href="#2-Physical-Design-Automation-of-FPGAs" class="headerlink" title="2  Physical Design Automation of FPGAs"></a>2  Physical Design Automation of FPGAs</h2><p>FPGA的物理设计流程包含三个主要步骤：partitioning,placement and routing.</p>
 <h3 id="2-1-Partitioning"><a href="#2-1-Partitioning" class="headerlink" title="2.1 Partitioning"></a>2.1 Partitioning</h3><p>Partitioning is the separation of the logic into Logic  blocks. Partitioning has both a logical and physical component. The  connections within a logic blocks are constrained by the limited  routing architecture and limited number of blocks outputs. However, the quality of the resulting partitioning depends on how well the  placement can be done. The logical component has been investigated in the  context of technology mapping in logic optimization.<br>Partitioning 就是将逻辑划分成逻辑块。分区同时拥有着逻辑组件和物理组件。逻辑块内的连接受到路由结构的限制和块输出的数量。但是最终分区质量取决于分区的好坏。逻辑组件在逻辑优化的技术优化背景下应运而生。</p>
 <h3 id="2-2-Placement"><a href="#2-2-Placement" class="headerlink" title="2.2 Placement"></a>2.2 Placement</h3><p>Placement starts with logic blocks and input-output blocks in partitioned netlist and decides which corresponding blocks on the chip  should  contain them. The FPGA  placement problem is very similar to  traditional standard cell and gate array placement problems. Many  of  existing algorithm place­ment algorithms are applicable, such as simulated annealing,force  directed relaxation and min-cut.<br>Placement从逻辑块和位于分区线网表中的输入-输出块开始进行，并决定了他们应该对应在哪个芯片哪个的块上。FPGA placement问题与传统的单元和门阵列的布局问题相似。现有的很多布局算法，如模拟退火算法、强定向松弛算法、最小裁剪。</p>
-<h3 id="2-3-Routing"><a href="#2-3-Routing" class="headerlink" title="2.3 Routing"></a>2.3 Routing</h3><p>In general such a global  router divides the multipoint nets into two terminal nets and  routes  them with  minimumdistance path.<br>解决好所有电路的placement后，所有线网的每一个pin都必须连接。不同的FPGA结构有着不同的路由算法。FPGA的路由问题和standard cell和门阵列的设计一样复杂。FPGA路由可以分成：global routing and detailed routing。<br><img src="/images/2.Global_routing_and_Detailed_routing.png" alt><br>The global route defines route for each connection by assigning it a sequence of channel segments. After the paths are defined in terms of channel between two-pin connection detailed router chose specific wiring segments to implement the channel segment assigned during global routing.<br>主流的Global router会把多端线网花分为一组双端线网，然后使用最短路径算法。同时也要考虑平衡channel的密度。全局路由从粗粒度层面通过给出一条channel segment 序列来为每一条连接大致规划出一条路径。在这条路径以channel的形式确定下来后，由详细路由选择具体的wire segment 来实现global routing阶段设计出的路径。</p>
+<h3 id="2-3-Routing"><a href="#2-3-Routing" class="headerlink" title="2.3 Routing"></a>2.3 Routing</h3><p>In general such a global  router divides the multipoint nets into two terminal nets and  routes  them with  minimumdistance path.<br>解决好所有电路的placement后，所有线网的每一个pin都必须连接。不同的FPGA结构有着不同的路由算法。FPGA的路由问题和standard cell和门阵列的设计一样复杂。FPGA路由可以分成：global routing and detailed routing。<br><img src="/images/2/2.Global_routing_and_Detailed_routing.png" alt><br>The global route defines route for each connection by assigning it a sequence of channel segments. After the paths are defined in terms of channel between two-pin connection detailed router chose specific wiring segments to implement the channel segment assigned during global routing.<br>主流的Global router会把多端线网花分为一组双端线网，然后使用最短路径算法。同时也要考虑平衡channel的密度。全局路由从粗粒度层面通过给出一条channel segment 序列来为每一条连接大致规划出一条路径。在这条路径以channel的形式确定下来后，由详细路由选择具体的wire segment 来实现global routing阶段设计出的路径。</p>
 <h2 id="3-Global-Routing-Problem-in-Design-Automation-of-FPGAs"><a href="#3-Global-Routing-Problem-in-Design-Automation-of-FPGAs" class="headerlink" title="3. Global Routing Problem in Design Automation of FPGAs"></a>3. Global Routing Problem in Design Automation of FPGAs</h2><p> 全局路由为每个线网选择channel然后将具体的选择哪条wire segment 和 switch这种工作留给detailed router。全局路由为每个net决定哪些pin是真正需要被连接的。全局路由的最终目标是最小化channel密度之和。在许多研究中，FPGA中的路由问题都直接分配segment，而忽略了全局路由阶段。有一个独特的FPGA全局路由器：PGAroute.该路由器类似于standard cell的全局路由器，使用LocusRoute算法。</p>
-<p>LocusRoute算法中，对每个多端线网执行以下三个步骤。<br>1) net的划分：用最小生成树算法将一个多端线网划分为一组双端线网。<br><img src="/images/2.简单的两转弯路径.png" alt><br>2) Route Generation and Evaluation:在这一步中考虑每一对pin之间的可能路径，并根据cost来选择最低的那条。<br>选择路径的方法是基于那些有2个转弯或者更少的路径.Locus评估两个物理pin之间所有两个弯道路径的cost，选择最低的那条。cost函数由channel的密度来定义。每个wire segment和switch block 被表示为cost array中的元素。<br>每一个cost array $H_{i,j}$中的元素,包含着通过wire segment(i,j)的路径数量.<br>The cost of path(P) is calculated as:  </p>
+<p>LocusRoute算法中，对每个多端线网执行以下三个步骤。<br>1) net的划分：用最小生成树算法将一个多端线网划分为一组双端线网。<br><img src="/images/2/2.简单的两转弯路径.png" alt><br>2) Route Generation and Evaluation:在这一步中考虑每一对pin之间的可能路径，并根据cost来选择最低的那条。<br>选择路径的方法是基于那些有2个转弯或者更少的路径.Locus评估两个物理pin之间所有两个弯道路径的cost，选择最低的那条。cost函数由channel的密度来定义。每个wire segment和switch block 被表示为cost array中的元素。<br>每一个cost array $H_{i,j}$中的元素,包含着通过wire segment(i,j)的路径数量.<br>The cost of path(P) is calculated as:  </p>
 <script type="math/tex; mode=display">Cost(p)=\sum_{p} H_{i,j}</script><p>3) Reconstruction：这一步将所有的双端网重新连接在一起，然后performs assigns unique numbers to distinct segments of some nets in each channel. 在每个channel中，执行分配唯一的数字在某些网的不同段。<br>Locus route利用迭代策略，即在第一次所有线网被路由之后，每个线网再依次被撕裂和重新路由。迭代减少了顺序依赖，提高路由质量。</p>
-<h2 id="4-Model-of-FPGA-for-Global-Routing"><a href="#4-Model-of-FPGA-for-Global-Routing" class="headerlink" title="4.Model of FPGA for Global Routing"></a>4.Model of FPGA for Global Routing</h2><p>商用的FPGA由以下部分组成：一个可编程逻辑块组成的规则的二维阵列（LB），一个可编程路由网络，switch boxes(SB)[3,1,2]. Logic blocks 被用来实现电路的功能；路由网络用来实现逻辑块和输入输出之间的连接。FPGA的路由网络包括wiring segment和connection blocks。基于FPGA的商业SRAM中，wiring segment可以分为三种类型（路由资源）：channel segments, long  lines and direct-interconnection.水平(垂直)的channel segment 由若干平行wire segment组成，它们连接水平(垂直)channel中的两个连续的SB。SB允许这些channel segments彼此可编程互连。direct-interconnection是相邻LB之间的连接。long  lines水平或竖直地穿过FPGA路由区域。connection block提供从LB的输入输出引脚到相应channel segments的wire segment的连接。每个引脚可以连接到一个通道中有限数量的wire segment上，这被称为connection block的灵活度。在本工作中，假设每个LB引脚可以连接到各自通道中的所有wire segment，把它作为我们的FPGA 模型的连接块。<br>direct-interconnections可以提供邻居LB之间的最小延迟的连接，long line在需要长距离传递信号是被使用（比如全局的时钟信号），这些路由资源在global routing中都没有被考虑到。因此我们关于的FPGA全局路由的模型只有可编程逻辑块（LB）,交换盒（SB）， channel segments。一个FPGA可以被建模为，二维的 由连接在水平和竖直channel segments中的LB组成的二维阵列，而SB则负责将水平和竖直的channel segments 连接在一起。<br><img src="/images/2.FPGA全局路由模型.png" alt><br>在本工作中我们使用最小生成树算法将多端线网划分为一组双端线网。故在此之后，文中提到的线网都指的是双端网。考虑一条双端曼哈顿距离为$d<em>h+d_v$的线网，其中$d_h$和$d_v$分别代表水平距离和垂直距离。该线网的路由区域被限制在大小为$(d_h+1)×(d_v+1)$的LB网格，如下图a所示<br><img src="/images/2.一条双端线网以及他子网和子网可能的路由区域.png" alt><br>然后该线网的最短距离可以被分解为三个独立的子网。该线网的每一个pin在最佳的路由区域只有一个邻居SB。所以，每一个pin都可以通过水平的或竖直的channel  segment与他的相邻的SB相连接，就如上图所示。同时，这两个pin连接的SB之间的连接的最佳路由区域就限制在$(d_h+1)×(d_v+1)$的大小的网格中。基于这个事实，我们进一步将每个线网细分为三个双端子网，及LS,SS,SL(如上图b所示)。这里，LS和SL子网代表着 LB-to-SB和SB-to-LB的连接，SS子网代表着特定网络的SB-to-SB连接。因此我们只LS和SL这两种子网考虑2条可能的路径，为SS子网考虑吧$d_h+d_v-2$条可能的包含1个或2个转弯的路径。<br>我们定义一个FPGA图(L,S,C),它是一个P×Q的二维网格，L,S,C分别代表着LB,SB,channel segments.这里P和Q代表着FPGA中水平和垂直的通道数量。每个顶点$s</em>{p,q}$代表着水平通道p和竖直通道q处的SB。网格中的每一个矩形单元$L<em>{p,q}$代表着四面相邻着$s</em>{p,q}$，$s<em>{p,q+1}$，$s</em>{p+1,q}$，$s<em>{p+1,q+1}$的LB。边被标记为$c^{h}</em>{pq}$($c^{v}<em>{pq}$),对应夹在$s</em>{p,q}$和$s<em>{p,q+1}$($s</em>{p+1,q}$)中间的channel segment。如下图所示：<br><img src="/images/2.FPGA_Graph.png" alt><br>全局路由问题为 寻找这些子网的路由的均匀分布 减少了搜索空间。路由的均匀分布有利于提高后续详细路由阶段寻找到可行路由的可能性。所以我们需要定义一个目标函数奖励balanced路由。因为我们前面讲到我们要避免区域性密度过高。将权重与边相关连以简化对给定路由结果的balance质量的计算。$w^{h}<em>{pq}$($w^{v}</em>{pq}$)代表$c^{h}<em>{pq}$($c^{v}</em>{pq}$)上的权重，意义是channel segment. 上的权重。通过这种模型，我们可以通过下面的公式来表示给定一条路由结果的balance质量：  </p>
+<h2 id="4-Model-of-FPGA-for-Global-Routing"><a href="#4-Model-of-FPGA-for-Global-Routing" class="headerlink" title="4.Model of FPGA for Global Routing"></a>4.Model of FPGA for Global Routing</h2><p>商用的FPGA由以下部分组成：一个可编程逻辑块组成的规则的二维阵列（LB），一个可编程路由网络，switch boxes(SB)[3,1,2]. Logic blocks 被用来实现电路的功能；路由网络用来实现逻辑块和输入输出之间的连接。FPGA的路由网络包括wiring segment和connection blocks。基于FPGA的商业SRAM中，wiring segment可以分为三种类型（路由资源）：channel segments, long  lines and direct-interconnection.水平(垂直)的channel segment 由若干平行wire segment组成，它们连接水平(垂直)channel中的两个连续的SB。SB允许这些channel segments彼此可编程互连。direct-interconnection是相邻LB之间的连接。long  lines水平或竖直地穿过FPGA路由区域。connection block提供从LB的输入输出引脚到相应channel segments的wire segment的连接。每个引脚可以连接到一个通道中有限数量的wire segment上，这被称为connection block的灵活度。在本工作中，假设每个LB引脚可以连接到各自通道中的所有wire segment，把它作为我们的FPGA 模型的连接块。<br>direct-interconnections可以提供邻居LB之间的最小延迟的连接，long line在需要长距离传递信号是被使用（比如全局的时钟信号），这些路由资源在global routing中都没有被考虑到。因此我们关于的FPGA全局路由的模型只有可编程逻辑块（LB）,交换盒（SB）， channel segments。一个FPGA可以被建模为，二维的 由连接在水平和竖直channel segments中的LB组成的二维阵列，而SB则负责将水平和竖直的channel segments 连接在一起。<br><img src="/images/2/2.FPGA全局路由模型.png" alt><br>在本工作中我们使用最小生成树算法将多端线网划分为一组双端线网。故在此之后，文中提到的线网都指的是双端网。考虑一条双端曼哈顿距离为$d<em>h+d_v$的线网，其中$d_h$和$d_v$分别代表水平距离和垂直距离。该线网的路由区域被限制在大小为$(d_h+1)×(d_v+1)$的LB网格，如下图a所示<br><img src="/images/2/2.一条双端线网以及他子网和子网可能的路由区域.png" alt><br>然后该线网的最短距离可以被分解为三个独立的子网。该线网的每一个pin在最佳的路由区域只有一个邻居SB。所以，每一个pin都可以通过水平的或竖直的channel  segment与他的相邻的SB相连接，就如上图所示。同时，这两个pin连接的SB之间的连接的最佳路由区域就限制在$(d_h+1)×(d_v+1)$的大小的网格中。基于这个事实，我们进一步将每个线网细分为三个双端子网，及LS,SS,SL(如上图b所示)。这里，LS和SL子网代表着 LB-to-SB和SB-to-LB的连接，SS子网代表着特定网络的SB-to-SB连接。因此我们只LS和SL这两种子网考虑2条可能的路径，为SS子网考虑吧$d_h+d_v-2$条可能的包含1个或2个转弯的路径。<br>我们定义一个FPGA图(L,S,C),它是一个P×Q的二维网格，L,S,C分别代表着LB,SB,channel segments.这里P和Q代表着FPGA中水平和垂直的通道数量。每个顶点$s</em>{p,q}$代表着水平通道p和竖直通道q处的SB。网格中的每一个矩形单元$L<em>{p,q}$代表着四面相邻着$s</em>{p,q}$，$s<em>{p,q+1}$，$s</em>{p+1,q}$，$s<em>{p+1,q+1}$的LB。边被标记为$c^{h}</em>{pq}$($c^{v}<em>{pq}$),对应夹在$s</em>{p,q}$和$s<em>{p,q+1}$($s</em>{p+1,q}$)中间的channel segment。如下图所示：<br><img src="/images/2/2.FPGA_Graph.png" alt><br>全局路由问题为 寻找这些子网的路由的均匀分布 减少了搜索空间。路由的均匀分布有利于提高后续详细路由阶段寻找到可行路由的可能性。所以我们需要定义一个目标函数奖励balanced路由。因为我们前面讲到我们要避免区域性密度过高。将权重与边相关连以简化对给定路由结果的balance质量的计算。$w^{h}<em>{pq}$($w^{v}</em>{pq}$)代表$c^{h}<em>{pq}$($c^{v}</em>{pq}$)上的权重，意义是channel segment. 上的权重。通过这种模型，我们可以通过下面的公式来表示给定一条路由结果的balance质量：  </p>
 <script type="math/tex; mode=display">B(R)=\sum_{p=1}^P\sum_{q=1}^{Q-1}(w^{h}_{pq}(R))^2+\sum_{q=1}^Q\sum_{p=1}^{P-1}(w^{v}_{pq}(R))^2</script><p>公式中，每个channel segment将其密度的平方贡献给目标函数，从而惩罚不平衡的路由分布。因此全局路由问题就是最小化上式。</p>
 <h1 id="MFA-SOLUTION-FOR-GLOBAL-ROUTING-IN-FPGA"><a href="#MFA-SOLUTION-FOR-GLOBAL-ROUTING-IN-FPGA" class="headerlink" title="MFA SOLUTION FOR GLOBAL ROUTING IN FPGA"></a>MFA SOLUTION FOR GLOBAL ROUTING IN FPGA</h1><p>待续。。。。。。</p>
+
+          
+        
+      
+    </div>
+    
+    
+    
+
+    
+
+    
+
+    
+
+    <footer class="post-footer">
+      
+
+      
+
+      
+
+      
+      
+        <div class="post-eof"></div>
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+      
+    
+      
+      
+      
+        
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="http://hanze5.github.io/2020/02/08/1.%E9%9A%8F%E7%AC%941/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/images/my_avatar.png">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="也许不会有人进来吧">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+                
+                <a class="post-title-link" href="/2020/02/08/1.%E9%9A%8F%E7%AC%941/" itemprop="url">奋斗在一线的，不止是医生与军人</a></h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2020-02-08T09:04:54+08:00">
+                2020-02-08
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E6%97%A5%E4%BA%8B/" itemprop="url" rel="index">
+                    <span itemprop="name">日事</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+          
+
+          
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        
+          
+            <p>也许从标题可以看出，文章的内容无非是要歌颂在一线奋战除医生军人以外的其他人们。确有心之所感，但说来惭愧，写这段话的目的，我不与予隐瞒，是出于我的私心。</p>
+<p>疫情爆发以来，家人对于疫情的态度也有了极其大的转变。从之前的不甚在意，到现在邻里朋友间建立“疫情防控群”互相通知周边疫情状况。近期，确诊人的出行交际关系已经慢慢蔓延渗透到身边。</p>
+<p>距上次出家门大概已近十天，用人心惶惶形容目前家人的心境并不夸张，但是父亲的工作却依旧如常。父亲是一名煤矿工人，每天做班车去几十公里外的矿区上班。途中的其工友来自各个街道，家中孩子近期也自五湖四海归来。班车每天消毒，但是个人的防护设备，仅仅是自己准备的口罩。</p>
+<p>想来家中的亲戚也知道了矿区工作的危险性，我在妈妈和他们的视频中隐约听到了不要与我们家来往，“谁知道他班儿上的人家里人都去过哪”。我担心父亲，关于“钱重要还是命重要的话题”最近也时常被提起，但是父亲的回答确实令我没有想到，他说“咱这地区没有煤拿啥供暖，拿啥发电？”。未曾想到除了作为一个父亲之外他竟如此伟大，真是令我又难过又想笑。</p>
+<p>所以这篇短文的目的，只想在铺天盖地的歌颂医者军人的文段里，再夹杂一些段落，一些语句，一些痕迹，去好好的说说那些不为人所知的人们。他们没有防护服，仅有的防护设备是自己准备的口罩（还不知道是花了多大力气才搞到）。明知疫情严重，依然奋斗在工作岗位，只因“大家需要”。工人，社区工作者…有遗漏</p>
+<p>我的的确确是出于私心才写下这篇短文，我的的确确时想有人去知道我的父亲这个阶层，这个团体的人。我在爸爸早上离去的关门声后醒来，一上午心绪再不能平静。希望写下这些之后，能在爸爸晚上归来时，有东西去缓解无可奈何带给我的苦楚。</p>
 
           
         
@@ -924,7 +1233,7 @@
               
                 <a href="/">
               
-                  <span class="site-state-item-count">3</span>
+                  <span class="site-state-item-count">5</span>
                   <span class="site-state-item-name">日志</span>
                 </a>
               </div>
@@ -935,7 +1244,7 @@
               
               <div class="site-state-item site-state-categories">
                 <a href="/categories/index.html">
-                  <span class="site-state-item-count">1</span>
+                  <span class="site-state-item-count">2</span>
                   <span class="site-state-item-name">分类</span>
                 </a>
               </div>
@@ -946,7 +1255,7 @@
               
               <div class="site-state-item site-state-tags">
                 <a href="/tags/index.html">
-                  <span class="site-state-item-count">2</span>
+                  <span class="site-state-item-count">3</span>
                   <span class="site-state-item-name">标签</span>
                 </a>
               </div>
