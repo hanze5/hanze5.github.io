@@ -82,27 +82,27 @@
 <meta name="description" content="接触fpga布线是从复位杯的比赛开始。但是比赛的问题和数据已经将布线问题高度抽象化为了一个数学问题。所以个人认为无法实际支撑fpga布线的研究，因为在读相关文献的时候常常有看不懂的地方。所以从现在起阅读并翻译《MAPPING AND FPGA GLOBAL ROUTING USING MEAN FIELD ANNEALING》第三章的内容。有些部分因怕翻译有误所以也copy了原文。">
 <meta property="og:type" content="article">
 <meta property="og:title" content="关于FPGA全局布线">
-<meta property="og:url" content="http://example.com/2021/12/06/2.%E5%85%B3%E4%BA%8EFPGA%E5%85%A8%E5%B1%80%E5%B8%83%E7%BA%BF/index.html">
+<meta property="og:url" content="http://zhang-hanze.gitee.io/2021/12/06/2.%E5%85%B3%E4%BA%8EFPGA%E5%85%A8%E5%B1%80%E5%B8%83%E7%BA%BF/index.html">
 <meta property="og:site_name" content="也许不会有人进来吧">
 <meta property="og:description" content="接触fpga布线是从复位杯的比赛开始。但是比赛的问题和数据已经将布线问题高度抽象化为了一个数学问题。所以个人认为无法实际支撑fpga布线的研究，因为在读相关文献的时候常常有看不懂的地方。所以从现在起阅读并翻译《MAPPING AND FPGA GLOBAL ROUTING USING MEAN FIELD ANNEALING》第三章的内容。有些部分因怕翻译有误所以也copy了原文。">
 <meta property="og:locale">
-<meta property="og:image" content="http://example.com/images/2.cover1.png">
-<meta property="og:image" content="http://example.com/images/2.cover2.png">
-<meta property="og:image" content="http://example.com/images/2.FPGA%E8%B7%AF%E7%94%B1%E7%BB%93%E6%9E%84.png">
-<meta property="og:image" content="http://example.com/images/2.switch_block%E5%92%8Cconnection_block.png">
-<meta property="og:image" content="http://example.com/images/2.%E7%BB%93%E6%9E%84Xilinx_3000_FPGA.png">
-<meta property="og:image" content="http://example.com/images/2.%E7%BB%93%E6%9E%84Actel_FPGA.png">
-<meta property="og:image" content="http://example.com/images/2.Global_routing_and_Detailed_routing.png">
-<meta property="og:image" content="http://example.com/images/2.%E7%AE%80%E5%8D%95%E7%9A%84%E4%B8%A4%E8%BD%AC%E5%BC%AF%E8%B7%AF%E5%BE%84.png">
-<meta property="og:image" content="http://example.com/images/2.FPGA%E5%85%A8%E5%B1%80%E8%B7%AF%E7%94%B1%E6%A8%A1%E5%9E%8B.png">
-<meta property="og:image" content="http://example.com/images/2.%E4%B8%80%E6%9D%A1%E5%8F%8C%E7%AB%AF%E7%BA%BF%E7%BD%91%E4%BB%A5%E5%8F%8A%E4%BB%96%E5%AD%90%E7%BD%91%E5%92%8C%E5%AD%90%E7%BD%91%E5%8F%AF%E8%83%BD%E7%9A%84%E8%B7%AF%E7%94%B1%E5%8C%BA%E5%9F%9F.png">
-<meta property="og:image" content="http://example.com/images/2.FPGA_Graph.png">
+<meta property="og:image" content="http://zhang-hanze.gitee.io/images/2.cover1.png">
+<meta property="og:image" content="http://zhang-hanze.gitee.io/images/2.cover2.png">
+<meta property="og:image" content="http://zhang-hanze.gitee.io/images/2.FPGA%E8%B7%AF%E7%94%B1%E7%BB%93%E6%9E%84.png">
+<meta property="og:image" content="http://zhang-hanze.gitee.io/images/2.switch_block%E5%92%8Cconnection_block.png">
+<meta property="og:image" content="http://zhang-hanze.gitee.io/images/2.%E7%BB%93%E6%9E%84Xilinx_3000_FPGA.png">
+<meta property="og:image" content="http://zhang-hanze.gitee.io/images/2.%E7%BB%93%E6%9E%84Actel_FPGA.png">
+<meta property="og:image" content="http://zhang-hanze.gitee.io/images/2.Global_routing_and_Detailed_routing.png">
+<meta property="og:image" content="http://zhang-hanze.gitee.io/images/2.%E7%AE%80%E5%8D%95%E7%9A%84%E4%B8%A4%E8%BD%AC%E5%BC%AF%E8%B7%AF%E5%BE%84.png">
+<meta property="og:image" content="http://zhang-hanze.gitee.io/images/2.FPGA%E5%85%A8%E5%B1%80%E8%B7%AF%E7%94%B1%E6%A8%A1%E5%9E%8B.png">
+<meta property="og:image" content="http://zhang-hanze.gitee.io/images/2.%E4%B8%80%E6%9D%A1%E5%8F%8C%E7%AB%AF%E7%BA%BF%E7%BD%91%E4%BB%A5%E5%8F%8A%E4%BB%96%E5%AD%90%E7%BD%91%E5%92%8C%E5%AD%90%E7%BD%91%E5%8F%AF%E8%83%BD%E7%9A%84%E8%B7%AF%E7%94%B1%E5%8C%BA%E5%9F%9F.png">
+<meta property="og:image" content="http://zhang-hanze.gitee.io/images/2.FPGA_Graph.png">
 <meta property="article:published_time" content="2021-12-06T02:07:27.000Z">
 <meta property="article:modified_time" content="2023-02-27T06:09:01.493Z">
 <meta property="article:author" content="Dawnlake">
 <meta property="article:tag" content="FPGA">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:image" content="http://example.com/images/2.cover1.png">
+<meta name="twitter:image" content="http://zhang-hanze.gitee.io/images/2.cover1.png">
 
 
 
@@ -132,7 +132,7 @@
 
 
 
-  <link rel="canonical" href="http://example.com/2021/12/06/2.关于FPGA全局布线/"/>
+  <link rel="canonical" href="http://zhang-hanze.gitee.io/2021/12/06/2.关于FPGA全局布线/"/>
 
 
 
@@ -265,7 +265,7 @@
   
   
   <div class="post-block">
-    <link itemprop="mainEntityOfPage" href="http://example.com/2021/12/06/2.%E5%85%B3%E4%BA%8EFPGA%E5%85%A8%E5%B1%80%E5%B8%83%E7%BA%BF/">
+    <link itemprop="mainEntityOfPage" href="http://zhang-hanze.gitee.io/2021/12/06/2.%E5%85%B3%E4%BA%8EFPGA%E5%85%A8%E5%B1%80%E5%B8%83%E7%BA%BF/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
       <meta itemprop="name" content="">
