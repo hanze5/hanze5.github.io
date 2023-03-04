@@ -554,6 +554,177 @@
   
   
   <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="http://hanze5.github.io/2022/01/14/7.C-%E5%AE%9E%E6%88%98%E2%80%94%E2%80%94%E7%BA%BF%E7%A8%8B%E6%B1%A0%E8%AE%BE%E8%AE%A1/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/images/my_avatar.png">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="也许不会有人进来吧">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+                
+                <a class="post-title-link" href="/2022/01/14/7.C-%E5%AE%9E%E6%88%98%E2%80%94%E2%80%94%E7%BA%BF%E7%A8%8B%E6%B1%A0%E8%AE%BE%E8%AE%A1/" itemprop="url">C++实战——线程池设计</a></h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2022-01-14T19:23:10+08:00">
+                2022-01-14
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E5%AD%A6%E6%97%A0%E6%AD%A2%E5%A2%83/" itemprop="url" rel="index">
+                    <span itemprop="name">学无止境</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+          
+
+          
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        
+          
+            <h1 id="C-实战——线程池设计"><a href="#C-实战——线程池设计" class="headerlink" title="C++实战——线程池设计"></a>C++实战——线程池设计</h1><p>文章代码来源:<a target="_blank" rel="noopener" href="https://github.com/gaojingcome/WebServer">高并发Web服务器</a></p>
+<ol>
+<li><p>首先,在线程池的私有部分 定义结构体 <code>Pool</code> 并且实例化一个共享智能指针</p>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">struct</span> <span class="title class_">Pool</span> </span><br><span class="line">&#123;</span><br><span class="line">    std::mutex mtx;                            <span class="comment">//互斥锁</span></span><br><span class="line">    std::condition_variable cond;              <span class="comment">//条件变量</span></span><br><span class="line">    <span class="type">bool</span> isClosed;                             <span class="comment">//是否关闭</span></span><br><span class="line">    std::queue&lt;std::function&lt;<span class="type">void</span>()&gt;&gt; tasks;   <span class="comment">//任务队列</span></span><br><span class="line">&#125;;</span><br><span class="line">std::shared_ptr&lt;Pool&gt; pool_; </span><br></pre></td></tr></table></figure>
+</li>
+</ol>
+<ol>
+<li><p>显式实例化构造函数定义,在这之前需要先看看 std::thread的构造方法，</p>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//强制显式实例化   放置A a = 8  必须 A a = new A(8); </span></span><br><span class="line"><span class="function"><span class="keyword">explicit</span> <span class="title">ThreadPool</span><span class="params">(<span class="type">size_t</span> threadCount = <span class="number">8</span>)</span>: pool_(std::make_shared&lt;Pool&gt;()) &#123;</span></span><br><span class="line">    <span class="built_in">assert</span>(threadCount &gt; <span class="number">0</span>);</span><br><span class="line"></span><br><span class="line">    <span class="comment">//创建8个子线程</span></span><br><span class="line">    <span class="keyword">for</span>(<span class="type">size_t</span> i = <span class="number">0</span>; i &lt; threadCount; i++) &#123;</span><br><span class="line">        <span class="comment">//创建线程表示不需要父线程对线程进行资源的释放</span></span><br><span class="line">        std::<span class="built_in">thread</span>([pool = pool_] &#123; ... &#125;).<span class="built_in">detach</span>();</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>上述thread方法的 <code>...</code>为线程的具体要执行的命令内容。<code>.detach（）</code>代表线程不需要父线程释放资源，该方法会自动释放资源。</p>
+<p>具体命令内容如下，可以看到通过互斥锁实现对 <code>pool-&gt;tasks</code>队列的互斥访问，：</p>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line">std::<span class="built_in">thread</span>([pool = pool_] &#123;                       </span><br><span class="line">    std::unique_lock&lt;std::mutex&gt; <span class="built_in">locker</span>(pool-&gt;mtx);  <span class="comment">//设置一个锁</span></span><br><span class="line"></span><br><span class="line">    <span class="keyword">while</span>(<span class="literal">true</span>) &#123;</span><br><span class="line">        <span class="comment">//从任务队列中取任务</span></span><br><span class="line">        <span class="keyword">if</span>(!pool-&gt;tasks.<span class="built_in">empty</span>()) &#123;</span><br><span class="line">            <span class="keyword">auto</span> task = std::<span class="built_in">move</span>(pool-&gt;tasks.<span class="built_in">front</span>());</span><br><span class="line">            pool-&gt;tasks.<span class="built_in">pop</span>();</span><br><span class="line">            <span class="comment">//开关锁</span></span><br><span class="line">            locker.<span class="built_in">unlock</span>();</span><br><span class="line">            <span class="built_in">task</span>();                        <span class="comment">//具体任务指定的代码 functional库里边的东西</span></span><br><span class="line">            locker.<span class="built_in">lock</span>();</span><br><span class="line">        &#125; </span><br><span class="line">        <span class="keyword">else</span> <span class="keyword">if</span>(pool-&gt;isClosed) <span class="keyword">break</span>;</span><br><span class="line">        <span class="keyword">else</span> pool-&gt;cond.<span class="built_in">wait</span>(locker);             <span class="comment">//条件变量使之阻塞</span></span><br><span class="line">    &#125;</span><br><span class="line">&#125;).<span class="built_in">detach</span>();<span class="comment">//设置线程分离？表示不需要父线程对线程进行资源的释放</span></span><br></pre></td></tr></table></figure>
+<p>另外上述代码中，使用条件变量在任务队列为空时讲线程阻塞，可以防止他一直不断的循环浪费资源</p>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">pool-&gt;cond.<span class="built_in">wait</span>(locker);</span><br></pre></td></tr></table></figure>
+<p>与之相应的，向任务队列中添加任务后，通过条件变量将一个线程唤醒：</p>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">template</span>&lt;<span class="keyword">class</span> F&gt;</span></span><br><span class="line"><span class="function">    <span class="type">void</span> <span class="title">AddTask</span><span class="params">(F&amp;&amp; task)</span> </span>&#123;</span><br><span class="line">        &#123;</span><br><span class="line">        <span class="function">std::lock_guard&lt;std::mutex&gt; <span class="title">locker</span><span class="params">(pool_-&gt;mtx)</span></span>;</span><br><span class="line">        pool_-&gt;tasks.<span class="built_in">emplace</span>(std::forward&lt;F&gt;(task));</span><br><span class="line">        &#125;</span><br><span class="line">    pool_-&gt;cond.<span class="built_in">notify_one</span>();                       <span class="comment">//条件变量去唤醒一个线程</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+</li>
+<li><p>析构函数  联系上部分的线程内容，将<code>pool-&gt;isClosed</code>置为真,并且唤醒所有线程，才会让线程执行完推出并自动释放资源。</p>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">~<span class="built_in">ThreadPool</span>() &#123;</span><br><span class="line">    <span class="keyword">if</span>(<span class="built_in">static_cast</span>&lt;<span class="type">bool</span>&gt;(pool_)) &#123;</span><br><span class="line">        &#123;</span><br><span class="line">            <span class="function">std::lock_guard&lt;std::mutex&gt; <span class="title">locker</span><span class="params">(pool_-&gt;mtx)</span></span>;</span><br><span class="line">            pool_-&gt;isClosed = <span class="literal">true</span>;</span><br><span class="line">        &#125;</span><br><span class="line">    	pool_-&gt;cond.<span class="built_in">notify_all</span>();</span><br><span class="line">	&#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+</li>
+</ol>
+<ol>
+<li><p>完整代码：</p>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/*</span></span><br><span class="line"><span class="comment"> * @Author       : mark</span></span><br><span class="line"><span class="comment"> * @Date         : 2020-06-15</span></span><br><span class="line"><span class="comment"> * @copyleft Apache 2.0</span></span><br><span class="line"><span class="comment"> */</span> </span><br><span class="line"></span><br><span class="line"><span class="meta">#<span class="keyword">ifndef</span> THREADPOOL_H</span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> THREADPOOL_H</span></span><br><span class="line"></span><br><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;mutex&gt;</span>  <span class="comment">//锁</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;condition_variable&gt;</span><span class="comment">//条件变量</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;queue&gt;</span> <span class="comment">//队列</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;thread&gt;</span> <span class="comment">//线程库   c++的库</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;functional&gt;</span> <span class="comment">//</span></span></span><br><span class="line"><span class="keyword">class</span> <span class="title class_">ThreadPool</span> &#123;</span><br><span class="line"><span class="keyword">private</span>:</span><br><span class="line">    <span class="comment">//定义pool结构体</span></span><br><span class="line">    <span class="keyword">struct</span> <span class="title class_">Pool</span> &#123;</span><br><span class="line">        std::mutex mtx;                            <span class="comment">//互斥锁</span></span><br><span class="line">        std::condition_variable cond;              <span class="comment">//条件变量</span></span><br><span class="line">        <span class="type">bool</span> isClosed;                             <span class="comment">//是否关闭</span></span><br><span class="line">        std::queue&lt;std::function&lt;<span class="type">void</span>()&gt;&gt; tasks;   <span class="comment">//任务队列</span></span><br><span class="line">    &#125;;</span><br><span class="line">    std::shared_ptr&lt;Pool&gt; pool_;                   <span class="comment">//实例化一个pool指针 而且是共享指针</span></span><br><span class="line"><span class="keyword">public</span>:</span><br><span class="line">    <span class="comment">//显式实例化</span></span><br><span class="line">    <span class="function"><span class="keyword">explicit</span> <span class="title">ThreadPool</span><span class="params">(<span class="type">size_t</span> threadCount = <span class="number">8</span>)</span>: pool_(std::make_shared&lt;Pool&gt;()) &#123;</span></span><br><span class="line">            <span class="built_in">assert</span>(threadCount &gt; <span class="number">0</span>);</span><br><span class="line"></span><br><span class="line">            <span class="comment">//创建8个子线程</span></span><br><span class="line">            <span class="keyword">for</span>(<span class="type">size_t</span> i = <span class="number">0</span>; i &lt; threadCount; i++) &#123;</span><br><span class="line">                std::<span class="built_in">thread</span>([pool = pool_] &#123;                       <span class="comment">//花括号内为线程的具体任务</span></span><br><span class="line">                    </span><br><span class="line">                    std::unique_lock&lt;std::mutex&gt; <span class="built_in">locker</span>(pool-&gt;mtx);  <span class="comment">//设置一个锁</span></span><br><span class="line"></span><br><span class="line">                    <span class="keyword">while</span>(<span class="literal">true</span>) &#123;</span><br><span class="line">                        <span class="comment">//从任务队列中取任务</span></span><br><span class="line">                        <span class="keyword">if</span>(!pool-&gt;tasks.<span class="built_in">empty</span>()) &#123;</span><br><span class="line">                            <span class="keyword">auto</span> task = std::<span class="built_in">move</span>(pool-&gt;tasks.<span class="built_in">front</span>());</span><br><span class="line">                            pool-&gt;tasks.<span class="built_in">pop</span>();</span><br><span class="line">                            locker.<span class="built_in">unlock</span>();</span><br><span class="line">                            <span class="built_in">task</span>();                               <span class="comment">//具体任务指定的代码 functional库里边的东西</span></span><br><span class="line">                            locker.<span class="built_in">lock</span>();</span><br><span class="line">                        &#125; </span><br><span class="line">                        <span class="keyword">else</span> <span class="keyword">if</span>(pool-&gt;isClosed) <span class="keyword">break</span>;</span><br><span class="line">                        <span class="keyword">else</span> pool-&gt;cond.<span class="built_in">wait</span>(locker);             <span class="comment">//条件变量使之阻塞</span></span><br><span class="line">                    &#125;</span><br><span class="line">                &#125;).<span class="built_in">detach</span>();<span class="comment">//设置线程分离？表示不需要父线程对线程进行资源的释放</span></span><br><span class="line">            &#125;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="built_in">ThreadPool</span>() = <span class="keyword">default</span>;  <span class="comment">//无参用默认</span></span><br><span class="line"></span><br><span class="line">    <span class="built_in">ThreadPool</span>(ThreadPool&amp;&amp;) = <span class="keyword">default</span>;  <span class="comment">//没定义用默认</span></span><br><span class="line">    </span><br><span class="line">    ~<span class="built_in">ThreadPool</span>() &#123;</span><br><span class="line">        <span class="keyword">if</span>(<span class="built_in">static_cast</span>&lt;<span class="type">bool</span>&gt;(pool_)) &#123;</span><br><span class="line">            &#123;</span><br><span class="line">                <span class="function">std::lock_guard&lt;std::mutex&gt; <span class="title">locker</span><span class="params">(pool_-&gt;mtx)</span></span>;</span><br><span class="line">                pool_-&gt;isClosed = <span class="literal">true</span>;</span><br><span class="line">            &#125;</span><br><span class="line">            pool_-&gt;cond.<span class="built_in">notify_all</span>();</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">template</span>&lt;<span class="keyword">class</span> F&gt;</span></span><br><span class="line"><span class="function">    <span class="type">void</span> <span class="title">AddTask</span><span class="params">(F&amp;&amp; task)</span> </span>&#123;</span><br><span class="line">        &#123;</span><br><span class="line">            <span class="function">std::lock_guard&lt;std::mutex&gt; <span class="title">locker</span><span class="params">(pool_-&gt;mtx)</span></span>;</span><br><span class="line">            pool_-&gt;tasks.<span class="built_in">emplace</span>(std::forward&lt;F&gt;(task));</span><br><span class="line">        &#125;</span><br><span class="line">        pool_-&gt;cond.<span class="built_in">notify_one</span>();                       <span class="comment">//条件变量去唤醒一个线程</span></span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">&#125;;</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="meta">#<span class="keyword">endif</span> <span class="comment">//THREADPOOL_H</span></span></span><br></pre></td></tr></table></figure>
+</li>
+</ol>
+
+          
+        
+      
+    </div>
+    
+    
+    
+
+    
+
+    
+
+    
+
+    <footer class="post-footer">
+      
+
+      
+
+      
+
+      
+      
+        <div class="post-eof"></div>
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+      
+    
+      
+      
+      
+        
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
     <link itemprop="mainEntityOfPage" href="http://hanze5.github.io/2022/01/12/6.%E6%96%87%E4%BB%B6I-O/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
@@ -1050,7 +1221,7 @@
   
   
   <div class="post-block">
-    <link itemprop="mainEntityOfPage" href="http://hanze5.github.io/2021/12/28/3.C-%E5%AE%9E%E6%88%981%E2%80%94%E2%80%94%E5%85%88%E6%8A%8A%E9%A1%B9%E7%9B%AE%E8%B7%91%E8%B5%B7%E6%9D%A5/">
+    <link itemprop="mainEntityOfPage" href="http://hanze5.github.io/2021/12/28/3.C-%E5%AE%9E%E6%88%98%E2%80%94%E2%80%94%E5%85%88%E6%8A%8A%E9%A1%B9%E7%9B%AE%E8%B7%91%E8%B5%B7%E6%9D%A5/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
       <meta itemprop="name" content="">
@@ -1069,7 +1240,7 @@
         
           <h1 class="post-title" itemprop="name headline">
                 
-                <a class="post-title-link" href="/2021/12/28/3.C-%E5%AE%9E%E6%88%981%E2%80%94%E2%80%94%E5%85%88%E6%8A%8A%E9%A1%B9%E7%9B%AE%E8%B7%91%E8%B5%B7%E6%9D%A5/" itemprop="url">C++实战1——先把项目跑起来</a></h1>
+                <a class="post-title-link" href="/2021/12/28/3.C-%E5%AE%9E%E6%88%98%E2%80%94%E2%80%94%E5%85%88%E6%8A%8A%E9%A1%B9%E7%9B%AE%E8%B7%91%E8%B5%B7%E6%9D%A5/" itemprop="url">C++实战1——先把项目跑起来</a></h1>
         
 
         <div class="post-meta">
@@ -1143,9 +1314,8 @@
       
         
           
-            <p>参考问文章：</p>
-<p><a target="_blank" rel="noopener" href="https://www.ipangbo.cn/linux/272.html#:~:text=Ubuntu22.04使用apt安装MySQL8指南 当今，MySQL8的文档还停留在支持Ubuntu 20.04上，甚至使用官方的 mysql-apt-config 安装也会提示不支持。 但是使用apt却可以很顺利地在Ubuntu,22.04的实体机%2F虚拟机%2F容器上安装MySQL8。 使用apt的安装过程轻松又愉快，只需 sudo apt install mysql-server">Ubuntu22.04使用apt安装MySQL8指南 – 气势磅礴 (ipangbo.cn)</a></p>
-<p>环境：</p>
+            <p>参考文章：</p>
+<p><a target="_blank" rel="noopener" href="https://www.ipangbo.cn/linux/272.html#:~:text=Ubuntu22.04使用apt安装MySQL8指南 当今，MySQL8的文档还停留在支持Ubuntu 20.04上，甚至使用官方的 mysql-apt-config 安装也会提示不支持。 但是使用apt却可以很顺利地在Ubuntu,22.04的实体机%2F虚拟机%2F容器上安装MySQL8。 使用apt的安装过程轻松又愉快，只需 sudo apt install mysql-server">Ubuntu22.04使用apt安装MySQL8指南 – 气势磅礴 (ipangbo.cn)</a><br>文章代码来源:<a target="_blank" rel="noopener" href="https://github.com/gaojingcome/WebServer">高并发Web服务器</a><br>环境：</p>
 <p>​    vmware 16 pro</p>
 <p>​    ubuntu 22.04</p>
 <ol>
@@ -1751,7 +1921,7 @@
               
                 <a href="/">
               
-                  <span class="site-state-item-count">8</span>
+                  <span class="site-state-item-count">9</span>
                   <span class="site-state-item-name">日志</span>
                 </a>
               </div>
