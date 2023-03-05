@@ -658,7 +658,7 @@
 </li>
 <li><p>首先需要确认CPU是支持虚拟化的</p>
 <ul>
-<li>```shell<br>dawnlake@dawnlake-virtual-machine:~$ lsmod | grep kvm<br>kvm_intel             434176  0<br>kvm                  1130496  1 kvm_intel<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"></span><br><span class="line">  - vmware可以通过编辑虚拟机设置来开启处理器的虚拟化功能![1677995747801](C:\Users\DawnLake\AppData\Roaming\Typora\typora-user-images\1677995747801.png)</span><br><span class="line"></span><br><span class="line">- 下载配置内核所需要的依赖</span><br><span class="line"></span><br><span class="line">  ```shell</span><br><span class="line">  sudo apt-get install ncurses-dev libncurses-dev flex bison bc</span><br></pre></td></tr></table></figure>
+<li>```shell<br>dawnlake@dawnlake-virtual-machine:~$ lsmod | grep kvm<br>kvm_intel             434176  0<br>kvm                  1130496  1 kvm_intel<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"></span><br><span class="line">  - vmware可以通过编辑虚拟机设置来开启处理器的虚拟化功能![1677995747801](/images/14/1677995747801.png)</span><br><span class="line"></span><br><span class="line">- 下载配置内核所需要的依赖</span><br><span class="line"></span><br><span class="line">  ```shell</span><br><span class="line">  sudo apt-get install ncurses-dev libncurses-dev flex bison bc</span><br></pre></td></tr></table></figure>
 </li>
 </ul>
 </li>
@@ -672,20 +672,16 @@
 <h2 id="2-下载linux内核源码"><a href="#2-下载linux内核源码" class="headerlink" title="2.下载linux内核源码"></a>2.下载linux内核源码</h2><figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">wget https://mirrors.edge.kernel.org/pub/linux/kernel/v4.x/linux-4.9.229.tar.xz  </span><br></pre></td></tr></table></figure>
 <p>太慢了，直接浏览器下完用vscode往上传的。</p>
 <figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">dawnlake@dawnlake-virtual-machine:~/Downloads$ ls</span><br><span class="line">linux-4.9.229  linux-4.9.229.tar.xz</span><br></pre></td></tr></table></figure>
-<p><img src="/C:/Users\DawnLake\AppData\Roaming\Typora\typora-user-images\1677997900172.png" alt="1677997900172"></p>
+<p><img src="/images/14/1677997900172.png" alt="1677997900172"></p>
 <ul>
-<li><strong>arch</strong>中包含了对不同cpu架构体系的支持，每个架构里面都有自身相关的代码。不同架构针对某一内核功能的实现是不一样的，不同体系的汇编代码和语法是不一样的。体系之间差别有功能的一般都会在arch里面。</li>
-<li><strong>Documentation</strong>是文档</li>
-<li><strong>init</strong>：内核启动相关代码  内核启动先执行一部分汇编代码。之后会经过一个跳转指令，跳转到 main.c里面的start_kernel 之后就开始执行c代码，里面有启动内核索要做的初始化。</li>
-<li><strong>block</strong> 块设备相关代码</li>
-<li><strong>driver</strong> 各种驱动</li>
-<li><strong>ipc</strong> 进程通信相关代码</li>
-<li><strong>net</strong> 协议栈相关</li>
-<li><strong>sound</strong> 声音相关</li>
-<li><strong>fs</strong> 文件系统相关</li>
-<li><strong>kernel</strong> 内核核心相关 进程管理 进程调度之类的</li>
-<li><strong>include</strong> 内核头文件</li>
-<li><strong>mm</strong>  内存管理</li>
+<li>arch 目录， 和具体cpu有关的代码，例如arm/mach-omap1，即ti公司的soc，此soc的cpu核是ARM提供</li>
+<li>init目录， 内核启动代码。对应到应用层就是main，内核里最早的目录是内核的解压程序，先执行汇编代码让cpu做一些初始化。 初始化完成之后会执行这个目录里的main。</li>
+<li>drivers目录，驱动框架代码，例如i2c，dma， leds 鼠标 键盘 反正就是各种驱动。做驱动开发的可以关注一下。</li>
+<li>fs目录，文件系统 </li>
+<li>kernel目录， 注意和arm/kernel目录的区别。 kernel目录会调用arm/kernel。</li>
+<li>net目录， 网络协议</li>
+<li>include目录</li>
+<li>mm目录 内存相关</li>
 </ul>
 <h2 id="3-编译内核"><a href="#3-编译内核" class="headerlink" title="3.编译内核"></a>3.编译内核</h2><p>下列命令要在管理员权限下执行，root用户可以不用加sudo</p>
 <ol>
@@ -697,7 +693,7 @@
 </li>
 <li><p>配置内核，针对性配置，和实验不想关的就不做配置，避免内核臃肿。</p>
 <figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">make menuconfig</span><br></pre></td></tr></table></figure>
-<p><img src="/C:/Users\DawnLake\AppData\Roaming\Typora\typora-user-images\1678000057028.png" alt="1678000057028"></p>
+<p><img src="/images/14/1678000057028.png" alt="1678000057028"></p>
 <p>进来之后，（[*]代表要选中哈）</p>
 <ul>
 <li>General setup   —-&gt;   <ul>
@@ -706,8 +702,8 @@
 </li>
 <li>Device Drivers  —-&gt;     <ul>
 <li>[*] Block devices  —-&gt;   </li>
-<li><img src="/C:/Users\DawnLake\AppData\Roaming\Typora\typora-user-images\1678000486617.png" alt="1678000486617"><ul>
-<li><img src="/C:/Users\DawnLake\AppData\Roaming\Typora\typora-user-images\1678000467715.png" alt="1678000467715"></li>
+<li><img src="/images/14/1678000486617.png" alt="1678000486617"><ul>
+<li><img src="/images/14/1678000467715.png" alt="1678000467715"></li>
 </ul>
 </li>
 </ul>
@@ -742,7 +738,7 @@
 <figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br></pre></td><td class="code"><pre><span class="line">make &amp;&amp; make install </span><br><span class="line">=======================================================================</span><br><span class="line">/usr/bin/ld: libbb/lib.a(inet_common.o): in function `INET6_resolve&#x27;:</span><br><span class="line">inet_common.c:(.text.INET6_resolve+0x4a): warning: Using &#x27;getaddrinfo&#x27; in statically linked applications requires at runtime the shared libraries from the glibc version used for linking</span><br><span class="line">/usr/bin/ld: coreutils/lib.a(mktemp.o): in function `mktemp_main&#x27;:</span><br><span class="line">mktemp.c:(.text.mktemp_main+0x98): warning: the use of `mktemp&#x27; is dangerous, better use `mkstemp&#x27; or `mkdtemp&#x27;</span><br><span class="line">/usr/bin/ld: networking/lib.a(ipcalc.o): in function `ipcalc_main&#x27;:</span><br><span class="line">ipcalc.c:(.text.ipcalc_main+0x231): warning: Using &#x27;gethostbyaddr&#x27; in statically linked applications requires at runtime the shared libraries from the glibc version used for linking</span><br><span class="line">/usr/bin/ld: libbb/lib.a(inet_common.o): in function `INET_resolve&#x27;:</span><br><span class="line">inet_common.c:(.text.INET_resolve+0x4d): warning: Using &#x27;gethostbyname&#x27; in statically linked applications requires at runtime the shared libraries from the glibc version used for linking</span><br><span class="line">/usr/bin/ld: networking/lib.a(inetd.o): in function `reread_config_file&#x27;:</span><br><span class="line">inetd.c:(.text.reread_config_file+0x254): warning: Using &#x27;getservbyname&#x27; in statically linked applications requires at runtime the shared libraries from the glibc version used for linking</span><br><span class="line">/usr/bin/ld: networking/lib.a(netstat.o): in function `ip_port_str&#x27;:</span><br><span class="line">netstat.c:(.text.ip_port_str+0x50): warning: Using &#x27;getservbyport&#x27; in statically linked applications requires at runtime the shared libraries from the glibc version used for linking</span><br><span class="line">/usr/bin/ld: util-linux/lib.a(rdate.o): in function `rdate_main&#x27;:</span><br><span class="line">rdate.c:(.text.rdate_main+0xff): undefined reference to `stime&#x27;</span><br><span class="line">/usr/bin/ld: coreutils/lib.a(date.o): in function `date_main&#x27;:</span><br><span class="line">date.c:(.text.date_main+0x25b): undefined reference to `stime&#x27;</span><br><span class="line">collect2: error: ld returned 1 exit status</span><br><span class="line">Note: if build needs additional libraries, put them in CONFIG_EXTRA_LDLIBS.</span><br><span class="line">Example: CONFIG_EXTRA_LDLIBS=&quot;pthread dl tirpc audit pam&quot;</span><br><span class="line">make: *** [Makefile:718: busybox_unstripped] Error 1</span><br></pre></td></tr></table></figure>
 <p>解决方案：换更高版本的busybox</p>
 <p>如果是老版本的ubuntu应该是不会报错，如果报错要么降低ubuntu版本，要么升级busybox版本。</p>
-<p>重新执行上述步骤，安装成功<img src="/C:/Users\DawnLake\AppData\Roaming\Typora\typora-user-images\1678002515221.png" alt="1678002515221"></p>
+<p>重新执行上述步骤，安装成功<img src="/images/14/1678002515221.png" alt="1678002515221"></p>
 <p>目前还不是完整的文件系统，还待完善，无法直接使用。现在只是目录，内核识别的是文件系统。内核启动需要consle打印信息，但是这里面连dev都没有，所以也不存在什么设备文件。</p>
 </li>
 <li><p>进入_install目录，补充一些必要的文件或目录，相关的shell命令如下： </p>
@@ -762,8 +758,8 @@
 <li><p>打成gzip包。 </p>
 <figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta prompt_">#</span><span class="language-bash">!/bin/bash</span></span><br><span class="line"><span class="meta prompt_">$ </span><span class="language-bash"><span class="built_in">rm</span> -rf rootfs.ext3</span></span><br><span class="line"><span class="meta prompt_">$ </span><span class="language-bash"><span class="built_in">rm</span> -rf fs</span></span><br><span class="line"><span class="meta prompt_"></span></span><br><span class="line"><span class="meta prompt_">#</span><span class="language-bash"><span class="built_in">dd</span>命令 可以创建一个空的镜像文件</span></span><br><span class="line"><span class="meta prompt_">$ </span><span class="language-bash"><span class="built_in">dd</span> <span class="keyword">if</span>=/dev/zero of=./rootfs.ext3 bs=1M count=32</span></span><br><span class="line"><span class="meta prompt_"></span></span><br><span class="line"><span class="meta prompt_">#</span><span class="language-bash">格式化为ext3的格式</span></span><br><span class="line"><span class="meta prompt_">$ </span><span class="language-bash">mkfs.ext3 rootfs.ext3</span></span><br><span class="line"><span class="meta prompt_"></span></span><br><span class="line"><span class="meta prompt_">#</span><span class="language-bash">将该镜像文件挂载到fs这样一个临时的目录下</span></span><br><span class="line"><span class="meta prompt_">$ </span><span class="language-bash"><span class="built_in">mkdir</span> fs</span></span><br><span class="line"><span class="meta prompt_">$ </span><span class="language-bash">mount -o loop rootfs.ext3 ./fs</span></span><br><span class="line"><span class="meta prompt_"></span></span><br><span class="line"><span class="meta prompt_">#</span><span class="language-bash">然后把刚才./_install/* 也就是文件系统的东西 拷贝到 fs里 就相当于放到刚才的镜像里边了</span></span><br><span class="line"><span class="meta prompt_">$ </span><span class="language-bash"><span class="built_in">cp</span> -rf ./_install/* ./fs</span></span><br><span class="line"><span class="meta prompt_">#</span><span class="language-bash">释放挂载点</span></span><br><span class="line"><span class="meta prompt_">$ </span><span class="language-bash">umount ./fs</span></span><br><span class="line"><span class="meta prompt_"></span></span><br><span class="line"><span class="meta prompt_">#</span><span class="language-bash">打包成内核能识别的压缩模式</span></span><br><span class="line"><span class="meta prompt_">$ </span><span class="language-bash">gzip --best -c rootfs.ext3 &gt; rootfs.img.gz</span> </span><br><span class="line"></span><br></pre></td></tr></table></figure>
 <p>下面是重要的步骤成功时的输出</p>
-<p><img src="/C:/Users\DawnLake\AppData\Roaming\Typora\typora-user-images\1678005089603.png" alt="1678005089603"></p>
-<p><img src="/C:/Users\DawnLake\AppData\Roaming\Typora\typora-user-images\1678005190545.png" alt="1678005190545"></p>
+<p><img src="/images/14/1678005089603.png" alt="1678005089603"></p>
+<p><img src="/images/14/1678005190545.png" alt="1678005190545"></p>
 </li>
 </ol>
 <h2 id="6-qemu启动内核与文件系统"><a href="#6-qemu启动内核与文件系统" class="headerlink" title="6.qemu启动内核与文件系统"></a>6.qemu启动内核与文件系统</h2><p>​    参数说明：</p>
@@ -776,7 +772,7 @@
 <figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta prompt_">$</span><span class="language-bash">qemu-system-x86_64 \</span></span><br><span class="line"><span class="language-bash">    -kernel ./linux-4.9.229/arch/x86_64/boot/bzImage  \ </span> </span><br><span class="line">    -initrd ./busybox-1.36.0/rootfs.img.gz   \</span><br><span class="line">    -append &quot;root=/dev/ram init=/linuxrc&quot;  \</span><br><span class="line">    -serial file:output.txt </span><br></pre></td></tr></table></figure>
 <p><strong><em>注意：要在图形界面下执行！</em></strong>而且执行目录是<code>linux-4.9.229</code>所在的目录。</p>
 <p>很快啊！！！！</p>
-<p><img src="/C:/Users\DawnLake\AppData\Roaming\Typora\typora-user-images\1678006002978.png" alt="1678006002978"></p>
+<p><img src="/images/14/1678006002978.png" alt="1678006002978"></p>
 
           
         
