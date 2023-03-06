@@ -252,6 +252,162 @@
   
   
   <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="http://hanze5.github.io/2022/01/18/9-C-%E5%AE%9E%E6%88%98%E2%80%94%E2%80%94Socket%E5%88%9D%E5%A7%8B%E5%8C%96%E6%B5%81%E7%A8%8B/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/images/my_avatar.png">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="也许不会有人进来吧">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+                
+                <a class="post-title-link" href="/2022/01/18/9-C-%E5%AE%9E%E6%88%98%E2%80%94%E2%80%94Socket%E5%88%9D%E5%A7%8B%E5%8C%96%E6%B5%81%E7%A8%8B/" itemprop="url">9.C++实战——Socket初始化流程</a></h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2022-01-18T20:24:00+08:00">
+                2022-01-18
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E5%AD%A6%E6%97%A0%E6%AD%A2%E5%A2%83/" itemprop="url" rel="index">
+                    <span itemprop="name">学无止境</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+          
+
+          
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        
+          
+            <p>文章代码来源:<a target="_blank" rel="noopener" href="https://github.com/gaojingcome/WebServer">高并发Web服务器</a></p>
+<p>Socket 初始化流程</p>
+<ol>
+<li>首先检查端口是否合法，不可使用公知端口，以及超出最大端口大小</li>
+<li>创建监听文件描述符，当有连接到来时会产生事件，被Epoll监测到</li>
+<li>文件描述符绑定ip地址</li>
+<li>开始监听，并将监听文件描述符添加进Epoll的事件监听集合中（具体使用那种数据结构没有仔细探究）</li>
+<li>设置监听文件描述符非阻塞。这一步很重要，不然如果一直没有连接到来服务器会被阻塞。</li>
+</ol>
+<p>以上这些步骤所需要的功能底层都用c语言实现（就是一些经典的库函数），但是都做了良好的封装</p>
+<h2 id="初始化-Socket代码："><a href="#初始化-Socket代码：" class="headerlink" title="初始化 Socket代码："></a>初始化 Socket代码：</h2><figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br></pre></td><td class="code"><pre><span class="line">* Create listenFd */</span><br><span class="line"><span class="function"><span class="type">bool</span> <span class="title">WebServer::InitSocket_</span><span class="params">()</span> </span>&#123;</span><br><span class="line">    <span class="type">int</span> ret;</span><br><span class="line">    <span class="keyword">struct</span> <span class="title class_">sockaddr_in</span> addr;</span><br><span class="line">    <span class="comment">//首先检查端口的合法性</span></span><br><span class="line">    <span class="keyword">if</span>(port_ &gt; <span class="number">65535</span> || port_ &lt; <span class="number">1024</span>) &#123;</span><br><span class="line">        <span class="built_in">LOG_ERROR</span>(<span class="string">&quot;Port:%d error!&quot;</span>,  port_);</span><br><span class="line">        <span class="keyword">return</span> <span class="literal">false</span>;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    addr.sin_family = AF_INET;                 <span class="comment">//IPv4 </span></span><br><span class="line">    addr.sin_addr.s_addr = <span class="built_in">htonl</span>(INADDR_ANY); <span class="comment">//INADDR_ANY 意为可以绑定任意可用的IP地址</span></span><br><span class="line">    addr.sin_port = <span class="built_in">htons</span>(port_);</span><br><span class="line"></span><br><span class="line">    <span class="comment">//优雅关闭</span></span><br><span class="line">    <span class="keyword">struct</span> <span class="title class_">linger</span> optLinger = &#123; <span class="number">0</span> &#125;;</span><br><span class="line">    <span class="keyword">if</span>(openLinger_) &#123;</span><br><span class="line">        <span class="comment">/* 优雅关闭: 直到所剩数据发送完毕或超时 */</span></span><br><span class="line">        optLinger.l_onoff = <span class="number">1</span>;</span><br><span class="line">        optLinger.l_linger = <span class="number">1</span>;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="comment">//返回监听成员描述符</span></span><br><span class="line">    listenFd_ = <span class="built_in">socket</span>(AF_INET, SOCK_STREAM, <span class="number">0</span>);</span><br><span class="line">    <span class="keyword">if</span>(listenFd_ &lt; <span class="number">0</span>) &#123;</span><br><span class="line">        <span class="built_in">LOG_ERROR</span>(<span class="string">&quot;Create socket error!&quot;</span>, port_);</span><br><span class="line">        <span class="keyword">return</span> <span class="literal">false</span>;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="comment">//</span></span><br><span class="line">    ret = <span class="built_in">setsockopt</span>(listenFd_, SOL_SOCKET, SO_LINGER, &amp;optLinger, <span class="built_in">sizeof</span>(optLinger));</span><br><span class="line">    <span class="keyword">if</span>(ret &lt; <span class="number">0</span>) &#123;</span><br><span class="line">        <span class="built_in">close</span>(listenFd_);</span><br><span class="line">        <span class="built_in">LOG_ERROR</span>(<span class="string">&quot;Init linger error!&quot;</span>, port_);</span><br><span class="line">        <span class="keyword">return</span> <span class="literal">false</span>;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="type">int</span> optval = <span class="number">1</span>;</span><br><span class="line">    <span class="comment">/* 端口复用 */</span></span><br><span class="line">    <span class="comment">/* 只有最后一个套接字会正常接收数据。 */</span></span><br><span class="line">    ret = <span class="built_in">setsockopt</span>(listenFd_, SOL_SOCKET, SO_REUSEADDR, (<span class="type">const</span> <span class="type">void</span>*)&amp;optval, <span class="built_in">sizeof</span>(<span class="type">int</span>));</span><br><span class="line">    <span class="keyword">if</span>(ret == <span class="number">-1</span>) &#123;</span><br><span class="line">        <span class="built_in">LOG_ERROR</span>(<span class="string">&quot;set socket setsockopt error !&quot;</span>);</span><br><span class="line">        <span class="built_in">close</span>(listenFd_);</span><br><span class="line">        <span class="keyword">return</span> <span class="literal">false</span>;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="comment">//绑定</span></span><br><span class="line">    ret = <span class="built_in">bind</span>(listenFd_, (<span class="keyword">struct</span> sockaddr *)&amp;addr, <span class="built_in">sizeof</span>(addr));</span><br><span class="line">    <span class="keyword">if</span>(ret &lt; <span class="number">0</span>) &#123;</span><br><span class="line">        <span class="built_in">LOG_ERROR</span>(<span class="string">&quot;Bind Port:%d error!&quot;</span>, port_);</span><br><span class="line">        <span class="built_in">close</span>(listenFd_);</span><br><span class="line">        <span class="keyword">return</span> <span class="literal">false</span>;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="comment">//监听</span></span><br><span class="line">    ret = <span class="built_in">listen</span>(listenFd_, <span class="number">6</span>);</span><br><span class="line">    <span class="keyword">if</span>(ret &lt; <span class="number">0</span>) &#123;</span><br><span class="line">        <span class="built_in">LOG_ERROR</span>(<span class="string">&quot;Listen port:%d error!&quot;</span>, port_);</span><br><span class="line">        <span class="built_in">close</span>(listenFd_);</span><br><span class="line">        <span class="keyword">return</span> <span class="literal">false</span>;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="comment">//将监听文件描述符 与 事件 添加进Epoll</span></span><br><span class="line">    ret = epoller_-&gt;<span class="built_in">AddFd</span>(listenFd_,  listenEvent_ | EPOLLIN);</span><br><span class="line">    <span class="keyword">if</span>(ret == <span class="number">0</span>) &#123;</span><br><span class="line">        <span class="built_in">LOG_ERROR</span>(<span class="string">&quot;Add listen error!&quot;</span>);</span><br><span class="line">        <span class="built_in">close</span>(listenFd_);</span><br><span class="line">        <span class="keyword">return</span> <span class="literal">false</span>;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="comment">//设置监听文件描述符非阻塞</span></span><br><span class="line">    <span class="built_in">SetFdNonblock</span>(listenFd_);</span><br><span class="line">    <span class="built_in">LOG_INFO</span>(<span class="string">&quot;Server port:%d&quot;</span>, port_);</span><br><span class="line">    <span class="keyword">return</span> <span class="literal">true</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+          
+        
+      
+    </div>
+    
+    
+    
+
+    
+
+    
+
+    
+
+    <footer class="post-footer">
+      
+
+      
+
+      
+
+      
+      
+        <div class="post-eof"></div>
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+      
+    
+      
+      
+      
+        
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
     <link itemprop="mainEntityOfPage" href="http://hanze5.github.io/2022/01/15/8-C-%E5%AE%9E%E6%88%98%E2%80%94%E2%80%94Epoll%E5%8A%9F%E8%83%BD%E7%9A%84%E5%B0%81%E8%A3%85/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
@@ -1773,7 +1929,7 @@
               
                 <a href="/">
               
-                  <span class="site-state-item-count">19</span>
+                  <span class="site-state-item-count">20</span>
                   <span class="site-state-item-name">日志</span>
                 </a>
               </div>
