@@ -554,6 +554,176 @@
   
   
   <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="http://hanze5.github.io/2022/06/02/16-Linux%E5%86%85%E6%A0%B8%E2%80%94%E2%80%94%E5%A6%82%E4%BD%95%E5%B0%86%E9%A9%B1%E5%8A%A8%E4%BB%A3%E7%A0%81%E6%B7%BB%E5%8A%A0%E5%88%B0%E5%86%85%E6%A0%B8%E6%BA%90%E7%A0%81%E6%A0%91/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/images/my_avatar.png">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="也许不会有人进来吧">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+                
+                <a class="post-title-link" href="/2022/06/02/16-Linux%E5%86%85%E6%A0%B8%E2%80%94%E2%80%94%E5%A6%82%E4%BD%95%E5%B0%86%E9%A9%B1%E5%8A%A8%E4%BB%A3%E7%A0%81%E6%B7%BB%E5%8A%A0%E5%88%B0%E5%86%85%E6%A0%B8%E6%BA%90%E7%A0%81%E6%A0%91/" itemprop="url">Linux内核——如何将驱动代码添加到内核源码树</a></h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2022-06-02T09:24:42+08:00">
+                2022-06-02
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E5%AD%A6%E6%97%A0%E6%AD%A2%E5%A2%83/" itemprop="url" rel="index">
+                    <span itemprop="name">学无止境</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+          
+
+          
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        
+          
+            <h1 id="以字符设备驱动为例"><a href="#以字符设备驱动为例" class="headerlink" title="以字符设备驱动为例"></a>以字符设备驱动为例</h1><ol>
+<li><p>首先，把.c文件拷贝到/driver/char中要修改源码给目录下的/driver/char中的Kconfig文件，这样才能在编译内核时看到我们驱动的配置选单，参考其他的config 有样学样</p>
+<p><img src="/images/16/1678061581009.png" alt="1678061581009"></p>
+<p>tristate字段说明 该驱动有三个选项 y m n 。 y代表编译到内核里面，m是编程驱动.ko n是不编译。</p>
+</li>
+<li><p>接下来到内核源码根目录下执行，</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">/home/dawnlake/Downloads/linux-4.9.229$ make memuconfig</span><br></pre></td></tr></table></figure>
+</li>
+</ol>
+<p>   <img src="/images/16/1678061753376.png" alt="1678061753376"></p>
+<p>   <img src="/images/16/1678061802952.png" alt="1678061802952"></p>
+<p>   <img src="/images/16/1678061851658.png" alt="1678061851658"></p>
+<p>   查看help</p>
+<p>   <img src="/images/16/1678061906964.png" alt="1678061906964"></p>
+<ol>
+<li><p>接下来需要修改/drivers/char目录下的makefile文件 </p>
+<p><img src="/images/16/1678065704335.png" alt="1678065704335"></p>
+</li>
+</ol>
+<ol>
+<li><p>然后再回到内核源码根目录下执行，make</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br></pre></td><td class="code"><pre><span class="line">root@dawnlake-virtual-machine:/home/dawnlake/Downloads/linux-4.9.229$ make</span><br><span class="line">scripts/kconfig/conf  --silentoldconfig Kconfig</span><br><span class="line">  CHK     include/config/kernel.release</span><br><span class="line">  CHK     include/generated/uapi/linux/version.h</span><br><span class="line">  CHK     include/generated/utsrelease.h</span><br><span class="line">  CHK     include/generated/bounds.h</span><br><span class="line">  CHK     include/generated/timeconst.h</span><br><span class="line">  CHK     include/generated/asm-offsets.h</span><br><span class="line">  CALL    scripts/checksyscalls.sh</span><br><span class="line">  CHK     scripts/mod/devicetable-offsets.h</span><br><span class="line">  CHK     include/generated/compile.h</span><br><span class="line">  CC      drivers/char/helloDev.o</span><br><span class="line">  LD      drivers/char/built-in.o</span><br><span class="line">  LD      drivers/built-in.o</span><br><span class="line">  LD      vmlinux.o</span><br><span class="line">  MODPOST vmlinux.o</span><br><span class="line">  GEN     .version</span><br><span class="line">  CHK     include/generated/compile.h</span><br><span class="line">  UPD     include/generated/compile.h</span><br><span class="line">  CC      init/version.o</span><br><span class="line">  LD      init/built-in.o</span><br><span class="line">  KSYM    .tmp_kallsyms1.o</span><br><span class="line">  KSYM    .tmp_kallsyms2.o</span><br><span class="line">  LD      vmlinux</span><br><span class="line">  SORTEX  vmlinux</span><br><span class="line">  SYSMAP  System.map</span><br><span class="line">  VOFFSET arch/x86/boot/compressed/../voffset.h</span><br><span class="line">  CC      arch/x86/boot/compressed/misc.o</span><br><span class="line">  OBJCOPY arch/x86/boot/compressed/vmlinux.bin</span><br><span class="line">  GZIP    arch/x86/boot/compressed/vmlinux.bin.gz</span><br><span class="line">  MKPIGGY arch/x86/boot/compressed/piggy.S</span><br><span class="line">  AS      arch/x86/boot/compressed/piggy.o</span><br><span class="line">  LD      arch/x86/boot/compressed/vmlinux</span><br><span class="line">ld: arch/x86/boot/compressed/head_64.o: warning: relocation in read-only section `.head.text&#x27;</span><br><span class="line">ld: warning: creating DT_TEXTREL in a PIE</span><br><span class="line">  ZOFFSET arch/x86/boot/zoffset.h</span><br><span class="line">  AS      arch/x86/boot/header.o</span><br><span class="line">  CC      arch/x86/boot/version.o</span><br><span class="line">  LD      arch/x86/boot/setup.elf</span><br><span class="line">  OBJCOPY arch/x86/boot/setup.bin</span><br><span class="line">  OBJCOPY arch/x86/boot/vmlinux.bin</span><br><span class="line">  BUILD   arch/x86/boot/bzImage</span><br><span class="line">Setup is 15580 bytes (padded to 15872 bytes).</span><br><span class="line">System is 6681 kB</span><br><span class="line">CRC 959cc45</span><br><span class="line">Kernel: arch/x86/boot/bzImage is ready  (#2)</span><br><span class="line">  Building modules, stage 2.</span><br><span class="line">  MODPOST 18 modules</span><br></pre></td></tr></table></figure>
+<p>现在内核启动时候就会自动加载我们的hello驱动，如果在menuconfig设置m而不是y（*） ，就会只生成.ko文件而不是直接加载，需要手动插入。</p>
+</li>
+</ol>
+
+          
+        
+      
+    </div>
+    
+    
+    
+
+    
+
+    
+
+    
+
+    <footer class="post-footer">
+      
+
+      
+
+      
+
+      
+      
+        <div class="post-eof"></div>
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+      
+    
+      
+      
+      
+        
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
     <link itemprop="mainEntityOfPage" href="http://hanze5.github.io/2022/05/23/15-Linux%E5%86%85%E6%A0%B8%E2%80%94%E2%80%94%E7%BC%96%E5%86%99%E6%9C%80%E7%AE%80%E5%8D%95%E7%9A%84%E5%AD%97%E7%AC%A6%E8%AE%BE%E5%A4%87%E9%A9%B1%E5%8A%A8/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
@@ -673,7 +843,7 @@
 </li>
 <li><p>让我们看看makefile文件都做了什么：</p>
 <figure class="highlight makefile"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">ifneq</span> (<span class="variable">$(KERNELRELEASE)</span>,)</span><br><span class="line">obj-m := helloDev.o                        </span><br><span class="line"><span class="keyword">else</span></span><br><span class="line">PWD := <span class="variable">$(<span class="built_in">shell</span> pwd)</span></span><br><span class="line">KDIR := /lib/modules/`uname -r`/build</span><br><span class="line"></span><br><span class="line"><span class="section">all:</span></span><br><span class="line">	make -C <span class="variable">$(KDIR)</span> M=<span class="variable">$(PWD)</span></span><br><span class="line"><span class="section">clean:	</span></span><br><span class="line">	rm -rf *.o *.ko *.mod.c *.symvers *.c~ *~</span><br><span class="line"><span class="keyword">endif</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 变量 KERNELRELEASE  由内核定义</span></span><br></pre></td></tr></table></figure>
-<p>首先，有一个寻找环境变量的判断语句，如果没找到的话，就会去到内核的根目录下执行内核的Makefile。这是因为驱动也需要链接c运行时库和glibc库，但是驱动不能链接和使用应用层的任何lib库，驱动需要引用内核的头文件和函数。所以，编译的时候需要指定内核源码的地址。这里我想在自己的环境里做实验比较方便，所以就把内核源码根目录设置为了本机内核源码的根目录。执行过后环境变量中便有了<code>KERNELRELEASE</code>。其实当前内核是否编译成功正常工作。内核的编译系统会将所有的obj-m变量中的.o文件链接成为.ko文件。这就是驱动文件的生成。</p>
+<p>首先，有一个寻找环境变量的判断语句，如果没找到的话，就会去到内核的根目录下执行内核的Makefile。这是因为驱动也需要链接c运行时库和glibc库，但是驱动不能链接和使用应用层的任何lib库，驱动需要引用内核的头文件和函数。所以，编译的时候需要指定内核源码的地址。这里我想在自己的环境里做实验比较方便，所以就把内核源码根目录设置为了本机内核源码的根目录。执行过后环境变量中便有了<code>KERNELRELEASE</code>。其实当前内核是否编译成功正常工作。,内核的编译系统会将所有的obj-m变量中的.o文件链接成为.ko文件,如果是obj-y 就编译内核里面。这就是驱动文件的生成。</p>
 </li>
 </ol>
 <h1 id="测试"><a href="#测试" class="headerlink" title="测试"></a>测试</h1><ol>
@@ -698,9 +868,10 @@
 <p>​        正常应用里面的read write函数是c库里面的函数，这两个函数的实现使用了系统调用。由应用层产生中断，陷入到内核里面，系统调用执行响相应动作，再把返回值返回给应用层用户空间。</p>
 <p>​        </p>
 <p>​    然后再次执行dmesg查看驱动输出，发现驱动里的hell_open, hello_write, hello_read被依次调用了。</p>
-<p>​            <img src="/images/15/1678022546541.png" alt="1678022546541"></p>
-<p>忽略两次初始化。。。。。。</p>
-<h1 id="完整代码："><a href="#完整代码：" class="headerlink" title="完整代码："></a><strong>完整代码：</strong></h1><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//helloDev.c</span></span><br><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;linux/module.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;linux/moduleparam.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;linux/cdev.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;linux/fs.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;linux/wait.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;linux/poll.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;linux/sched.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;linux/slab.h&gt;</span></span></span><br><span class="line"></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> BUFFER_MAX    (10)</span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> OK            (0)</span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> ERROR         (-1)</span></span><br><span class="line"></span><br><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">cdev</span> *<span class="title">gDev</span>;</span></span><br><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">file_operations</span> *<span class="title">gFile</span>;</span></span><br><span class="line"><span class="type">dev_t</span>  devNum;</span><br><span class="line"><span class="type">unsigned</span> <span class="type">int</span> subDevNum = <span class="number">1</span>;</span><br><span class="line"><span class="type">int</span> reg_major  =  <span class="number">232</span>;    </span><br><span class="line"><span class="type">int</span> reg_minor =   <span class="number">0</span>;</span><br><span class="line"><span class="type">char</span> *buffer;</span><br><span class="line"><span class="type">int</span> flag = <span class="number">0</span>;</span><br><span class="line"><span class="type">int</span> <span class="title function_">hello_open</span><span class="params">(<span class="keyword">struct</span> inode *p, <span class="keyword">struct</span> file *f)</span></span><br><span class="line">&#123;</span><br><span class="line">    printk(KERN_EMERG<span class="string">&quot;hello_open\r\n&quot;</span>);</span><br><span class="line">    <span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="type">ssize_t</span> <span class="title function_">hello_write</span><span class="params">(<span class="keyword">struct</span> file *f, <span class="type">const</span> <span class="type">char</span> __user *u, <span class="type">size_t</span> s, <span class="type">loff_t</span> *l)</span></span><br><span class="line">&#123;</span><br><span class="line">    printk(KERN_EMERG<span class="string">&quot;hello_write\r\n&quot;</span>);</span><br><span class="line">    <span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">&#125;</span><br><span class="line"><span class="type">ssize_t</span> <span class="title function_">hello_read</span><span class="params">(<span class="keyword">struct</span> file *f, <span class="type">char</span> __user *u, <span class="type">size_t</span> s, <span class="type">loff_t</span> *l)</span></span><br><span class="line">&#123;</span><br><span class="line">    printk(KERN_EMERG<span class="string">&quot;hello_read\r\n&quot;</span>);      </span><br><span class="line">    <span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">&#125;</span><br><span class="line"><span class="type">int</span> <span class="title function_">hello_init</span><span class="params">(<span class="type">void</span>)</span></span><br><span class="line">&#123;</span><br><span class="line">    <span class="comment">//根据主次设备号生成一个devnum 主次设备号可以唯一标识</span></span><br><span class="line">    devNum = MKDEV(reg_major, reg_minor);</span><br><span class="line">    <span class="comment">//将设备号注册到内核 </span></span><br><span class="line">    <span class="keyword">if</span>(OK == register_chrdev_region(devNum, subDevNum, <span class="string">&quot;helloworld&quot;</span>))&#123;</span><br><span class="line">        printk(KERN_EMERG<span class="string">&quot;register_chrdev_region ok \n&quot;</span>); </span><br><span class="line">    &#125;<span class="keyword">else</span> &#123;</span><br><span class="line">    printk(KERN_EMERG<span class="string">&quot;register_chrdev_region error n&quot;</span>);</span><br><span class="line">        <span class="keyword">return</span> ERROR;</span><br><span class="line">    &#125;</span><br><span class="line">    printk(KERN_EMERG<span class="string">&quot; hello driver init \n&quot;</span>);</span><br><span class="line">    <span class="comment">// struct cdev 是内核中的字符设备</span></span><br><span class="line">    gDev = kzalloc(<span class="keyword">sizeof</span>(<span class="keyword">struct</span> cdev), GFP_KERNEL);</span><br><span class="line">    <span class="comment">//初始化一个file结构体 代表设备</span></span><br><span class="line">    gFile = kzalloc(<span class="keyword">sizeof</span>(<span class="keyword">struct</span> file_operations), GFP_KERNEL);</span><br><span class="line"></span><br><span class="line">    <span class="comment">//给file结构体中的函数操作赋值   右侧是函数指针 指明操作</span></span><br><span class="line">    gFile-&gt;open = hello_open;</span><br><span class="line">    gFile-&gt;read = hello_read;</span><br><span class="line">    gFile-&gt;write = hello_write;</span><br><span class="line">    gFile-&gt;owner = THIS_MODULE;</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">    <span class="comment">//内核中找到设备号 就能找到cdev 与 file_operations</span></span><br><span class="line">    <span class="comment">//建立gDev 与 gFile之间的联系 里边没看但是肯定有两个之间的互动就是了</span></span><br><span class="line">    cdev_init(gDev, gFile);</span><br><span class="line">    <span class="comment">//又建立了gDev 与 设备号的联系</span></span><br><span class="line">    cdev_add(gDev, devNum, <span class="number">3</span>);</span><br><span class="line">    <span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">&#125;</span><br><span class="line"><span class="comment">//驱动的卸载</span></span><br><span class="line"><span class="type">void</span> __exit <span class="title function_">hello_exit</span><span class="params">(<span class="type">void</span>)</span></span><br><span class="line">&#123;</span><br><span class="line">    cdev_del(gDev);</span><br><span class="line">    unregister_chrdev_region(devNum, subDevNum);</span><br><span class="line">    <span class="keyword">return</span>;</span><br><span class="line">&#125;</span><br><span class="line">module_init(hello_init);</span><br><span class="line">module_exit(hello_exit);</span><br><span class="line">MODULE_LICENSE(<span class="string">&quot;GPL&quot;</span>);</span><br><span class="line"></span><br></pre></td></tr></table></figure>
+<p>​   <img src="/images/15/1678022546541.png" alt="1678022546541"></p>
+<pre><code>忽略两次初始化。。。。。。
+</code></pre><h2 id="添加到内核源码树"><a href="#添加到内核源码树" class="headerlink" title="添加到内核源码树"></a>添加到内核源码树</h2><pre><code>字符型设备放在 /driver/char 里头
+</code></pre><h1 id="完整代码："><a href="#完整代码：" class="headerlink" title="完整代码："></a><strong>完整代码：</strong></h1><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//helloDev.c</span></span><br><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;linux/module.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;linux/moduleparam.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;linux/cdev.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;linux/fs.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;linux/wait.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;linux/poll.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;linux/sched.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;linux/slab.h&gt;</span></span></span><br><span class="line"></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> BUFFER_MAX    (10)</span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> OK            (0)</span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> ERROR         (-1)</span></span><br><span class="line"></span><br><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">cdev</span> *<span class="title">gDev</span>;</span></span><br><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">file_operations</span> *<span class="title">gFile</span>;</span></span><br><span class="line"><span class="type">dev_t</span>  devNum;</span><br><span class="line"><span class="type">unsigned</span> <span class="type">int</span> subDevNum = <span class="number">1</span>;</span><br><span class="line"><span class="type">int</span> reg_major  =  <span class="number">232</span>;    </span><br><span class="line"><span class="type">int</span> reg_minor =   <span class="number">0</span>;</span><br><span class="line"><span class="type">char</span> *buffer;</span><br><span class="line"><span class="type">int</span> flag = <span class="number">0</span>;</span><br><span class="line"><span class="type">int</span> <span class="title function_">hello_open</span><span class="params">(<span class="keyword">struct</span> inode *p, <span class="keyword">struct</span> file *f)</span></span><br><span class="line">&#123;</span><br><span class="line">    printk(KERN_EMERG<span class="string">&quot;hello_open\r\n&quot;</span>);</span><br><span class="line">    <span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="type">ssize_t</span> <span class="title function_">hello_write</span><span class="params">(<span class="keyword">struct</span> file *f, <span class="type">const</span> <span class="type">char</span> __user *u, <span class="type">size_t</span> s, <span class="type">loff_t</span> *l)</span></span><br><span class="line">&#123;</span><br><span class="line">    printk(KERN_EMERG<span class="string">&quot;hello_write\r\n&quot;</span>);</span><br><span class="line">    <span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">&#125;</span><br><span class="line"><span class="type">ssize_t</span> <span class="title function_">hello_read</span><span class="params">(<span class="keyword">struct</span> file *f, <span class="type">char</span> __user *u, <span class="type">size_t</span> s, <span class="type">loff_t</span> *l)</span></span><br><span class="line">&#123;</span><br><span class="line">    printk(KERN_EMERG<span class="string">&quot;hello_read\r\n&quot;</span>);      </span><br><span class="line">    <span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">&#125;</span><br><span class="line"><span class="type">int</span> <span class="title function_">hello_init</span><span class="params">(<span class="type">void</span>)</span></span><br><span class="line">&#123;</span><br><span class="line">    <span class="comment">//根据主次设备号生成一个devnum 主次设备号可以唯一标识</span></span><br><span class="line">    devNum = MKDEV(reg_major, reg_minor);</span><br><span class="line">    <span class="comment">//将设备号注册到内核 </span></span><br><span class="line">    <span class="keyword">if</span>(OK == register_chrdev_region(devNum, subDevNum, <span class="string">&quot;helloworld&quot;</span>))&#123;</span><br><span class="line">        printk(KERN_EMERG<span class="string">&quot;register_chrdev_region ok \n&quot;</span>); </span><br><span class="line">    &#125;<span class="keyword">else</span> &#123;</span><br><span class="line">    printk(KERN_EMERG<span class="string">&quot;register_chrdev_region error n&quot;</span>);</span><br><span class="line">        <span class="keyword">return</span> ERROR;</span><br><span class="line">    &#125;</span><br><span class="line">    printk(KERN_EMERG<span class="string">&quot; hello driver init \n&quot;</span>);</span><br><span class="line">    <span class="comment">// struct cdev 是内核中的字符设备</span></span><br><span class="line">    gDev = kzalloc(<span class="keyword">sizeof</span>(<span class="keyword">struct</span> cdev), GFP_KERNEL);</span><br><span class="line">    <span class="comment">//初始化一个file结构体 代表设备</span></span><br><span class="line">    gFile = kzalloc(<span class="keyword">sizeof</span>(<span class="keyword">struct</span> file_operations), GFP_KERNEL);</span><br><span class="line"></span><br><span class="line">    <span class="comment">//给file结构体中的函数操作赋值   右侧是函数指针 指明操作</span></span><br><span class="line">    gFile-&gt;open = hello_open;</span><br><span class="line">    gFile-&gt;read = hello_read;</span><br><span class="line">    gFile-&gt;write = hello_write;</span><br><span class="line">    gFile-&gt;owner = THIS_MODULE;</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">    <span class="comment">//内核中找到设备号 就能找到cdev 与 file_operations</span></span><br><span class="line">    <span class="comment">//建立gDev 与 gFile之间的联系 里边没看但是肯定有两个之间的互动就是了</span></span><br><span class="line">    cdev_init(gDev, gFile);</span><br><span class="line">    <span class="comment">//又建立了gDev 与 设备号的联系</span></span><br><span class="line">    cdev_add(gDev, devNum, <span class="number">3</span>);</span><br><span class="line">    <span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">&#125;</span><br><span class="line"><span class="comment">//驱动的卸载</span></span><br><span class="line"><span class="type">void</span> __exit <span class="title function_">hello_exit</span><span class="params">(<span class="type">void</span>)</span></span><br><span class="line">&#123;</span><br><span class="line">    cdev_del(gDev);</span><br><span class="line">    unregister_chrdev_region(devNum, subDevNum);</span><br><span class="line">    <span class="keyword">return</span>;</span><br><span class="line">&#125;</span><br><span class="line">module_init(hello_init);</span><br><span class="line">module_exit(hello_exit);</span><br><span class="line">MODULE_LICENSE(<span class="string">&quot;GPL&quot;</span>);</span><br><span class="line"></span><br></pre></td></tr></table></figure>
 <figure class="highlight makefile"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">##Makefile</span></span><br><span class="line"><span class="keyword">ifneq</span> (<span class="variable">$(KERNELRELEASE)</span>,)</span><br><span class="line">obj-m := helloDev.o                        </span><br><span class="line"><span class="keyword">else</span></span><br><span class="line">PWD := <span class="variable">$(<span class="built_in">shell</span> pwd)</span></span><br><span class="line"><span class="comment"># KDIR:= /lib/modules/4.4.0-31-generic/build</span></span><br><span class="line"><span class="comment"># KDIR:=/home/dawnlake/Downloads/linux-4.9.229</span></span><br><span class="line">KDIR := /lib/modules/`uname -r`/build</span><br><span class="line"><span class="section">all:</span></span><br><span class="line">	make -C <span class="variable">$(KDIR)</span> M=<span class="variable">$(PWD)</span></span><br><span class="line"><span class="section">clean:	</span></span><br><span class="line">	rm -rf *.o *.ko *.mod.c *.symvers *.c~ *~</span><br><span class="line"><span class="keyword">endif</span></span><br><span class="line"></span><br></pre></td></tr></table></figure>
 <figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;fcntl.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;stdio.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;string.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;sys/select.h&gt;</span></span></span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> DATA_NUM    (64)</span></span><br><span class="line"><span class="type">int</span> <span class="title function_">main</span><span class="params">(<span class="type">int</span> argc, <span class="type">char</span> *argv[])</span></span><br><span class="line">&#123;</span><br><span class="line">    <span class="type">int</span> fd, i;</span><br><span class="line">    <span class="type">int</span> r_len, w_len;</span><br><span class="line">    fd_set fdset;</span><br><span class="line">    <span class="type">char</span> buf[DATA_NUM]=<span class="string">&quot;hello world&quot;</span>;</span><br><span class="line">    <span class="built_in">memset</span>(buf,<span class="number">0</span>,DATA_NUM);</span><br><span class="line">    fd = open(<span class="string">&quot;/dev/hello&quot;</span>, O_RDWR);</span><br><span class="line">	<span class="built_in">printf</span>(<span class="string">&quot;%d\r\n&quot;</span>,fd);</span><br><span class="line">    <span class="keyword">if</span>(<span class="number">-1</span> == fd) &#123;</span><br><span class="line">      	perror(<span class="string">&quot;open file error\r\n&quot;</span>);</span><br><span class="line">		<span class="keyword">return</span> <span class="number">-1</span>;</span><br><span class="line">    &#125;	</span><br><span class="line">	<span class="keyword">else</span> &#123;</span><br><span class="line">		<span class="built_in">printf</span>(<span class="string">&quot;open successe\r\n&quot;</span>);</span><br><span class="line">	&#125;</span><br><span class="line">    </span><br><span class="line">    w_len = write(fd,buf, DATA_NUM);</span><br><span class="line">    r_len = read(fd, buf, DATA_NUM);</span><br><span class="line">    <span class="built_in">printf</span>(<span class="string">&quot;%d %d\r\n&quot;</span>, w_len, r_len);</span><br><span class="line">    <span class="built_in">printf</span>(<span class="string">&quot;%s\r\n&quot;</span>,buf);</span><br><span class="line"></span><br><span class="line">    <span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
 
@@ -1949,177 +2120,6 @@
 
       
     
-      
-      
-      
-        
-
-  
-
-  
-  
-  
-
-  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
-  
-  
-  
-  <div class="post-block">
-    <link itemprop="mainEntityOfPage" href="http://hanze5.github.io/2022/01/02/5.%E9%9D%99%E6%80%81%E5%BA%93%E5%92%8C%E5%8A%A8%E6%80%81%E5%BA%93/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="name" content="">
-      <meta itemprop="description" content="">
-      <meta itemprop="image" content="/images/my_avatar.png">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="也许不会有人进来吧">
-    </span>
-
-    
-      <header class="post-header">
-
-        
-        
-          <h1 class="post-title" itemprop="name headline">
-                
-                <a class="post-title-link" href="/2022/01/02/5.%E9%9D%99%E6%80%81%E5%BA%93%E5%92%8C%E5%8A%A8%E6%80%81%E5%BA%93/" itemprop="url">静态库和动态库</a></h1>
-        
-
-        <div class="post-meta">
-          <span class="post-time">
-            
-              <span class="post-meta-item-icon">
-                <i class="fa fa-calendar-o"></i>
-              </span>
-              
-                <span class="post-meta-item-text">发表于</span>
-              
-              <time title="创建于" itemprop="dateCreated datePublished" datetime="2022-01-02T19:11:53+08:00">
-                2022-01-02
-              </time>
-            
-
-            
-
-            
-          </span>
-
-          
-            <span class="post-category" >
-            
-              <span class="post-meta-divider">|</span>
-            
-              <span class="post-meta-item-icon">
-                <i class="fa fa-folder-o"></i>
-              </span>
-              
-                <span class="post-meta-item-text">分类于</span>
-              
-              
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/%E5%AD%A6%E6%97%A0%E6%AD%A2%E5%A2%83/" itemprop="url" rel="index">
-                    <span itemprop="name">学无止境</span>
-                  </a>
-                </span>
-
-                
-                
-              
-            </span>
-          
-
-          
-            
-          
-
-          
-          
-
-          
-
-          
-
-          
-
-        </div>
-      </header>
-    
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-      
-
-      
-        
-          
-            <h1 id="静态库和动态库"><a href="#静态库和动态库" class="headerlink" title="静态库和动态库"></a>静态库和动态库</h1><h2 id="什么是库"><a href="#什么是库" class="headerlink" title="什么是库"></a>什么是库</h2><p>库文件是计算机上的一类文件，可以简单的把库文件看成一种代码仓库，它提供给使用者一些可以直接拿来用的变量、类、函数等<br>库是一种特殊的程序，编写库文件和编写一般的程序的区别不大，只是库文件不能单独运行。<br>库文件有两种，静态库和动态库(共享库) ，他们的<strong>区别是</strong></p>
-<ul>
-<li>​    静态库在程序的链接阶段就被复制到了程序中，</li>
-<li>​    而动态库在链接阶段只是被记录的一些信息(如文件名)，而没有把动态库复制到程序中，而是在程序运行 阶段由系统动态加载到内存中供程序调用。</li>
-</ul>
-<p>库的好处：代码保密(c++程序即使被反编译也只能还原20%左右) 、方便部署和发布    </p>
-<h2 id="静态库命名规则："><a href="#静态库命名规则：" class="headerlink" title="静态库命名规则："></a>静态库命名规则：</h2><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">linux：libxxx.a</span><br><span class="line">	lib:固定前缀</span><br><span class="line">	xxx:库的名字</span><br><span class="line">	 .a:固定后缀</span><br><span class="line">windows：libxxx.lib</span><br></pre></td></tr></table></figure>
-<h2 id="静态库的制作"><a href="#静态库的制作" class="headerlink" title="静态库的制作"></a>静态库的制作</h2><p>​    gcc获得.o文件</p>
-<p>​    将.o文件打包，使用ar工具（archive)</p>
-<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">ar rcs libxxx.a xxx.o xxx.o</span><br><span class="line"><span class="meta prompt_">#</span><span class="language-bash">r - 将文件插入备存文件中</span></span><br><span class="line"><span class="meta prompt_">#</span><span class="language-bash">c - 建立备存文件</span></span><br><span class="line"><span class="meta prompt_">#</span><span class="language-bash">s - 索引</span></span><br></pre></td></tr></table></figure>
-<p><img src="/images/5/1677754140889.png" alt="1677754140889"></p>
-<p>库文件需要头文件配合一起使用，因为头文件知名库文件里实现的函数。</p>
-<p>编译时</p>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">-I 头文件目录  -l库文件 -L库文件路径</span><br></pre></td></tr></table></figure>
-<h2 id="动态库命名规则："><a href="#动态库命名规则：" class="headerlink" title="动态库命名规则："></a>动态库命名规则：</h2><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">linux：libxxx.so</span><br><span class="line">	lib:固定前缀</span><br><span class="line">	xxx:库的名字</span><br><span class="line">	.so:固定后缀</span><br><span class="line">	linux下动态库是一个可执行文件</span><br><span class="line">windows：libxxx.dll</span><br></pre></td></tr></table></figure>
-<h2 id="动态库的制作"><a href="#动态库的制作" class="headerlink" title="动态库的制作"></a>动态库的制作</h2><p>​    gcc获得.o文件,得到和位置无关的代码</p>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">gcc -c -fpic/-fPIC a.c b.c</span><br><span class="line">gcc -share a.o b.o -o libxxx.so</span><br></pre></td></tr></table></figure>
-<p>​    这里就不制作了 挺简单的。</p>
-<h2 id="静态库和动态库的工作原理"><a href="#静态库和动态库的工作原理" class="headerlink" title="静态库和动态库的工作原理"></a>静态库和动态库的工作原理</h2><p>静态库:GCC进行链接时,会把静态库中的代码打包到可执行程序中</p>
-<p>动态库:GCC进行链接时,动态库的代码不会被打包到可执行程序中 在程序启动之后，动态库会被动态加载到内存中。但是可以被多个程序共享（shared）</p>
-<p>通过ldd(list dynamic dependcies)命令检查可执行文件动态库依赖关系 </p>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">ldd a.out</span><br></pre></td></tr></table></figure>
-<h2 id="区别"><a href="#区别" class="headerlink" title="区别"></a>区别</h2><p><img src="/images/5/1677755090849.png" alt="1677755090849"></p>
-<p><img src="/images/5/1677755114608.png" alt="1677755114608"></p>
-<p><img src="/images/5/1677755128214.png" alt="1677755128214"></p>
-<p><img src="/images/5/1677755166902.png" alt="1677755166902"></p>
-
-          
-        
-      
-    </div>
-    
-    
-    
-
-    
-
-    
-
-    
-
-    <footer class="post-footer">
-      
-
-      
-
-      
-
-      
-      
-        <div class="post-eof"></div>
-      
-    </footer>
-  </div>
-  
-  
-  
-  </article>
-
-
-      
-    
   </section>
 
   
@@ -2174,7 +2174,7 @@
               
                 <a href="/">
               
-                  <span class="site-state-item-count">15</span>
+                  <span class="site-state-item-count">16</span>
                   <span class="site-state-item-name">日志</span>
                 </a>
               </div>
