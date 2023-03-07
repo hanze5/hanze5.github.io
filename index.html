@@ -1550,6 +1550,350 @@
   
   
   <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="http://hanze5.github.io/2022/07/20/25-Linux%E5%86%85%E6%A0%B8%E2%80%94%E2%80%94%E8%BD%AF%E4%B8%AD%E6%96%AD%E7%9A%84%E7%89%B9%E7%82%B9%E4%BB%A5%E5%8F%8A%E6%B3%A8%E5%86%8C%E5%92%8C%E8%A7%A6%E5%8F%91/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/images/my_avatar.png">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="也许不会有人进来吧">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+                
+                <a class="post-title-link" href="/2022/07/20/25-Linux%E5%86%85%E6%A0%B8%E2%80%94%E2%80%94%E8%BD%AF%E4%B8%AD%E6%96%AD%E7%9A%84%E7%89%B9%E7%82%B9%E4%BB%A5%E5%8F%8A%E6%B3%A8%E5%86%8C%E5%92%8C%E8%A7%A6%E5%8F%91/" itemprop="url">Linux内核——软中断的特点以及注册和触发</a></h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2022-07-20T21:36:54+08:00">
+                2022-07-20
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E5%AD%A6%E6%97%A0%E6%AD%A2%E5%A2%83/" itemprop="url" rel="index">
+                    <span itemprop="name">学无止境</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+          
+
+          
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        
+          
+            <p>跟着简叔学的，可以B站搜索 <strong>简说linux</strong></p>
+<h2 id="1-软中断一般是哪些"><a href="#1-软中断一般是哪些" class="headerlink" title="1.软中断一般是哪些"></a>1.软中断一般是哪些</h2><p>硬件中断往往处理简单的操作，触发由外设发出。一般申请内存，保存数据一般由（底半部）来实现，在内核中有三种底半部BH，软中断、tasklet ，工作队列。工作队列是一个内核的线程，tasklet是基于软中断来实现。对于软中断来说，处理函数是可以同时运行在多个cpu之上，tasklet只能运行在唯一一个cpu上。</p>
+<p>内核中定义了几种常用的软中断 /kernel/softirq.c</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//软中断处理函数</span></span><br><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">softirq_action</span></span></span><br><span class="line"><span class="class">&#123;</span></span><br><span class="line">	<span class="type">void</span>	(*action)(<span class="keyword">struct</span> softirq_action *);</span><br><span class="line">&#125;;</span><br><span class="line"></span><br><span class="line"><span class="type">static</span> <span class="class"><span class="keyword">struct</span> <span class="title">softirq_action</span> <span class="title">softirq_vec</span>[<span class="title">NR_SOFTIRQS</span>] __<span class="title">cacheline_aligned_in_smp</span>;</span></span><br><span class="line"></span><br><span class="line">DEFINE_PER_CPU(<span class="keyword">struct</span> task_struct *, ksoftirqd);</span><br><span class="line"></span><br><span class="line"><span class="type">const</span> <span class="type">char</span> * <span class="type">const</span> softirq_to_name[NR_SOFTIRQS] = &#123;</span><br><span class="line">	<span class="string">&quot;HI&quot;</span>, <span class="string">&quot;TIMER&quot;</span>, <span class="string">&quot;NET_TX&quot;</span>, <span class="string">&quot;NET_RX&quot;</span>, <span class="string">&quot;BLOCK&quot;</span>, <span class="string">&quot;IRQ_POLL&quot;</span>,</span><br><span class="line">	<span class="string">&quot;TASKLET&quot;</span>, <span class="string">&quot;SCHED&quot;</span>, <span class="string">&quot;HRTIMER&quot;</span>, <span class="string">&quot;RCU&quot;</span></span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+<h2 id="2-软中断的使用"><a href="#2-软中断的使用" class="headerlink" title="2.软中断的使用"></a>2.软中断的使用</h2><p>软中断的使用可以分为3步，软中断的注册，触发，与执行</p>
+<h3 id="2-1软中断的注册"><a href="#2-1软中断的注册" class="headerlink" title="2.1软中断的注册"></a>2.1软中断的注册</h3><p>其实就是给第nr个软中断的操作设为 action</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">void</span> <span class="title function_">open_softirq</span><span class="params">(<span class="type">int</span> nr, <span class="type">void</span> (*action)(<span class="keyword">struct</span> softirq_action *))</span></span><br><span class="line">&#123;</span><br><span class="line">	softirq_vec[nr].action = action;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>很多地方都用到了软中断的注册。</p>
+<p><img src="/images/25/1678178880618.png" alt="1678178880618"></p>
+<p>在软中断的初始化环节，注册了两个软中断，tasklet与Hi</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">void</span> __init <span class="title function_">softirq_init</span><span class="params">(<span class="type">void</span>)</span></span><br><span class="line">&#123;</span><br><span class="line">	<span class="type">int</span> cpu;</span><br><span class="line"></span><br><span class="line">	for_each_possible_cpu(cpu) &#123;</span><br><span class="line">		per_cpu(tasklet_vec, cpu).tail =</span><br><span class="line">			&amp;per_cpu(tasklet_vec, cpu).head;</span><br><span class="line">		per_cpu(tasklet_hi_vec, cpu).tail =</span><br><span class="line">			&amp;per_cpu(tasklet_hi_vec, cpu).head;</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	open_softirq(TASKLET_SOFTIRQ, tasklet_action);</span><br><span class="line">	open_softirq(HI_SOFTIRQ, tasklet_hi_action);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">//其中tasklet_action就是tasklet的处理逻辑</span></span><br><span class="line"><span class="type">static</span> __latent_entropy <span class="type">void</span> <span class="title function_">tasklet_action</span><span class="params">(<span class="keyword">struct</span> softirq_action *a)</span></span><br><span class="line">&#123;</span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">tasklet_struct</span> *<span class="title">list</span>;</span></span><br><span class="line"></span><br><span class="line">	local_irq_disable();</span><br><span class="line">	<span class="built_in">list</span> = __this_cpu_read(tasklet_vec.head);</span><br><span class="line">	__this_cpu_write(tasklet_vec.head, <span class="literal">NULL</span>);</span><br><span class="line">	__this_cpu_write(tasklet_vec.tail, this_cpu_ptr(&amp;tasklet_vec.head));</span><br><span class="line">	local_irq_enable();</span><br><span class="line"></span><br><span class="line">	<span class="keyword">while</span> (<span class="built_in">list</span>) &#123;</span><br><span class="line">		<span class="class"><span class="keyword">struct</span> <span class="title">tasklet_struct</span> *<span class="title">t</span> =</span> <span class="built_in">list</span>;</span><br><span class="line"></span><br><span class="line">		<span class="built_in">list</span> = <span class="built_in">list</span>-&gt;next;</span><br><span class="line"></span><br><span class="line">		<span class="keyword">if</span> (tasklet_trylock(t)) &#123;</span><br><span class="line">			<span class="keyword">if</span> (!<span class="type">atomic_read</span>(&amp;t-&gt;count)) &#123;</span><br><span class="line">				<span class="keyword">if</span> (!test_and_clear_bit(TASKLET_STATE_SCHED,</span><br><span class="line">							&amp;t-&gt;state))</span><br><span class="line">					BUG();</span><br><span class="line">				t-&gt;func(t-&gt;data);</span><br><span class="line">				tasklet_unlock(t);</span><br><span class="line">				<span class="keyword">continue</span>;</span><br><span class="line">			&#125;</span><br><span class="line">			tasklet_unlock(t);</span><br><span class="line">		&#125;</span><br><span class="line"></span><br><span class="line">		local_irq_disable();</span><br><span class="line">		t-&gt;next = <span class="literal">NULL</span>;</span><br><span class="line">		*__this_cpu_read(tasklet_vec.tail) = t;</span><br><span class="line">		__this_cpu_write(tasklet_vec.tail, &amp;(t-&gt;next));</span><br><span class="line">		__raise_softirq_irqoff(TASKLET_SOFTIRQ);</span><br><span class="line">		local_irq_enable();</span><br><span class="line">	&#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h3 id="2-2软中断的触发"><a href="#2-2软中断的触发" class="headerlink" title="2.2软中断的触发"></a>2.2软中断的触发</h3><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">void</span> <span class="title function_">raise_softirq</span><span class="params">(<span class="type">unsigned</span> <span class="type">int</span> nr)</span></span><br><span class="line">&#123;</span><br><span class="line">	<span class="type">unsigned</span> <span class="type">long</span> flags;</span><br><span class="line">	<span class="comment">//首先禁止本机中断  就是所有中断</span></span><br><span class="line">	local_irq_save(flags);</span><br><span class="line">	raise_softirq_irqoff(nr);</span><br><span class="line">    </span><br><span class="line">	local_irq_restore(flags);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">//调用这个函数之前  一定是已经禁止了本机中断</span></span><br><span class="line"><span class="keyword">inline</span> <span class="type">void</span> <span class="title function_">raise_softirq_irqoff</span><span class="params">(<span class="type">unsigned</span> <span class="type">int</span> nr)</span></span><br><span class="line">&#123;</span><br><span class="line">	__raise_softirq_irqoff(nr);</span><br><span class="line"></span><br><span class="line">	<span class="comment">/*</span></span><br><span class="line"><span class="comment">	 * If we&#x27;re in an interrupt or softirq, we&#x27;re done</span></span><br><span class="line"><span class="comment">	 * (this also catches softirq-disabled code). We will</span></span><br><span class="line"><span class="comment">	 * actually run the softirq once we return from</span></span><br><span class="line"><span class="comment">	 * the irq or softirq.</span></span><br><span class="line"><span class="comment">	 *</span></span><br><span class="line"><span class="comment">	 * Otherwise we wake up ksoftirqd to make sure we</span></span><br><span class="line"><span class="comment">	 * schedule the softirq soon.</span></span><br><span class="line"><span class="comment">	 */</span></span><br><span class="line">	<span class="keyword">if</span> (!in_interrupt())</span><br><span class="line">		wakeup_softirqd();</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="type">void</span> __raise_softirq_irqoff(<span class="type">unsigned</span> <span class="type">int</span> nr)</span><br><span class="line">&#123;</span><br><span class="line">	trace_softirq_raise(nr);</span><br><span class="line">	or_softirq_pending(<span class="number">1UL</span> &lt;&lt; nr);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>层层寻找下去之后，会有一个软件中断寄存器结构的定义。每个外设都会有一个硬件中断寄存器，硬件寄存器中每一个bit都代表着某一类型的硬件设备中断。对于软件中断来讲，也会有不同类型的软件中断，那么同理。软件中断寄存器也会将某一位置一从而判断哪一个类型的软件中断类型被触发。触发软中断时，会将中断号放到触发中断的cpu的软件寄存器里边。</p>
+<h3 id="2-3软中断的执行"><a href="#2-3软中断的执行" class="headerlink" title="2.3软中断的执行"></a>2.3软中断的执行</h3><p><img src="/images/25/1678185060977.png" alt="1678185060977"></p>
+<h4 id="2-3-1执行时机"><a href="#2-3-1执行时机" class="headerlink" title="2.3.1执行时机"></a>2.3.1执行时机</h4><h5 id="2-3-1-1-ksoftirqd线程"><a href="#2-3-1-1-ksoftirqd线程" class="headerlink" title="2.3.1.1 ksoftirqd线程"></a>2.3.1.1 ksoftirqd线程</h5><p>软中断初始化时候回调用，<code>spawn_ksoftirqd</code>，创建一个线程，每个cpu都会创建这个线程。</p>
+<p><img src="/images/25/1678185992489.png" alt="1678185992489"></p>
+<p>去看看 run_ksoftirqd具体执行了什么</p>
+<p><img src="/images/25/1678186119041.png" alt="1678186119041"></p>
+<p>首先有一个中断打开的动作，执行软中断时候必须要打开中断。然后<code>local_softirq_pending()</code>可以判断软中段的发生，然后由__do_softirq()执行中断处理的逻辑。</p>
+<h5 id="2-3-1-2-硬件中断返回irq-exit"><a href="#2-3-1-2-硬件中断返回irq-exit" class="headerlink" title="2.3.1.2 硬件中断返回irq_exit()"></a>2.3.1.2 硬件中断返回irq_exit()</h5><p>kernel/softirq.c</p>
+<p><img src="/images/25/1678186601545.png" alt="1678186601545"></p>
+<p><code>ivoke_softirq</code>会处理cpu上面待处理的软中断，</p>
+<p><img src="/images/25/1678186695049.png" alt="1678186695049"></p>
+<p>最终会调用 __do_softirq. 也就是最终的</p>
+<h5 id="2-3-1-3-直接调用，例如在网络子系统等"><a href="#2-3-1-3-直接调用，例如在网络子系统等" class="headerlink" title="2.3.1.3 直接调用，例如在网络子系统等"></a>2.3.1.3 直接调用，例如在网络子系统等</h5><p>找到最后也是直接调用 _do_softirq，所以说都是调用 _do_softirq函数。</p>
+<h4 id="2-3-2执行过程"><a href="#2-3-2执行过程" class="headerlink" title="2.3.2执行过程"></a>2.3.2执行过程</h4><p>执行过程就是上文说的<code>_do_softirq</code>函数，如何保证触发软中断的cpu也去执行这个中断处理，如果实现中断优先级，</p>
+<p>kernel/softirq.c</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br></pre></td><td class="code"><pre><span class="line">asmlinkage __visible <span class="type">void</span> __softirq_entry __do_softirq(<span class="type">void</span>)</span><br><span class="line">&#123;</span><br><span class="line">	<span class="type">unsigned</span> <span class="type">long</span> end = jiffies + MAX_SOFTIRQ_TIME;</span><br><span class="line">	<span class="type">unsigned</span> <span class="type">long</span> old_flags = current-&gt;flags;</span><br><span class="line">	<span class="type">int</span> max_restart = MAX_SOFTIRQ_RESTART;</span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">softirq_action</span> *<span class="title">h</span>;</span></span><br><span class="line">	<span class="type">bool</span> in_hardirq;</span><br><span class="line">	__u32 pending;</span><br><span class="line">	<span class="type">int</span> softirq_bit;</span><br><span class="line"></span><br><span class="line">	<span class="comment">/*</span></span><br><span class="line"><span class="comment">	 * Mask out PF_MEMALLOC s current task context is borrowed for the</span></span><br><span class="line"><span class="comment">	 * softirq. A softirq handled such as network RX might set PF_MEMALLOC</span></span><br><span class="line"><span class="comment">	 * again if the socket is related to swap</span></span><br><span class="line"><span class="comment">	 */</span></span><br><span class="line">	current-&gt;flags &amp;= ~PF_MEMALLOC;</span><br><span class="line"></span><br><span class="line">	pending = local_softirq_pending(); <span class="comment">//获取未决软中断， 这个是每个cpu都有自己的寄存器实现了谁触发就谁处理。</span></span><br><span class="line">	account_irq_enter_time(current);</span><br><span class="line"></span><br><span class="line">	__local_bh_disable_ip(_RET_IP_, SOFTIRQ_OFFSET); <span class="comment">//把那个preemtycount软中断位置1</span></span><br><span class="line">	in_hardirq = lockdep_softirq_start();</span><br><span class="line"></span><br><span class="line">restart:</span><br><span class="line">	<span class="comment">/* Reset the pending bitmask before enabling irqs */</span></span><br><span class="line">	set_softirq_pending(<span class="number">0</span>);   <span class="comment">//软中断寄存器清零</span></span><br><span class="line"></span><br><span class="line">	local_irq_enable();        <span class="comment">//打开本机中断</span></span><br><span class="line"></span><br><span class="line">	h = softirq_vec;           <span class="comment">//softirq_vec 是数组 所以h是基地址</span></span><br><span class="line"></span><br><span class="line">	<span class="keyword">while</span> ((softirq_bit = ffs(pending))) &#123;   <span class="comment">//依次之执行未决软中断   位数高的先执行</span></span><br><span class="line">		<span class="type">unsigned</span> <span class="type">int</span> vec_nr;</span><br><span class="line">		<span class="type">int</span> prev_count;</span><br><span class="line"></span><br><span class="line">		h += softirq_bit - <span class="number">1</span>;             <span class="comment">//这次要处理的软中断地址</span></span><br><span class="line"></span><br><span class="line">		vec_nr = h - softirq_vec;</span><br><span class="line">		prev_count = preempt_count();</span><br><span class="line"></span><br><span class="line">		kstat_incr_softirqs_this_cpu(vec_nr);</span><br><span class="line"></span><br><span class="line">		trace_softirq_entry(vec_nr);</span><br><span class="line">		h-&gt;action(h);                     <span class="comment">//然后就可以调用action执行具体这个软中断类型的action</span></span><br><span class="line">		trace_softirq_exit(vec_nr);</span><br><span class="line">		<span class="keyword">if</span> (unlikely(prev_count != preempt_count())) &#123;</span><br><span class="line">			pr_err(<span class="string">&quot;huh, entered softirq %u %s %p with preempt_count %08x, exited with %08x?\n&quot;</span>,</span><br><span class="line">			       vec_nr, softirq_to_name[vec_nr], h-&gt;action,</span><br><span class="line">			       prev_count, preempt_count());</span><br><span class="line">			preempt_count_set(prev_count);</span><br><span class="line">		&#125;</span><br><span class="line">		h++;</span><br><span class="line">		pending &gt;&gt;= softirq_bit;</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	rcu_bh_qs();</span><br><span class="line">	local_irq_disable();   <span class="comment">//关闭中断</span></span><br><span class="line"></span><br><span class="line">    <span class="comment">//这里就是优先级实现如果当前还有没有处理的软中断 </span></span><br><span class="line">	pending = local_softirq_pending();  </span><br><span class="line">	<span class="keyword">if</span> (pending) &#123;                      <span class="comment">//并且执行的时间较少，当前没有更高优先级的进程去抢占，重启次数&lt;10次</span></span><br><span class="line">		<span class="keyword">if</span> (time_before(jiffies, end) &amp;&amp; !need_resched() &amp;&amp;</span><br><span class="line">		    --max_restart)				<span class="comment">//那么</span></span><br><span class="line">			<span class="keyword">goto</span> restart;</span><br><span class="line"></span><br><span class="line">		wakeup_softirqd();</span><br><span class="line">	&#125;</span><br><span class="line">	</span><br><span class="line">    <span class="comment">//推出软中断上下文环境</span></span><br><span class="line">	lockdep_softirq_end(in_hardirq);</span><br><span class="line">	account_irq_exit_time(current);</span><br><span class="line">	__local_bh_enable(SOFTIRQ_OFFSET);</span><br><span class="line">	WARN_ON_ONCE(in_interrupt());</span><br><span class="line">	tsk_restore_flags(current, old_flags, PF_MEMALLOC);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>那么软中断是可以被硬中断打断执行的，比如我们在软执行的时候，突然又来了硬件中断。，开始执行硬件中断。</p>
+
+          
+        
+      
+    </div>
+    
+    
+    
+
+    
+
+    
+
+    
+
+    <footer class="post-footer">
+      
+
+      
+
+      
+
+      
+      
+        <div class="post-eof"></div>
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+      
+    
+      
+      
+      
+        
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="http://hanze5.github.io/2022/07/17/24-Linux%E5%86%85%E6%A0%B8%E2%80%94%E2%80%94%E4%B8%AD%E6%96%AD%E4%B8%8A%E4%B8%8B%E6%96%87/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/images/my_avatar.png">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="也许不会有人进来吧">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+                
+                <a class="post-title-link" href="/2022/07/17/24-Linux%E5%86%85%E6%A0%B8%E2%80%94%E2%80%94%E4%B8%AD%E6%96%AD%E4%B8%8A%E4%B8%8B%E6%96%87/" itemprop="url">Linux内核——中断上下文</a></h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2022-07-17T16:17:23+08:00">
+                2022-07-17
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E5%AD%A6%E6%97%A0%E6%AD%A2%E5%A2%83/" itemprop="url" rel="index">
+                    <span itemprop="name">学无止境</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+          
+
+          
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        
+          
+            <p>跟着简叔学的，可以B站搜索 <strong>简说linux</strong></p>
+<h1 id="1-上下文"><a href="#1-上下文" class="headerlink" title="1.上下文"></a>1.上下文</h1><h3 id="1-1中断的种类如上下文判断方式"><a href="#1-1中断的种类如上下文判断方式" class="headerlink" title="1.1中断的种类如上下文判断方式"></a>1.1中断的种类如上下文判断方式</h3><p>中断可分为软件中断和硬件中断。或者BH ，这个BH是什么东西去查了查，说是软中断的实现方式，已经被弃用了。</p>
+<p>之前讲过内核中的进程描述方式struct task_struct 中有一个thread_info，他之中保留着不同架构的对于进程的描述信息。其中有一个属性是下面这个。 32bit的变量</p>
+<p><img src="/images/24/1678170873661.png" alt="1678170873661"></p>
+<p>红色部分描述当前硬中断嵌套的深度，0的话就是不是中断，不允许中断嵌套执行的话就只有0，1两种。</p>
+<p>绿色部分第8位是软中断，1的话就是软中断的处理上下文，9~15大于0也表示软中断。蓝色部分表示当前进程是否可以被抢占如果是0就是可以被抢占反之就是不能被抢占。</p>
+<p>include/linux/preempt.h</p>
+<p><img src="/images/24/1678171398820.png" alt="1678171398820"></p>
+<p>通过这些函数来确定出狱生么上下问之中，可以看到都是在用上面说的preemtycount做位运算。通过current-&gt;threadinfo得到threadinfo 然后就能得到preemtycount ，这样就能直到当前处于什么上下文</p>
+<h3 id="1-2-调用上面函数的案例"><a href="#1-2-调用上面函数的案例" class="headerlink" title="1.2 调用上面函数的案例"></a>1.2 调用上面函数的案例</h3><p> arm中 handle_irq是处理中断的总入口，arch/arm/kernel/irq.c</p>
+<p><img src="/images/24/1678172574530.png" alt="1678172574530"></p>
+<p>/kernel/irq/irqdesc.c。</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#<span class="keyword">ifdef</span> CONFIG_HANDLE_DOMAIN_IRQ</span></span><br><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment"> * __handle_domain_irq - Invoke the handler for a HW irq belonging to a domain</span></span><br><span class="line"><span class="comment"> * @domain:	The domain where to perform the lookup</span></span><br><span class="line"><span class="comment"> * @hwirq:	The HW irq number to convert to a logical one</span></span><br><span class="line"><span class="comment"> * @lookup:	Whether to perform the domain lookup or not</span></span><br><span class="line"><span class="comment"> * @regs:	Register file coming from the low-level handling code</span></span><br><span class="line"><span class="comment"> *</span></span><br><span class="line"><span class="comment"> * Returns:	0 on success, or -EINVAL if conversion has failed</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="type">int</span> __handle_domain_irq(<span class="keyword">struct</span> irq_domain *domain, <span class="type">unsigned</span> <span class="type">int</span> hwirq,</span><br><span class="line">			<span class="type">bool</span> lookup, <span class="keyword">struct</span> pt_regs *regs)</span><br><span class="line">&#123;</span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">pt_regs</span> *<span class="title">old_regs</span> =</span> set_irq_regs(regs);</span><br><span class="line">	<span class="type">unsigned</span> <span class="type">int</span> irq = hwirq;</span><br><span class="line">	<span class="type">int</span> ret = <span class="number">0</span>;</span><br><span class="line"></span><br><span class="line">	irq_enter();<span class="comment">//中断陷入</span></span><br><span class="line"></span><br><span class="line"><span class="meta">#<span class="keyword">ifdef</span> CONFIG_IRQ_DOMAIN</span></span><br><span class="line">	<span class="keyword">if</span> (lookup)</span><br><span class="line">		irq = irq_find_mapping(domain, hwirq);</span><br><span class="line"><span class="meta">#<span class="keyword">endif</span></span></span><br><span class="line"></span><br><span class="line">	<span class="comment">/*</span></span><br><span class="line"><span class="comment">	 * Some hardware gives randomly wrong interrupts.  Rather</span></span><br><span class="line"><span class="comment">	 * than crashing, do something sensible.</span></span><br><span class="line"><span class="comment">	 */</span></span><br><span class="line">	<span class="keyword">if</span> (unlikely(!irq || irq &gt;= nr_irqs)) &#123;</span><br><span class="line">		ack_bad_irq(irq);</span><br><span class="line">		ret = -EINVAL;</span><br><span class="line">	&#125; <span class="keyword">else</span> &#123;</span><br><span class="line">		generic_handle_irq(irq);</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	irq_exit();   <span class="comment">//中断退出</span></span><br><span class="line">	set_irq_regs(old_regs);</span><br><span class="line">	<span class="keyword">return</span> ret;</span><br><span class="line">&#125;</span><br><span class="line"><span class="meta">#<span class="keyword">endif</span></span></span><br></pre></td></tr></table></figure>
+<p>上面 中断陷入中断退出之间就是中断上下文。</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/*</span></span><br><span class="line"><span class="comment"> * Enter an interrupt context.</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="type">void</span> <span class="title function_">irq_enter</span><span class="params">(<span class="type">void</span>)</span></span><br><span class="line">&#123;</span><br><span class="line">	rcu_irq_enter();</span><br><span class="line">    <span class="comment">//如果当前进程是一个空闲进程并且不是在终端上上下文</span></span><br><span class="line">	<span class="keyword">if</span> (is_idle_task(current) &amp;&amp; !in_interrupt()) &#123;</span><br><span class="line">		<span class="comment">/*</span></span><br><span class="line"><span class="comment">		 * Prevent raise_softirq from needlessly waking up ksoftirqd</span></span><br><span class="line"><span class="comment">		 * here, as softirq will be serviced on return from interrupt.</span></span><br><span class="line"><span class="comment">		 */</span></span><br><span class="line">		local_bh_disable();</span><br><span class="line">		tick_irq_enter();</span><br><span class="line">		_local_bh_enable();</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	__irq_enter();</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h2 id="2-中断上下文进入时机"><a href="#2-中断上下文进入时机" class="headerlink" title="2.中断上下文进入时机"></a>2.中断上下文进入时机</h2><h3 id="2-1硬件中断进入时机"><a href="#2-1硬件中断进入时机" class="headerlink" title="2.1硬件中断进入时机"></a>2.1硬件中断进入时机</h3><p>当外设产生中断，会给cpu发送中断信号，cpu收到中断信号之后会调用（以arm为例，arch/arm/kernel/irq.c）</p>
+<p><img src="/images/24/1678175449036.png" alt="1678175449036"></p>
+<p>然后又回到上部分的代码</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/*</span></span><br><span class="line"><span class="comment"> * Enter an interrupt context.</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="type">void</span> <span class="title function_">irq_enter</span><span class="params">(<span class="type">void</span>)</span></span><br><span class="line">&#123;</span><br><span class="line">	rcu_irq_enter();</span><br><span class="line">    <span class="comment">//如果当前进程是一个空闲进程并且不是在终端上上下文</span></span><br><span class="line">	<span class="keyword">if</span> (is_idle_task(current) &amp;&amp; !in_interrupt()) &#123;</span><br><span class="line">		<span class="comment">/*</span></span><br><span class="line"><span class="comment">		 * Prevent raise_softirq from needlessly waking up ksoftirqd</span></span><br><span class="line"><span class="comment">		 * here, as softirq will be serviced on return from interrupt.</span></span><br><span class="line"><span class="comment">		 */</span></span><br><span class="line">		local_bh_disable();</span><br><span class="line">		tick_irq_enter();</span><br><span class="line">		_local_bh_enable();</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	__irq_enter();</span><br><span class="line">&#125;</span><br><span class="line"><span class="comment">/*</span></span><br><span class="line"><span class="comment"> * It is safe to do non-atomic ops on -&gt;hardirq_context,</span></span><br><span class="line"><span class="comment"> * because NMI handlers may not preempt and the ops are</span></span><br><span class="line"><span class="comment"> * always balanced, so the interrupted value of -&gt;hardirq_context</span></span><br><span class="line"><span class="comment"> * will always be restored.</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> __irq_enter()					\</span></span><br><span class="line"><span class="meta">	do &#123;						\</span></span><br><span class="line"><span class="meta">		account_irq_enter_time(current);	\</span></span><br><span class="line"><span class="meta">		preempt_count_add(HARDIRQ_OFFSET);	\</span></span><br><span class="line"><span class="meta">		trace_hardirq_enter();			\</span></span><br><span class="line"><span class="meta">	&#125; while (0)</span></span><br><span class="line"></span><br></pre></td></tr></table></figure>
+<p>可以看到<code>__irq_enter()</code>有一个操作是对<code>preempt_count</code>的操作，相当于把 <code>preempt_count</code>代表硬中断的位置为真，从此开始就进入了硬件中断的上下文。之前那些判断上下文的函数返回值就会显示是硬件中断。与irq_enter相反的操作irq_exit也是将硬件中断的位置为0；</p>
+<h3 id="2-2软件中断进入时机"><a href="#2-2软件中断进入时机" class="headerlink" title="2.2软件中断进入时机"></a>2.2软件中断进入时机</h3><p><img src="/images/24/1678176007129.png" alt="1678176007129"></p>
+<p>可以看到软中断这块有两个范围，一个是比特8，一个是比特9~15。当我们调用 BHdisable这种函数，9-15就会被置1，还有就是正常处理软中断 比特8会置为1.</p>
+<p>在/kernel/softirq.c中，</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br></pre></td><td class="code"><pre><span class="line">asmlinkage __visible <span class="type">void</span> __softirq_entry __do_softirq(<span class="type">void</span>)</span><br><span class="line">&#123;</span><br><span class="line">	<span class="type">unsigned</span> <span class="type">long</span> end = jiffies + MAX_SOFTIRQ_TIME;</span><br><span class="line">	<span class="type">unsigned</span> <span class="type">long</span> old_flags = current-&gt;flags;</span><br><span class="line">	<span class="type">int</span> max_restart = MAX_SOFTIRQ_RESTART;</span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">softirq_action</span> *<span class="title">h</span>;</span></span><br><span class="line">	<span class="type">bool</span> in_hardirq;</span><br><span class="line">	__u32 pending;</span><br><span class="line">	<span class="type">int</span> softirq_bit;</span><br><span class="line"></span><br><span class="line">	<span class="comment">/*</span></span><br><span class="line"><span class="comment">	 * Mask out PF_MEMALLOC s current task context is borrowed for the</span></span><br><span class="line"><span class="comment">	 * softirq. A softirq handled such as network RX might set PF_MEMALLOC</span></span><br><span class="line"><span class="comment">	 * again if the socket is related to swap</span></span><br><span class="line"><span class="comment">	 */</span></span><br><span class="line">	current-&gt;flags &amp;= ~PF_MEMALLOC;</span><br><span class="line"></span><br><span class="line">	pending = local_softirq_pending();</span><br><span class="line">	account_irq_enter_time(current);</span><br><span class="line"></span><br><span class="line">	__local_bh_disable_ip(_RET_IP_, SOFTIRQ_OFFSET);</span><br><span class="line">	in_hardirq = lockdep_softirq_start();</span><br><span class="line"></span><br><span class="line">restart:</span><br><span class="line">	<span class="comment">/* Reset the pending bitmask before enabling irqs */</span></span><br><span class="line">	set_softirq_pending(<span class="number">0</span>);</span><br><span class="line"></span><br><span class="line">	local_irq_enable();</span><br><span class="line"></span><br><span class="line">	h = softirq_vec;</span><br><span class="line"></span><br><span class="line">	<span class="keyword">while</span> ((softirq_bit = ffs(pending))) &#123;</span><br><span class="line">		<span class="type">unsigned</span> <span class="type">int</span> vec_nr;</span><br><span class="line">		<span class="type">int</span> prev_count;</span><br><span class="line"></span><br><span class="line">		h += softirq_bit - <span class="number">1</span>;</span><br><span class="line"></span><br><span class="line">		vec_nr = h - softirq_vec;</span><br><span class="line">		prev_count = preempt_count();</span><br><span class="line"></span><br><span class="line">		kstat_incr_softirqs_this_cpu(vec_nr);</span><br><span class="line"></span><br><span class="line">		trace_softirq_entry(vec_nr);</span><br><span class="line">		h-&gt;action(h);</span><br><span class="line">		trace_softirq_exit(vec_nr);</span><br><span class="line">		<span class="keyword">if</span> (unlikely(prev_count != preempt_count())) &#123;</span><br><span class="line">			pr_err(<span class="string">&quot;huh, entered softirq %u %s %p with preempt_count %08x, exited with %08x?\n&quot;</span>,</span><br><span class="line">			       vec_nr, softirq_to_name[vec_nr], h-&gt;action,</span><br><span class="line">			       prev_count, preempt_count());</span><br><span class="line">			preempt_count_set(prev_count);</span><br><span class="line">		&#125;</span><br><span class="line">		h++;</span><br><span class="line">		pending &gt;&gt;= softirq_bit;</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	rcu_bh_qs();</span><br><span class="line">	local_irq_disable();</span><br><span class="line"></span><br><span class="line">	pending = local_softirq_pending();</span><br><span class="line">	<span class="keyword">if</span> (pending) &#123;</span><br><span class="line">		<span class="keyword">if</span> (time_before(jiffies, end) &amp;&amp; !need_resched() &amp;&amp;</span><br><span class="line">		    --max_restart)</span><br><span class="line">			<span class="keyword">goto</span> restart;</span><br><span class="line"></span><br><span class="line">		wakeup_softirqd();</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	lockdep_softirq_end(in_hardirq);</span><br><span class="line">	account_irq_exit_time(current);</span><br><span class="line">	__local_bh_enable(SOFTIRQ_OFFSET);</span><br><span class="line">	WARN_ON_ONCE(in_interrupt());</span><br><span class="line">	tsk_restore_flags(current, old_flags, PF_MEMALLOC);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>轮询所有软中断，如果某个软中断有需要处理的数据，就会调用相应的软中断的handle。处理软中断前后会调用<code>_local_bh_disable_ip(_RET_IP_, SOFTIRQ_OFFSET);</code>和<code>__local_bh_enable(SOFTIRQ_OFFSET);</code>这两个函数的作用是会操作preemty_cnt,点进去查看会发现他操作的位是，比特8.可以说这两个函数可以对应硬中断的<code>__irq_enter()</code>    与 <code>__irq_exit()</code>。所以，在这两条函数中间，调用那些处理软函数中，是在软中断上下文环境中，这个环境中是不允许休眠和调度的。</p>
+
+          
+        
+      
+    </div>
+    
+    
+    
+
+    
+
+    
+
+    
+
+    <footer class="post-footer">
+      
+
+      
+
+      
+
+      
+      
+        <div class="post-eof"></div>
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+      
+    
+      
+      
+      
+        
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
     <link itemprop="mainEntityOfPage" href="http://hanze5.github.io/2022/07/15/23-Linux%E5%86%85%E6%A0%B8%E2%80%94%E2%80%94%E8%BF%9B%E7%A8%8B%E7%9A%84%E8%99%9A%E6%8B%9F%E5%9C%B0%E5%9D%80%E7%A9%BA%E9%97%B4/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
@@ -1720,414 +2064,6 @@
 
       
     
-      
-      
-      
-        
-
-  
-
-  
-  
-  
-
-  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
-  
-  
-  
-  <div class="post-block">
-    <link itemprop="mainEntityOfPage" href="http://hanze5.github.io/2022/07/13/22-Linux%E5%86%85%E6%A0%B8%E2%80%94%E2%80%94%E5%86%85%E6%A0%B8%E7%A9%BA%E9%97%B4%E7%9A%84%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86%E4%B8%8E%E5%88%86%E9%85%8D/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="name" content="">
-      <meta itemprop="description" content="">
-      <meta itemprop="image" content="/images/my_avatar.png">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="也许不会有人进来吧">
-    </span>
-
-    
-      <header class="post-header">
-
-        
-        
-          <h1 class="post-title" itemprop="name headline">
-                
-                <a class="post-title-link" href="/2022/07/13/22-Linux%E5%86%85%E6%A0%B8%E2%80%94%E2%80%94%E5%86%85%E6%A0%B8%E7%A9%BA%E9%97%B4%E7%9A%84%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86%E4%B8%8E%E5%88%86%E9%85%8D/" itemprop="url">Linux内核——内核空间的内存管理与分配</a></h1>
-        
-
-        <div class="post-meta">
-          <span class="post-time">
-            
-              <span class="post-meta-item-icon">
-                <i class="fa fa-calendar-o"></i>
-              </span>
-              
-                <span class="post-meta-item-text">发表于</span>
-              
-              <time title="创建于" itemprop="dateCreated datePublished" datetime="2022-07-13T08:05:12+08:00">
-                2022-07-13
-              </time>
-            
-
-            
-
-            
-          </span>
-
-          
-            <span class="post-category" >
-            
-              <span class="post-meta-divider">|</span>
-            
-              <span class="post-meta-item-icon">
-                <i class="fa fa-folder-o"></i>
-              </span>
-              
-                <span class="post-meta-item-text">分类于</span>
-              
-              
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/%E5%AD%A6%E6%97%A0%E6%AD%A2%E5%A2%83/" itemprop="url" rel="index">
-                    <span itemprop="name">学无止境</span>
-                  </a>
-                </span>
-
-                
-                
-              
-            </span>
-          
-
-          
-            
-          
-
-          
-          
-
-          
-
-          
-
-          
-
-        </div>
-      </header>
-    
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-      
-
-      
-        
-          
-            <p>跟着简叔学的，可以B站搜索 <strong>简说linux</strong></p>
-<h2 id="页框和伙伴算法"><a href="#页框和伙伴算法" class="headerlink" title="页框和伙伴算法"></a>页框和伙伴算法</h2><ul>
-<li>定义:内核使用struct page结构体描述每个物理页，也叫页框。一般一个页框对应一个4k的空间</li>
-<li>场景:内核在很多情况下，需要申请连续的页框，而且数量不定，比如4个，5个，9个等。</li>
-<li>实现: Linux把所有的空闲页框分组为11个块链表，每个链表上的页框块是固定的。在第i条链表中每个页框块都包含2的i次方个连续页。</li>
-<li>注意:系统中每个页框块的第一个页框的物理地址是该块大小的整数倍。例如:大小为16个页框的块，其起始地址是16*2^12的倍数。</li>
-</ul>
-<p><img src="/images/22/1678103470108.png" alt="1678103470108"> </p>
-<p>我要申请4k 就去找0里摘取一个；8k就找。</p>
-<h2 id="页框操作"><a href="#页框操作" class="headerlink" title="页框操作"></a>页框操作</h2><p>分配2^order个连续的物理页，并返回一个指针，指向第一个页的page结构体</p>
-<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">static</span> <span class="keyword">inline</span> <span class="keyword">struct</span> page * <span class="title function_">alloc_pages</span><span class="params">(<span class="type">gfp_t</span> gfp_mask, <span class="type">unsigned</span> <span class="type">int</span> order)</span></span><br></pre></td></tr></table></figure>
-<p>返回page页面所映射的的虚拟地址</p>
-<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">void</span> *<span class="title function_">page_address</span><span class="params">(<span class="type">const</span> <span class="keyword">struct</span> page *page)</span></span><br></pre></td></tr></table></figure>
-<h2 id="slab实现了内存的管理和分配"><a href="#slab实现了内存的管理和分配" class="headerlink" title="slab实现了内存的管理和分配"></a>slab实现了内存的管理和分配</h2><ul>
-<li>slab层把不同的对象划分为所谓的高速缓存(cache)组，其中每个高速缓存都存放不同类型的对象;</li>
-<li>每种对象类型对应一个高速缓存(cache) ;</li>
-<li>例如一个高速缓存存放task_struct结构体，而另外一个高速缓存存放struct inode结构体;. </li>
-<li>slab由一个或者多个物理上连续的页组成。每个高速缓存由多个slab组成。</li>
-</ul>
-<p><img src="/images/22/1678104047825.png" alt="1678104047825">|<img src="/images/22/1678104158296.png" alt="1678104158296"></p>
-<p>slad又分为三个状态，用于形容 对象的分配情况。查看右图128B的情况，128Bcache中的每个对象大小都是128个字节，就是由2^15个page组成一个对象。每个slab又是由一个或多个page组成。</p>
-<p>slab可以</p>
-<ol>
-<li>减少伙伴算法在分配小块连续内存时所产生的内部碎片;</li>
-<li>将频繁使用的对象缓存起来，减少分配、初始化和释放对象的时间开销。</li>
-<li>通过着色技术调整对象以更好的使用硬件高速缓存;</li>
-</ol>
-<p>这块没怎么看明白。。。。这里留下网址以后再继续看</p>
-<p><a target="_blank" rel="noopener" href="https://www.toutiao.com/article/6874373733595742727/?log_from=09cb26731ee35_1678104694035">linux操作系统内存大串讲：段页式，slab，共享内存-今日头条 (toutiao.com)</a></p>
-<h2 id="slab高速缓存的使用"><a href="#slab高速缓存的使用" class="headerlink" title="slab高速缓存的使用"></a>slab高速缓存的使用</h2><ol>
-<li><p>通过命令 cat /proc/slabinfo 可查看系统中的长用的</p>
-<p><img src="/images/22/1678145522310.png" alt="1678145522310"></p>
-</li>
-<li><p>内核中用 <code>struct kmem_cache</code>表示一个高速缓存。   通过下面的方法创建高速缓存</p>
-<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">struct</span>  kmem_cache*  <span class="title function_">kmem_cache_create</span><span class="params">(<span class="type">const</span> <span class="type">char</span> *name,<span class="type">size_t</span> size,<span class="type">size_t</span> align,</span></span><br><span class="line"><span class="params">                                      <span class="type">unsigned</span> <span class="type">long</span> flags,<span class="type">void</span> (*ctor)(<span class="type">void</span>))</span> </span><br><span class="line">    </span><br></pre></td></tr></table></figure>
-</li>
-<li><p>申请和释放高速缓存  和申请 slab。 申请高速缓存的实现运用到了申请slab</p>
-<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">void</span> *<span class="title function_">kmem_cache_alloc</span><span class="params">(<span class="keyword">struct</span> kmem_cache *cachep, <span class="type">gfp_t</span> flags)</span> </span><br><span class="line"><span class="type">void</span> <span class="title function_">kmem_cache_destroy</span><span class="params">(<span class="keyword">struct</span> kmem_cache *s)</span></span><br><span class="line">    </span><br><span class="line">static_always_inline <span class="type">void</span> * <span class="title function_">slab_alloc</span><span class="params">(<span class="keyword">struct</span> kmem_cache *cachep, <span class="type">gfp_t</span> flags, <span class="type">unsigned</span> <span class="type">long</span> caller)</span></span><br></pre></td></tr></table></figure>
-</li>
-</ol>
-<h2 id="内核中的最常用的内存申请"><a href="#内核中的最常用的内存申请" class="headerlink" title="内核中的最常用的内存申请"></a>内核中的最常用的内存申请</h2><ol>
-<li>给硬件分配内存必须连续</li>
-</ol>
-<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">static</span> _always_inline <span class="type">void</span> *<span class="title function_">kmalloc</span><span class="params">(<span class="type">size_t</span> size, <span class="type">gfp_t</span> flags)</span></span><br><span class="line"><span class="type">static</span> <span class="keyword">inline</span> <span class="type">void</span> *<span class="title function_">kzalloc</span><span class="params">(<span class="type">size_t</span> size, <span class="type">gfp_t</span> flags)</span></span><br><span class="line"><span class="comment">//返回一个指向内存块的指针，其内存块大小至少size大小，所分配的内存在物理上是连续的。</span></span><br><span class="line"><span class="type">void</span> *<span class="title function_">vmalloc</span><span class="params">(<span class="type">unsigned</span> <span class="type">long</span> size)</span></span><br><span class="line"><span class="type">void</span> *<span class="title function_">vzalloc</span><span class="params">(<span class="type">unsigned</span> <span class="type">long</span> size)</span><span class="comment">//多了一步初始化操作 初始化成0</span></span><br><span class="line"><span class="comment">//返回一个指向内存块的指针，其内存块大小至少size大小，所分配的内存在物理上无需连续。</span></span><br></pre></td></tr></table></figure>
-<p><img src="/images/22/1678105707629.png" alt="1678105707629"></p>
-<h3 id="kzalloc实现"><a href="#kzalloc实现" class="headerlink" title="kzalloc实现"></a>kzalloc实现</h3><p>我们的代码中就用到了<img src="/images/22/1678105885291.png" alt="1678105885291"></p>
-<p>它的内部就是用kmalloc实现的，只是多了一步初始化为0的操作。</p>
-<p><img src="/images/22/1678105935522.png" alt="1678105935522"></p>
-<p>kmalloc的源码在/linux-4.9.229/include/linux/slab.h</p>
-<p><img src="/images/22/1678105981827.png" alt="1678105981827"></p>
-<p>大部分情况不会进入到if的判断里面，下图代码在 /mm/slab.c</p>
-<p><img src="/images/22/1678106254461.png" alt="1678106254461"></p>
-<p>到底依赖伙伴系统的算法。根据size和flag得到对应的高速缓存，通过调用kmalloc_slab里找到合适的缓存，然后找到对象返回到ret。kmalloc_slab的实现在/mm/slab_common.c</p>
-<p><img src="/images/22/1678106514598.png" alt="1678106514598"></p>
-<p>​        可以猜测到，通过大小查索引，是范围查找，合适的缓存。</p>
-<p><img src="/images/22/1678106829368.png" alt="1678106829368"></p>
-<p>  <img src="/images/22/1678106877955.png" alt="1678106877955"></p>
-<p>妙啊！ 除以8算出8的几倍，通过倍数当作索引来找出合适的size</p>
-<p>（这块儿看了好久都没理顺，打算先放一放往下看了。。。。）</p>
-
-          
-        
-      
-    </div>
-    
-    
-    
-
-    
-
-    
-
-    
-
-    <footer class="post-footer">
-      
-
-      
-
-      
-
-      
-      
-        <div class="post-eof"></div>
-      
-    </footer>
-  </div>
-  
-  
-  
-  </article>
-
-
-      
-    
-      
-      
-      
-        
-
-  
-
-  
-  
-  
-
-  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
-  
-  
-  
-  <div class="post-block">
-    <link itemprop="mainEntityOfPage" href="http://hanze5.github.io/2021/12/06/2.%E5%85%B3%E4%BA%8EFPGA%E5%85%A8%E5%B1%80%E5%B8%83%E7%BA%BF/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="name" content="">
-      <meta itemprop="description" content="">
-      <meta itemprop="image" content="/images/my_avatar.png">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="也许不会有人进来吧">
-    </span>
-
-    
-      <header class="post-header">
-
-        
-        
-          <h1 class="post-title" itemprop="name headline">
-                
-                <a class="post-title-link" href="/2021/12/06/2.%E5%85%B3%E4%BA%8EFPGA%E5%85%A8%E5%B1%80%E5%B8%83%E7%BA%BF/" itemprop="url">关于FPGA全局布线</a></h1>
-        
-
-        <div class="post-meta">
-          <span class="post-time">
-            
-              <span class="post-meta-item-icon">
-                <i class="fa fa-calendar-o"></i>
-              </span>
-              
-                <span class="post-meta-item-text">发表于</span>
-              
-              <time title="创建于" itemprop="dateCreated datePublished" datetime="2021-12-06T10:07:27+08:00">
-                2021-12-06
-              </time>
-            
-
-            
-
-            
-          </span>
-
-          
-            <span class="post-category" >
-            
-              <span class="post-meta-divider">|</span>
-            
-              <span class="post-meta-item-icon">
-                <i class="fa fa-folder-o"></i>
-              </span>
-              
-                <span class="post-meta-item-text">分类于</span>
-              
-              
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/%E5%AD%A6%E6%97%A0%E6%AD%A2%E5%A2%83/" itemprop="url" rel="index">
-                    <span itemprop="name">学无止境</span>
-                  </a>
-                </span>
-
-                
-                
-              
-            </span>
-          
-
-          
-            
-          
-
-          
-          
-
-          
-
-          
-
-          
-
-        </div>
-      </header>
-    
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-      
-
-      
-        
-          
-            <p>接触fpga布线是从复位杯的比赛开始。但是比赛的问题和数据已经将布线问题高度抽象化为了一个数学问题。所以个人认为无法实际支撑fpga布线的研究，因为在读相关文献的时候常常有看不懂的地方。所以从现在起阅读并翻译《MAPPING AND FPGA GLOBAL ROUTING USING MEAN FIELD ANNEALING》第三章的内容。<br>有些部分因怕翻译有误所以也copy了原文。</p>
-<div class="table-container">
-<table>
-<thead>
-<tr>
-<th><img src="/images/2/2.cover1.png" alt="封面1"></th>
-<th><img src="/images/2/2.cover2.png" alt="封面2"></th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td></td>
-</tr>
-</tbody>
-</table>
-</div>
-<h1 id="FPGAs-amp-Global-Routing"><a href="#FPGAs-amp-Global-Routing" class="headerlink" title="FPGAs  &amp;  Global Routing"></a>FPGAs  &amp;  Global Routing</h1><ul>
-<li>介绍FPGA以及其物理设计的简要步骤</li>
-<li>路由架构，global routing problem 以及 经典解决方案</li>
-<li>对global routing problem 进行建模</li>
-</ul>
-<h2 id="1-Introduction-to-Field-Programmable-Gate-Arrays"><a href="#1-Introduction-to-Field-Programmable-Gate-Arrays" class="headerlink" title="1.Introduction to Field Programmable Gate Arrays"></a>1.Introduction to Field Programmable Gate Arrays</h2><p>Field Programmable gate arrays (FPGAs)是新的电子可编程集成电路，具有高集成性和高速的周转时间。在VLSI设计自动化中，制造时间是一个比较重要的问题，为了减少制造互连的时间而引入可编程器件。<br>FPGA是ASIC设计市场中非常流行的可编程器件。FPGA可以减少制造周转时间和成本。在其最简单的形式中，FPGA由一个<strong>可编程逻辑块阵列</strong>和<strong>路由网络</strong>组成，以<strong>实现逻辑块的互连</strong>。可编程逻辑块可以由用户编程来实现一个小的逻辑功能。FPGA的一个重要特性是通过使用电子可编程的switches进行重新编程。商业的FPGA在 使用何种编程技术类型、 逻辑块的结构 和 路由结构 这几个方面有所不同。FPGA的逻辑块可以像晶体管一样简单，也可以像微处理器一样复杂。它通常能够实现许多不同的组合和顺序逻辑功能。FPGA的逻辑块可以分为晶体管对、基本的小门（如两个输入的NAND）、多路复用器和查找表。</p>
-<h3 id="1-1-Logic-Blocks"><a href="#1-1-Logic-Blocks" class="headerlink" title="1.1  Logic Blocks"></a>1.1  Logic Blocks</h3><p>FPGA的不同逻辑块在尺寸和能力上有很大的不同。两个晶体管逻辑块只能实现一个反相器，但尺寸非常小，而Xilinx FPGA中使用的查找表逻辑块(look-up table，LUT)可以实现任何五个输入的逻辑功能，但它们的尺寸明显较大。<br>逻辑块可以按照粒度进行分类。粒度可以用各种方式定义，例如，逻辑块可以实现的布尔函数的数量，相当于两个输入NAND门的数量，晶体管的总数，输入和输出的数量。但一般来说，商业逻辑块可以分为两类：细粒度和粗粒度。使用细粒度逻辑块的主要优点是可使用的块被充分利用，主要缺点是需要较多的线段和可编程switch。</p>
-<h3 id="1-2-Programming-Technologies"><a href="#1-2-Programming-Technologies" class="headerlink" title="1.2 Programming Technologies"></a>1.2 Programming Technologies</h3><p>FPGA是使用电子可编程开关进行编程的。根据这些可编程开关的特性，如导通电阻和电容，编程技术可分为三个主要类型。这三种类型是<strong><em>SRAM</em></strong>、<strong><em>antifuse</em></strong> 和 <strong><em>EPROM</em></strong>。</p>
-<ul>
-<li>SRAM编程技术使用静态的RAM cells去控制门和多路复用器。在SRAM中，switch是一个由一个SRAM位的状态来控制的导通的晶体管，故SRAM是易失性的。因此FPGA必须在芯片电源启动时及时加载和配置，它需要外部辅助的永久性存储提供编程位，比如PROM or EPROM. SRAM的优点是可快速重编程，最大的缺点就是占用面积大（实现个SRAM单元需要至少5个晶体管。）</li>
-<li>antifuse是一种具有非编程状态的，两端之间具有极高的电阻。当在端之间施加一个极高的电压，两端就会被打通产生低电阻连接，这种连接是持久性的。编程antifuse需要额外的电路来提供可编程的高电压和高电流。使得antifuse本身的体积很小但是，加上额外的电路就不那么小了。</li>
-<li>浮动门编程技术使用一种特殊技术，该技术在紫外线可擦EPROM和电可擦EEPROM中被发现。EPROM的主要优点是快速可编程性。另外，他也不需要额外的持久性存储在芯片通电时对其进行编程。然而，这种技术的加工步骤更为复杂且需要更多的高祖晶体管。</li>
-</ul>
-<h3 id="1-3-路由结构"><a href="#1-3-路由结构" class="headerlink" title="1.3 路由结构"></a>1.3 路由结构</h3><p>FPGA路由结构是对可编程switch和wiring segment的放置，以实现内部的编程性的逻辑互连。图3.1展示了一个典型的路由结构的模型。<br><img src="/images/2/2.FPGA路由结构.png" alt>  </p>
-<p>一个wire segment是一条由可编程switch连接的线路，一条wire segment中可能会包含一个或多个switch。每个wire segment的末端都会附着一个switch。</p>
-<ul>
-<li>一个 track 是形成一条线段的一条或多条wire segment的序列；</li>
-<li>一个 routing channel 是一组平行的track。  </li>
-</ul>
-<p>图3.1中还包含着两种基础的结构：switch block和connection block。</p>
-<ul>
-<li>一个switch block 提供水平和垂直线段之间的互连，当然也可以是水平与水平。</li>
-<li>一个connection block在channel中提供逻辑块的输入和输出和wire segment的连接。<br><img src="/images/2/2.switch_block和connection_block.png" alt></li>
-</ul>
-<p>如图3.2所示，FPGA普遍拥有的两个重要的内部互连块。这些块内部的switch的数量对可路由性来说至关重要。switch数量越多路由选择就越多，但会影响路由质量和体积。<br>这些switch的数量及分布叫做FPGA的灵活性。switch block的灵活性记为$F_s$,connection block的灵活性记为$F_c$。$F_s$可以被定义为switch block提供给每个进入的wire segment的可以连接的总数。$F_c$可以被定义为channel中每个逻辑块可以连接的wire数。接下来展示两个商业FPGA的路由架构，它们分别来自Xilinx和Actel。</p>
-<h4 id="The-Xilinx-Routing-Architecture"><a href="#The-Xilinx-Routing-Architecture" class="headerlink" title="The Xilinx Routing Architecture"></a>The Xilinx Routing Architecture</h4><p><img src="/images/2/2.结构Xilinx_3000_FPGA.png" alt><br>逻辑块通过connection_block与channel连接。由于使用的是SRAM编程技术所以连接点体积比较大，在 Xilinx 3000的$F_c$为2~3（有5条track通过block）。逻辑块的四个边上都有connection block，它们将不同的总共11个pin连接到wire segment。当pin被连接到水平或垂直的wire segment上之后，每个sire可以连接另一侧的15个可能的wire segment中的5~6个。Xilinx 3000的architecture提供了4种wire segment：</p>
-<ul>
-<li>General-purpose interconnect由通过switch block的wire segment组成。</li>
-<li>Direct interconnect 由逻辑块直接与相邻最近的邻居逻辑块之间的互连。</li>
-<li>Long lines，跨越芯片级的长度，提供high-fanout 均匀延迟连接。</li>
-<li>Clock line，是跨越整个芯片的单个线网，由高驱动缓冲器驱动。（没理解）。</li>
-</ul>
-<h4 id="The-Actel-Routing-Architecture"><a href="#The-Actel-Routing-Architecture" class="headerlink" title="The  Actel  Routing  Architecture"></a>The  Actel  Routing  Architecture</h4><p><img src="/images/2/2.结构Actel_FPGA.png" alt><br>Actel的路由结构是非对称式的，水平方向要比垂直方向有更多的track。Actel FPGA的输入和输出引脚的连接性是不同的。对于输入引脚，每个引脚可以连接对应这一侧的channel种的所有track，。而输出引脚横跨逻辑块上面2个channel和下面2个channel，它可以连接它跨过的这四个channel中包含的所有channel。在Actel中没有独立可分离的switch block。相对应的起到该功能的东西分布在整个水平的channel中。所有的垂直的track都可以与入射的水平track相连接。每个水平的channel由22个track组成，每个track可划分成不同长度的segment。垂直的segment共有3种类型：输入段，输出端，和通过整个芯片高度或者重要部分的freeway。这允许比输出端允许的垂直距离更长。</p>
-<h2 id="2-Physical-Design-Automation-of-FPGAs"><a href="#2-Physical-Design-Automation-of-FPGAs" class="headerlink" title="2  Physical Design Automation of FPGAs"></a>2  Physical Design Automation of FPGAs</h2><p>FPGA的物理设计流程包含三个主要步骤：partitioning,placement and routing.</p>
-<h3 id="2-1-Partitioning"><a href="#2-1-Partitioning" class="headerlink" title="2.1 Partitioning"></a>2.1 Partitioning</h3><p>Partitioning is the separation of the logic into Logic  blocks. Partitioning has both a logical and physical component. The  connections within a logic blocks are constrained by the limited  routing architecture and limited number of blocks outputs. However, the quality of the resulting partitioning depends on how well the  placement can be done. The logical component has been investigated in the  context of technology mapping in logic optimization.<br>Partitioning 就是将逻辑划分成逻辑块。分区同时拥有着逻辑组件和物理组件。逻辑块内的连接受到路由结构的限制和块输出的数量。但是最终分区质量取决于分区的好坏。逻辑组件在逻辑优化的技术优化背景下应运而生。</p>
-<h3 id="2-2-Placement"><a href="#2-2-Placement" class="headerlink" title="2.2 Placement"></a>2.2 Placement</h3><p>Placement starts with logic blocks and input-output blocks in partitioned netlist and decides which corresponding blocks on the chip  should  contain them. The FPGA  placement problem is very similar to  traditional standard cell and gate array placement problems. Many  of  existing algorithm place­ment algorithms are applicable, such as simulated annealing,force  directed relaxation and min-cut.<br>Placement从逻辑块和位于分区线网表中的输入-输出块开始进行，并决定了他们应该对应在哪个芯片哪个的块上。FPGA placement问题与传统的单元和门阵列的布局问题相似。现有的很多布局算法，如模拟退火算法、强定向松弛算法、最小裁剪。</p>
-<h3 id="2-3-Routing"><a href="#2-3-Routing" class="headerlink" title="2.3 Routing"></a>2.3 Routing</h3><p>In general such a global  router divides the multipoint nets into two terminal nets and  routes  them with  minimumdistance path.<br>解决好所有电路的placement后，所有线网的每一个pin都必须连接。不同的FPGA结构有着不同的路由算法。FPGA的路由问题和standard cell和门阵列的设计一样复杂。FPGA路由可以分成：global routing and detailed routing。<br><img src="/images/2/2.Global_routing_and_Detailed_routing.png" alt><br>The global route defines route for each connection by assigning it a sequence of channel segments. After the paths are defined in terms of channel between two-pin connection detailed router chose specific wiring segments to implement the channel segment assigned during global routing.<br>主流的Global router会把多端线网花分为一组双端线网，然后使用最短路径算法。同时也要考虑平衡channel的密度。全局路由从粗粒度层面通过给出一条channel segment 序列来为每一条连接大致规划出一条路径。在这条路径以channel的形式确定下来后，由详细路由选择具体的wire segment 来实现global routing阶段设计出的路径。</p>
-<h2 id="3-Global-Routing-Problem-in-Design-Automation-of-FPGAs"><a href="#3-Global-Routing-Problem-in-Design-Automation-of-FPGAs" class="headerlink" title="3. Global Routing Problem in Design Automation of FPGAs"></a>3. Global Routing Problem in Design Automation of FPGAs</h2><p> 全局路由为每个线网选择channel然后将具体的选择哪条wire segment 和 switch这种工作留给detailed router。全局路由为每个net决定哪些pin是真正需要被连接的。全局路由的最终目标是最小化channel密度之和。在许多研究中，FPGA中的路由问题都直接分配segment，而忽略了全局路由阶段。有一个独特的FPGA全局路由器：PGAroute.该路由器类似于standard cell的全局路由器，使用LocusRoute算法。</p>
-<p>LocusRoute算法中，对每个多端线网执行以下三个步骤。<br>1) net的划分：用最小生成树算法将一个多端线网划分为一组双端线网。<br><img src="/images/2/2.简单的两转弯路径.png" alt><br>2) Route Generation and Evaluation:在这一步中考虑每一对pin之间的可能路径，并根据cost来选择最低的那条。<br>选择路径的方法是基于那些有2个转弯或者更少的路径.Locus评估两个物理pin之间所有两个弯道路径的cost，选择最低的那条。cost函数由channel的密度来定义。每个wire segment和switch block 被表示为cost array中的元素。<br>每一个cost array $H_{i,j}$中的元素,包含着通过wire segment(i,j)的路径数量.<br>The cost of path(P) is calculated as:  </p>
-<script type="math/tex; mode=display">Cost(p)=\sum_{p} H_{i,j}</script><p>3) Reconstruction：这一步将所有的双端网重新连接在一起，然后performs assigns unique numbers to distinct segments of some nets in each channel. 在每个channel中，执行分配唯一的数字在某些网的不同段。<br>Locus route利用迭代策略，即在第一次所有线网被路由之后，每个线网再依次被撕裂和重新路由。迭代减少了顺序依赖，提高路由质量。</p>
-<h2 id="4-Model-of-FPGA-for-Global-Routing"><a href="#4-Model-of-FPGA-for-Global-Routing" class="headerlink" title="4.Model of FPGA for Global Routing"></a>4.Model of FPGA for Global Routing</h2><p>商用的FPGA由以下部分组成：一个可编程逻辑块组成的规则的二维阵列（LB），一个可编程路由网络，switch boxes(SB)[3,1,2]. Logic blocks 被用来实现电路的功能；路由网络用来实现逻辑块和输入输出之间的连接。FPGA的路由网络包括wiring segment和connection blocks。基于FPGA的商业SRAM中，wiring segment可以分为三种类型（路由资源）：channel segments, long  lines and direct-interconnection.水平(垂直)的channel segment 由若干平行wire segment组成，它们连接水平(垂直)channel中的两个连续的SB。SB允许这些channel segments彼此可编程互连。direct-interconnection是相邻LB之间的连接。long  lines水平或竖直地穿过FPGA路由区域。connection block提供从LB的输入输出引脚到相应channel segments的wire segment的连接。每个引脚可以连接到一个通道中有限数量的wire segment上，这被称为connection block的灵活度。在本工作中，假设每个LB引脚可以连接到各自通道中的所有wire segment，把它作为我们的FPGA 模型的连接块。<br>direct-interconnections可以提供邻居LB之间的最小延迟的连接，long line在需要长距离传递信号是被使用（比如全局的时钟信号），这些路由资源在global routing中都没有被考虑到。因此我们关于的FPGA全局路由的模型只有可编程逻辑块（LB）,交换盒（SB）， channel segments。一个FPGA可以被建模为，二维的 由连接在水平和竖直channel segments中的LB组成的二维阵列，而SB则负责将水平和竖直的channel segments 连接在一起。<br><img src="/images/2/2.FPGA全局路由模型.png" alt><br>在本工作中我们使用最小生成树算法将多端线网划分为一组双端线网。故在此之后，文中提到的线网都指的是双端网。考虑一条双端曼哈顿距离为$d<em>h+d_v$的线网，其中$d_h$和$d_v$分别代表水平距离和垂直距离。该线网的路由区域被限制在大小为$(d_h+1)×(d_v+1)$的LB网格，如下图a所示<br><img src="/images/2/2.一条双端线网以及他子网和子网可能的路由区域.png" alt><br>然后该线网的最短距离可以被分解为三个独立的子网。该线网的每一个pin在最佳的路由区域只有一个邻居SB。所以，每一个pin都可以通过水平的或竖直的channel  segment与他的相邻的SB相连接，就如上图所示。同时，这两个pin连接的SB之间的连接的最佳路由区域就限制在$(d_h+1)×(d_v+1)$的大小的网格中。基于这个事实，我们进一步将每个线网细分为三个双端子网，及LS,SS,SL(如上图b所示)。这里，LS和SL子网代表着 LB-to-SB和SB-to-LB的连接，SS子网代表着特定网络的SB-to-SB连接。因此我们只LS和SL这两种子网考虑2条可能的路径，为SS子网考虑吧$d_h+d_v-2$条可能的包含1个或2个转弯的路径。<br>我们定义一个FPGA图(L,S,C),它是一个P×Q的二维网格，L,S,C分别代表着LB,SB,channel segments.这里P和Q代表着FPGA中水平和垂直的通道数量。每个顶点$s</em>{p,q}$代表着水平通道p和竖直通道q处的SB。网格中的每一个矩形单元$L<em>{p,q}$代表着四面相邻着$s</em>{p,q}$，$s<em>{p,q+1}$，$s</em>{p+1,q}$，$s<em>{p+1,q+1}$的LB。边被标记为$c^{h}</em>{pq}$($c^{v}<em>{pq}$),对应夹在$s</em>{p,q}$和$s<em>{p,q+1}$($s</em>{p+1,q}$)中间的channel segment。如下图所示：<br><img src="/images/2/2.FPGA_Graph.png" alt><br>全局路由问题为 寻找这些子网的路由的均匀分布 减少了搜索空间。路由的均匀分布有利于提高后续详细路由阶段寻找到可行路由的可能性。所以我们需要定义一个目标函数奖励balanced路由。因为我们前面讲到我们要避免区域性密度过高。将权重与边相关连以简化对给定路由结果的balance质量的计算。$w^{h}<em>{pq}$($w^{v}</em>{pq}$)代表$c^{h}<em>{pq}$($c^{v}</em>{pq}$)上的权重，意义是channel segment. 上的权重。通过这种模型，我们可以通过下面的公式来表示给定一条路由结果的balance质量：  </p>
-<script type="math/tex; mode=display">B(R)=\sum_{p=1}^P\sum_{q=1}^{Q-1}(w^{h}_{pq}(R))^2+\sum_{q=1}^Q\sum_{p=1}^{P-1}(w^{v}_{pq}(R))^2</script><p>公式中，每个channel segment将其密度的平方贡献给目标函数，从而惩罚不平衡的路由分布。因此全局路由问题就是最小化上式。</p>
-<h1 id="MFA-SOLUTION-FOR-GLOBAL-ROUTING-IN-FPGA"><a href="#MFA-SOLUTION-FOR-GLOBAL-ROUTING-IN-FPGA" class="headerlink" title="MFA SOLUTION FOR GLOBAL ROUTING IN FPGA"></a>MFA SOLUTION FOR GLOBAL ROUTING IN FPGA</h1><p>待续。。。。。。</p>
-
-          
-        
-      
-    </div>
-    
-    
-    
-
-    
-
-    
-
-    
-
-    <footer class="post-footer">
-      
-
-      
-
-      
-
-      
-      
-        <div class="post-eof"></div>
-      
-    </footer>
-  </div>
-  
-  
-  
-  </article>
-
-
-      
-    
   </section>
 
   
@@ -2182,7 +2118,7 @@
               
                 <a href="/">
               
-                  <span class="site-state-item-count">23</span>
+                  <span class="site-state-item-count">25</span>
                   <span class="site-state-item-name">日志</span>
                 </a>
               </div>

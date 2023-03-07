@@ -1,0 +1,795 @@
+<!DOCTYPE html>
+
+
+
+  
+
+
+<html class="theme-next pisces use-motion" lang="zh-Hans">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+<meta name="theme-color" content="#222">
+
+
+
+
+
+
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css" />
+
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=5.1.4" rel="stylesheet" type="text/css" />
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png?v=5.1.4">
+
+
+  <link rel="mask-icon" href="/images/logo.svg?v=5.1.4" color="#222">
+
+
+
+
+
+  <meta name="keywords" content="Linux内核," />
+
+
+
+
+
+
+
+
+
+
+<meta name="description" content="跟着简叔学的，可以B站搜索 简说linux 1.软中断一般是哪些硬件中断往往处理简单的操作，触发由外设发出。一般申请内存，保存数据一般由（底半部）来实现，在内核中有三种底半部BH，软中断、tasklet ，工作队列。工作队列是一个内核的线程，tasklet是基于软中断来实现。对于软中断来说，处理函数是可以同时运行在多个cpu之上，tasklet只能运行在唯一一个cpu上。 内核中定义了几种常用的软">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Linux内核——软中断的特点以及注册和触发">
+<meta property="og:url" content="http://hanze5.github.io/2022/07/20/25-Linux%E5%86%85%E6%A0%B8%E2%80%94%E2%80%94%E8%BD%AF%E4%B8%AD%E6%96%AD%E7%9A%84%E7%89%B9%E7%82%B9%E4%BB%A5%E5%8F%8A%E6%B3%A8%E5%86%8C%E5%92%8C%E8%A7%A6%E5%8F%91/index.html">
+<meta property="og:site_name" content="也许不会有人进来吧">
+<meta property="og:description" content="跟着简叔学的，可以B站搜索 简说linux 1.软中断一般是哪些硬件中断往往处理简单的操作，触发由外设发出。一般申请内存，保存数据一般由（底半部）来实现，在内核中有三种底半部BH，软中断、tasklet ，工作队列。工作队列是一个内核的线程，tasklet是基于软中断来实现。对于软中断来说，处理函数是可以同时运行在多个cpu之上，tasklet只能运行在唯一一个cpu上。 内核中定义了几种常用的软">
+<meta property="og:locale">
+<meta property="og:image" content="http://hanze5.github.io/images/25/1678178880618.png">
+<meta property="og:image" content="http://hanze5.github.io/images/25/1678185060977.png">
+<meta property="og:image" content="http://hanze5.github.io/images/25/1678185992489.png">
+<meta property="og:image" content="http://hanze5.github.io/images/25/1678186119041.png">
+<meta property="og:image" content="http://hanze5.github.io/images/25/1678186601545.png">
+<meta property="og:image" content="http://hanze5.github.io/images/25/1678186695049.png">
+<meta property="article:published_time" content="2022-07-20T13:36:54.000Z">
+<meta property="article:modified_time" content="2023-03-07T13:38:38.074Z">
+<meta property="article:author" content="Dawnlake">
+<meta property="article:tag" content="Linux内核">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="http://hanze5.github.io/images/25/1678178880618.png">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '',
+    scheme: 'Pisces',
+    version: '5.1.4',
+    sidebar: {"position":"left","display":"post","offset":12,"b2t":false,"scrollpercent":false,"onmobile":false},
+    fancybox: true,
+    tabs: true,
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    duoshuo: {
+      userId: '0',
+      author: '博主'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="http://hanze5.github.io/2022/07/20/25-Linux内核——软中断的特点以及注册和触发/"/>
+
+
+
+
+
+  <title>Linux内核——软中断的特点以及注册和触发 | 也许不会有人进来吧</title>
+  
+
+
+
+
+
+
+
+
+<meta name="generator" content="Hexo 6.3.0"></head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/"  class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">也许不会有人进来吧</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+      
+        <p class="site-subtitle"></p>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br />
+            
+            首页
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br />
+            
+            标签
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-th"></i> <br />
+            
+            分类
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br />
+            
+            归档
+          </a>
+        </li>
+      
+
+      
+    </ul>
+  
+
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="http://hanze5.github.io/2022/07/20/25-Linux%E5%86%85%E6%A0%B8%E2%80%94%E2%80%94%E8%BD%AF%E4%B8%AD%E6%96%AD%E7%9A%84%E7%89%B9%E7%82%B9%E4%BB%A5%E5%8F%8A%E6%B3%A8%E5%86%8C%E5%92%8C%E8%A7%A6%E5%8F%91/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/images/my_avatar.png">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="也许不会有人进来吧">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">Linux内核——软中断的特点以及注册和触发</h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2022-07-20T21:36:54+08:00">
+                2022-07-20
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E5%AD%A6%E6%97%A0%E6%AD%A2%E5%A2%83/" itemprop="url" rel="index">
+                    <span itemprop="name">学无止境</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+          
+
+          
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <p>跟着简叔学的，可以B站搜索 <strong>简说linux</strong></p>
+<h2 id="1-软中断一般是哪些"><a href="#1-软中断一般是哪些" class="headerlink" title="1.软中断一般是哪些"></a>1.软中断一般是哪些</h2><p>硬件中断往往处理简单的操作，触发由外设发出。一般申请内存，保存数据一般由（底半部）来实现，在内核中有三种底半部BH，软中断、tasklet ，工作队列。工作队列是一个内核的线程，tasklet是基于软中断来实现。对于软中断来说，处理函数是可以同时运行在多个cpu之上，tasklet只能运行在唯一一个cpu上。</p>
+<p>内核中定义了几种常用的软中断 /kernel/softirq.c</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//软中断处理函数</span></span><br><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">softirq_action</span></span></span><br><span class="line"><span class="class">&#123;</span></span><br><span class="line">	<span class="type">void</span>	(*action)(<span class="keyword">struct</span> softirq_action *);</span><br><span class="line">&#125;;</span><br><span class="line"></span><br><span class="line"><span class="type">static</span> <span class="class"><span class="keyword">struct</span> <span class="title">softirq_action</span> <span class="title">softirq_vec</span>[<span class="title">NR_SOFTIRQS</span>] __<span class="title">cacheline_aligned_in_smp</span>;</span></span><br><span class="line"></span><br><span class="line">DEFINE_PER_CPU(<span class="keyword">struct</span> task_struct *, ksoftirqd);</span><br><span class="line"></span><br><span class="line"><span class="type">const</span> <span class="type">char</span> * <span class="type">const</span> softirq_to_name[NR_SOFTIRQS] = &#123;</span><br><span class="line">	<span class="string">&quot;HI&quot;</span>, <span class="string">&quot;TIMER&quot;</span>, <span class="string">&quot;NET_TX&quot;</span>, <span class="string">&quot;NET_RX&quot;</span>, <span class="string">&quot;BLOCK&quot;</span>, <span class="string">&quot;IRQ_POLL&quot;</span>,</span><br><span class="line">	<span class="string">&quot;TASKLET&quot;</span>, <span class="string">&quot;SCHED&quot;</span>, <span class="string">&quot;HRTIMER&quot;</span>, <span class="string">&quot;RCU&quot;</span></span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+<h2 id="2-软中断的使用"><a href="#2-软中断的使用" class="headerlink" title="2.软中断的使用"></a>2.软中断的使用</h2><p>软中断的使用可以分为3步，软中断的注册，触发，与执行</p>
+<h3 id="2-1软中断的注册"><a href="#2-1软中断的注册" class="headerlink" title="2.1软中断的注册"></a>2.1软中断的注册</h3><p>其实就是给第nr个软中断的操作设为 action</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">void</span> <span class="title function_">open_softirq</span><span class="params">(<span class="type">int</span> nr, <span class="type">void</span> (*action)(<span class="keyword">struct</span> softirq_action *))</span></span><br><span class="line">&#123;</span><br><span class="line">	softirq_vec[nr].action = action;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>很多地方都用到了软中断的注册。</p>
+<p><img src="/images/25/1678178880618.png" alt="1678178880618"></p>
+<p>在软中断的初始化环节，注册了两个软中断，tasklet与Hi</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">void</span> __init <span class="title function_">softirq_init</span><span class="params">(<span class="type">void</span>)</span></span><br><span class="line">&#123;</span><br><span class="line">	<span class="type">int</span> cpu;</span><br><span class="line"></span><br><span class="line">	for_each_possible_cpu(cpu) &#123;</span><br><span class="line">		per_cpu(tasklet_vec, cpu).tail =</span><br><span class="line">			&amp;per_cpu(tasklet_vec, cpu).head;</span><br><span class="line">		per_cpu(tasklet_hi_vec, cpu).tail =</span><br><span class="line">			&amp;per_cpu(tasklet_hi_vec, cpu).head;</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	open_softirq(TASKLET_SOFTIRQ, tasklet_action);</span><br><span class="line">	open_softirq(HI_SOFTIRQ, tasklet_hi_action);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">//其中tasklet_action就是tasklet的处理逻辑</span></span><br><span class="line"><span class="type">static</span> __latent_entropy <span class="type">void</span> <span class="title function_">tasklet_action</span><span class="params">(<span class="keyword">struct</span> softirq_action *a)</span></span><br><span class="line">&#123;</span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">tasklet_struct</span> *<span class="title">list</span>;</span></span><br><span class="line"></span><br><span class="line">	local_irq_disable();</span><br><span class="line">	<span class="built_in">list</span> = __this_cpu_read(tasklet_vec.head);</span><br><span class="line">	__this_cpu_write(tasklet_vec.head, <span class="literal">NULL</span>);</span><br><span class="line">	__this_cpu_write(tasklet_vec.tail, this_cpu_ptr(&amp;tasklet_vec.head));</span><br><span class="line">	local_irq_enable();</span><br><span class="line"></span><br><span class="line">	<span class="keyword">while</span> (<span class="built_in">list</span>) &#123;</span><br><span class="line">		<span class="class"><span class="keyword">struct</span> <span class="title">tasklet_struct</span> *<span class="title">t</span> =</span> <span class="built_in">list</span>;</span><br><span class="line"></span><br><span class="line">		<span class="built_in">list</span> = <span class="built_in">list</span>-&gt;next;</span><br><span class="line"></span><br><span class="line">		<span class="keyword">if</span> (tasklet_trylock(t)) &#123;</span><br><span class="line">			<span class="keyword">if</span> (!<span class="type">atomic_read</span>(&amp;t-&gt;count)) &#123;</span><br><span class="line">				<span class="keyword">if</span> (!test_and_clear_bit(TASKLET_STATE_SCHED,</span><br><span class="line">							&amp;t-&gt;state))</span><br><span class="line">					BUG();</span><br><span class="line">				t-&gt;func(t-&gt;data);</span><br><span class="line">				tasklet_unlock(t);</span><br><span class="line">				<span class="keyword">continue</span>;</span><br><span class="line">			&#125;</span><br><span class="line">			tasklet_unlock(t);</span><br><span class="line">		&#125;</span><br><span class="line"></span><br><span class="line">		local_irq_disable();</span><br><span class="line">		t-&gt;next = <span class="literal">NULL</span>;</span><br><span class="line">		*__this_cpu_read(tasklet_vec.tail) = t;</span><br><span class="line">		__this_cpu_write(tasklet_vec.tail, &amp;(t-&gt;next));</span><br><span class="line">		__raise_softirq_irqoff(TASKLET_SOFTIRQ);</span><br><span class="line">		local_irq_enable();</span><br><span class="line">	&#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h3 id="2-2软中断的触发"><a href="#2-2软中断的触发" class="headerlink" title="2.2软中断的触发"></a>2.2软中断的触发</h3><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">void</span> <span class="title function_">raise_softirq</span><span class="params">(<span class="type">unsigned</span> <span class="type">int</span> nr)</span></span><br><span class="line">&#123;</span><br><span class="line">	<span class="type">unsigned</span> <span class="type">long</span> flags;</span><br><span class="line">	<span class="comment">//首先禁止本机中断  就是所有中断</span></span><br><span class="line">	local_irq_save(flags);</span><br><span class="line">	raise_softirq_irqoff(nr);</span><br><span class="line">    </span><br><span class="line">	local_irq_restore(flags);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">//调用这个函数之前  一定是已经禁止了本机中断</span></span><br><span class="line"><span class="keyword">inline</span> <span class="type">void</span> <span class="title function_">raise_softirq_irqoff</span><span class="params">(<span class="type">unsigned</span> <span class="type">int</span> nr)</span></span><br><span class="line">&#123;</span><br><span class="line">	__raise_softirq_irqoff(nr);</span><br><span class="line"></span><br><span class="line">	<span class="comment">/*</span></span><br><span class="line"><span class="comment">	 * If we&#x27;re in an interrupt or softirq, we&#x27;re done</span></span><br><span class="line"><span class="comment">	 * (this also catches softirq-disabled code). We will</span></span><br><span class="line"><span class="comment">	 * actually run the softirq once we return from</span></span><br><span class="line"><span class="comment">	 * the irq or softirq.</span></span><br><span class="line"><span class="comment">	 *</span></span><br><span class="line"><span class="comment">	 * Otherwise we wake up ksoftirqd to make sure we</span></span><br><span class="line"><span class="comment">	 * schedule the softirq soon.</span></span><br><span class="line"><span class="comment">	 */</span></span><br><span class="line">	<span class="keyword">if</span> (!in_interrupt())</span><br><span class="line">		wakeup_softirqd();</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="type">void</span> __raise_softirq_irqoff(<span class="type">unsigned</span> <span class="type">int</span> nr)</span><br><span class="line">&#123;</span><br><span class="line">	trace_softirq_raise(nr);</span><br><span class="line">	or_softirq_pending(<span class="number">1UL</span> &lt;&lt; nr);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>层层寻找下去之后，会有一个软件中断寄存器结构的定义。每个外设都会有一个硬件中断寄存器，硬件寄存器中每一个bit都代表着某一类型的硬件设备中断。对于软件中断来讲，也会有不同类型的软件中断，那么同理。软件中断寄存器也会将某一位置一从而判断哪一个类型的软件中断类型被触发。触发软中断时，会将中断号放到触发中断的cpu的软件寄存器里边。</p>
+<h3 id="2-3软中断的执行"><a href="#2-3软中断的执行" class="headerlink" title="2.3软中断的执行"></a>2.3软中断的执行</h3><p><img src="/images/25/1678185060977.png" alt="1678185060977"></p>
+<h4 id="2-3-1执行时机"><a href="#2-3-1执行时机" class="headerlink" title="2.3.1执行时机"></a>2.3.1执行时机</h4><h5 id="2-3-1-1-ksoftirqd线程"><a href="#2-3-1-1-ksoftirqd线程" class="headerlink" title="2.3.1.1 ksoftirqd线程"></a>2.3.1.1 ksoftirqd线程</h5><p>软中断初始化时候回调用，<code>spawn_ksoftirqd</code>，创建一个线程，每个cpu都会创建这个线程。</p>
+<p><img src="/images/25/1678185992489.png" alt="1678185992489"></p>
+<p>去看看 run_ksoftirqd具体执行了什么</p>
+<p><img src="/images/25/1678186119041.png" alt="1678186119041"></p>
+<p>首先有一个中断打开的动作，执行软中断时候必须要打开中断。然后<code>local_softirq_pending()</code>可以判断软中段的发生，然后由__do_softirq()执行中断处理的逻辑。</p>
+<h5 id="2-3-1-2-硬件中断返回irq-exit"><a href="#2-3-1-2-硬件中断返回irq-exit" class="headerlink" title="2.3.1.2 硬件中断返回irq_exit()"></a>2.3.1.2 硬件中断返回irq_exit()</h5><p>kernel/softirq.c</p>
+<p><img src="/images/25/1678186601545.png" alt="1678186601545"></p>
+<p><code>ivoke_softirq</code>会处理cpu上面待处理的软中断，</p>
+<p><img src="/images/25/1678186695049.png" alt="1678186695049"></p>
+<p>最终会调用 __do_softirq. 也就是最终的</p>
+<h5 id="2-3-1-3-直接调用，例如在网络子系统等"><a href="#2-3-1-3-直接调用，例如在网络子系统等" class="headerlink" title="2.3.1.3 直接调用，例如在网络子系统等"></a>2.3.1.3 直接调用，例如在网络子系统等</h5><p>找到最后也是直接调用 _do_softirq，所以说都是调用 _do_softirq函数。</p>
+<h4 id="2-3-2执行过程"><a href="#2-3-2执行过程" class="headerlink" title="2.3.2执行过程"></a>2.3.2执行过程</h4><p>执行过程就是上文说的<code>_do_softirq</code>函数，如何保证触发软中断的cpu也去执行这个中断处理，如果实现中断优先级，</p>
+<p>kernel/softirq.c</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br></pre></td><td class="code"><pre><span class="line">asmlinkage __visible <span class="type">void</span> __softirq_entry __do_softirq(<span class="type">void</span>)</span><br><span class="line">&#123;</span><br><span class="line">	<span class="type">unsigned</span> <span class="type">long</span> end = jiffies + MAX_SOFTIRQ_TIME;</span><br><span class="line">	<span class="type">unsigned</span> <span class="type">long</span> old_flags = current-&gt;flags;</span><br><span class="line">	<span class="type">int</span> max_restart = MAX_SOFTIRQ_RESTART;</span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">softirq_action</span> *<span class="title">h</span>;</span></span><br><span class="line">	<span class="type">bool</span> in_hardirq;</span><br><span class="line">	__u32 pending;</span><br><span class="line">	<span class="type">int</span> softirq_bit;</span><br><span class="line"></span><br><span class="line">	<span class="comment">/*</span></span><br><span class="line"><span class="comment">	 * Mask out PF_MEMALLOC s current task context is borrowed for the</span></span><br><span class="line"><span class="comment">	 * softirq. A softirq handled such as network RX might set PF_MEMALLOC</span></span><br><span class="line"><span class="comment">	 * again if the socket is related to swap</span></span><br><span class="line"><span class="comment">	 */</span></span><br><span class="line">	current-&gt;flags &amp;= ~PF_MEMALLOC;</span><br><span class="line"></span><br><span class="line">	pending = local_softirq_pending(); <span class="comment">//获取未决软中断， 这个是每个cpu都有自己的寄存器实现了谁触发就谁处理。</span></span><br><span class="line">	account_irq_enter_time(current);</span><br><span class="line"></span><br><span class="line">	__local_bh_disable_ip(_RET_IP_, SOFTIRQ_OFFSET); <span class="comment">//把那个preemtycount软中断位置1</span></span><br><span class="line">	in_hardirq = lockdep_softirq_start();</span><br><span class="line"></span><br><span class="line">restart:</span><br><span class="line">	<span class="comment">/* Reset the pending bitmask before enabling irqs */</span></span><br><span class="line">	set_softirq_pending(<span class="number">0</span>);   <span class="comment">//软中断寄存器清零</span></span><br><span class="line"></span><br><span class="line">	local_irq_enable();        <span class="comment">//打开本机中断</span></span><br><span class="line"></span><br><span class="line">	h = softirq_vec;           <span class="comment">//softirq_vec 是数组 所以h是基地址</span></span><br><span class="line"></span><br><span class="line">	<span class="keyword">while</span> ((softirq_bit = ffs(pending))) &#123;   <span class="comment">//依次之执行未决软中断   位数高的先执行</span></span><br><span class="line">		<span class="type">unsigned</span> <span class="type">int</span> vec_nr;</span><br><span class="line">		<span class="type">int</span> prev_count;</span><br><span class="line"></span><br><span class="line">		h += softirq_bit - <span class="number">1</span>;             <span class="comment">//这次要处理的软中断地址</span></span><br><span class="line"></span><br><span class="line">		vec_nr = h - softirq_vec;</span><br><span class="line">		prev_count = preempt_count();</span><br><span class="line"></span><br><span class="line">		kstat_incr_softirqs_this_cpu(vec_nr);</span><br><span class="line"></span><br><span class="line">		trace_softirq_entry(vec_nr);</span><br><span class="line">		h-&gt;action(h);                     <span class="comment">//然后就可以调用action执行具体这个软中断类型的action</span></span><br><span class="line">		trace_softirq_exit(vec_nr);</span><br><span class="line">		<span class="keyword">if</span> (unlikely(prev_count != preempt_count())) &#123;</span><br><span class="line">			pr_err(<span class="string">&quot;huh, entered softirq %u %s %p with preempt_count %08x, exited with %08x?\n&quot;</span>,</span><br><span class="line">			       vec_nr, softirq_to_name[vec_nr], h-&gt;action,</span><br><span class="line">			       prev_count, preempt_count());</span><br><span class="line">			preempt_count_set(prev_count);</span><br><span class="line">		&#125;</span><br><span class="line">		h++;</span><br><span class="line">		pending &gt;&gt;= softirq_bit;</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	rcu_bh_qs();</span><br><span class="line">	local_irq_disable();   <span class="comment">//关闭中断</span></span><br><span class="line"></span><br><span class="line">    <span class="comment">//这里就是优先级实现如果当前还有没有处理的软中断 </span></span><br><span class="line">	pending = local_softirq_pending();  </span><br><span class="line">	<span class="keyword">if</span> (pending) &#123;                      <span class="comment">//并且执行的时间较少，当前没有更高优先级的进程去抢占，重启次数&lt;10次</span></span><br><span class="line">		<span class="keyword">if</span> (time_before(jiffies, end) &amp;&amp; !need_resched() &amp;&amp;</span><br><span class="line">		    --max_restart)				<span class="comment">//那么</span></span><br><span class="line">			<span class="keyword">goto</span> restart;</span><br><span class="line"></span><br><span class="line">		wakeup_softirqd();</span><br><span class="line">	&#125;</span><br><span class="line">	</span><br><span class="line">    <span class="comment">//推出软中断上下文环境</span></span><br><span class="line">	lockdep_softirq_end(in_hardirq);</span><br><span class="line">	account_irq_exit_time(current);</span><br><span class="line">	__local_bh_enable(SOFTIRQ_OFFSET);</span><br><span class="line">	WARN_ON_ONCE(in_interrupt());</span><br><span class="line">	tsk_restore_flags(current, old_flags, PF_MEMALLOC);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>那么软中断是可以被硬中断打断执行的，比如我们在软执行的时候，突然又来了硬件中断。，开始执行硬件中断。</p>
+
+      
+    </div>
+    
+    
+    
+
+    
+
+    
+
+    
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/Linux%E5%86%85%E6%A0%B8/" rel="tag"># Linux内核</a>
+          
+        </div>
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2022/07/17/24-Linux%E5%86%85%E6%A0%B8%E2%80%94%E2%80%94%E4%B8%AD%E6%96%AD%E4%B8%8A%E4%B8%8B%E6%96%87/" rel="next" title="Linux内核——中断上下文">
+                <i class="fa fa-chevron-left"></i> Linux内核——中断上下文
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2022/09/28/3.C-%E5%AE%9E%E6%88%98%E2%80%94%E2%80%94%E5%85%88%E6%8A%8A%E9%A1%B9%E7%9B%AE%E8%B7%91%E8%B5%B7%E6%9D%A5/" rel="prev" title="C++实战——先把项目跑起来">
+                C++实战——先把项目跑起来 <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+
+  
+
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <section class="site-overview-wrap sidebar-panel">
+        <div class="site-overview">
+          <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+            
+              <img class="site-author-image" itemprop="image"
+                src="/images/my_avatar.png"
+                alt="" />
+            
+              <p class="site-author-name" itemprop="name"></p>
+              <p class="site-description motion-element" itemprop="description"></p>
+          </div>
+
+          <nav class="site-state motion-element">
+
+            
+              <div class="site-state-item site-state-posts">
+              
+                <a href="/">
+              
+                  <span class="site-state-item-count">25</span>
+                  <span class="site-state-item-name">日志</span>
+                </a>
+              </div>
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-categories">
+                <a href="/categories/index.html">
+                  <span class="site-state-item-count">2</span>
+                  <span class="site-state-item-name">分类</span>
+                </a>
+              </div>
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-tags">
+                <a href="/tags/index.html">
+                  <span class="site-state-item-count">6</span>
+                  <span class="site-state-item-name">标签</span>
+                </a>
+              </div>
+            
+
+          </nav>
+
+          
+
+          
+
+          
+          
+
+          
+          
+
+          
+
+        </div>
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#1-%E8%BD%AF%E4%B8%AD%E6%96%AD%E4%B8%80%E8%88%AC%E6%98%AF%E5%93%AA%E4%BA%9B"><span class="nav-number">1.</span> <span class="nav-text">1.软中断一般是哪些</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#2-%E8%BD%AF%E4%B8%AD%E6%96%AD%E7%9A%84%E4%BD%BF%E7%94%A8"><span class="nav-number">2.</span> <span class="nav-text">2.软中断的使用</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#2-1%E8%BD%AF%E4%B8%AD%E6%96%AD%E7%9A%84%E6%B3%A8%E5%86%8C"><span class="nav-number">2.1.</span> <span class="nav-text">2.1软中断的注册</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2-2%E8%BD%AF%E4%B8%AD%E6%96%AD%E7%9A%84%E8%A7%A6%E5%8F%91"><span class="nav-number">2.2.</span> <span class="nav-text">2.2软中断的触发</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2-3%E8%BD%AF%E4%B8%AD%E6%96%AD%E7%9A%84%E6%89%A7%E8%A1%8C"><span class="nav-number">2.3.</span> <span class="nav-text">2.3软中断的执行</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#2-3-1%E6%89%A7%E8%A1%8C%E6%97%B6%E6%9C%BA"><span class="nav-number">2.3.1.</span> <span class="nav-text">2.3.1执行时机</span></a><ol class="nav-child"><li class="nav-item nav-level-5"><a class="nav-link" href="#2-3-1-1-ksoftirqd%E7%BA%BF%E7%A8%8B"><span class="nav-number">2.3.1.1.</span> <span class="nav-text">2.3.1.1 ksoftirqd线程</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#2-3-1-2-%E7%A1%AC%E4%BB%B6%E4%B8%AD%E6%96%AD%E8%BF%94%E5%9B%9Eirq-exit"><span class="nav-number">2.3.1.2.</span> <span class="nav-text">2.3.1.2 硬件中断返回irq_exit()</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#2-3-1-3-%E7%9B%B4%E6%8E%A5%E8%B0%83%E7%94%A8%EF%BC%8C%E4%BE%8B%E5%A6%82%E5%9C%A8%E7%BD%91%E7%BB%9C%E5%AD%90%E7%B3%BB%E7%BB%9F%E7%AD%89"><span class="nav-number">2.3.1.3.</span> <span class="nav-text">2.3.1.3 直接调用，例如在网络子系统等</span></a></li></ol></li><li class="nav-item nav-level-4"><a class="nav-link" href="#2-3-2%E6%89%A7%E8%A1%8C%E8%BF%87%E7%A8%8B"><span class="nav-number">2.3.2.</span> <span class="nav-text">2.3.2执行过程</span></a></li></ol></li></ol></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+<div class="copyright">&copy; <span itemprop="copyrightYear">2023</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">Dawnlake</span>
+
+  
+</div>
+
+
+  <div class="powered-by">由 <a class="theme-link" target="_blank" href="https://hexo.io">Hexo</a> 强力驱动</div>
+
+
+
+  <span class="post-meta-divider">|</span>
+
+
+
+  <div class="theme-info">主题 &mdash; <a class="theme-link" target="_blank" href="https://github.com/iissnan/hexo-theme-next">NexT.Pisces</a> v5.1.4</div>
+
+
+
+
+        
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+    
+
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+  
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.4"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.4"></script>
+
+
+
+  
+  
+
+
+  <script type="text/javascript" src="/js/src/affix.js?v=5.1.4"></script>
+
+  <script type="text/javascript" src="/js/src/schemes/pisces.js?v=5.1.4"></script>
+
+
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.4"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+  
+
+  
+
+  
+  
+
+  
+  
+    <script type="text/x-mathjax-config">
+      MathJax.Hub.Config({
+        tex2jax: {
+          inlineMath: [ ['$','$'], ["\\(","\\)"]  ],
+          processEscapes: true,
+          skipTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']
+        }
+      });
+    </script>
+
+    <script type="text/x-mathjax-config">
+      MathJax.Hub.Queue(function() {
+        var all = MathJax.Hub.getAllJax(), i;
+        for (i=0; i < all.length; i += 1) {
+          all[i].SourceElement().parentNode.className += ' has-jax';
+        }
+      });
+    </script>
+    <script type="text/javascript" src="//cdn.bootcss.com/mathjax/2.7.1/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
+  
+
+
+  
+
+  
+
+</body>
+</html>

@@ -252,6 +252,414 @@
   
   
   <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="http://hanze5.github.io/2022/07/13/22-Linux%E5%86%85%E6%A0%B8%E2%80%94%E2%80%94%E5%86%85%E6%A0%B8%E7%A9%BA%E9%97%B4%E7%9A%84%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86%E4%B8%8E%E5%88%86%E9%85%8D/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/images/my_avatar.png">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="也许不会有人进来吧">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+                
+                <a class="post-title-link" href="/2022/07/13/22-Linux%E5%86%85%E6%A0%B8%E2%80%94%E2%80%94%E5%86%85%E6%A0%B8%E7%A9%BA%E9%97%B4%E7%9A%84%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86%E4%B8%8E%E5%88%86%E9%85%8D/" itemprop="url">Linux内核——内核空间的内存管理与分配</a></h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2022-07-13T08:05:12+08:00">
+                2022-07-13
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E5%AD%A6%E6%97%A0%E6%AD%A2%E5%A2%83/" itemprop="url" rel="index">
+                    <span itemprop="name">学无止境</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+          
+
+          
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        
+          
+            <p>跟着简叔学的，可以B站搜索 <strong>简说linux</strong></p>
+<h2 id="页框和伙伴算法"><a href="#页框和伙伴算法" class="headerlink" title="页框和伙伴算法"></a>页框和伙伴算法</h2><ul>
+<li>定义:内核使用struct page结构体描述每个物理页，也叫页框。一般一个页框对应一个4k的空间</li>
+<li>场景:内核在很多情况下，需要申请连续的页框，而且数量不定，比如4个，5个，9个等。</li>
+<li>实现: Linux把所有的空闲页框分组为11个块链表，每个链表上的页框块是固定的。在第i条链表中每个页框块都包含2的i次方个连续页。</li>
+<li>注意:系统中每个页框块的第一个页框的物理地址是该块大小的整数倍。例如:大小为16个页框的块，其起始地址是16*2^12的倍数。</li>
+</ul>
+<p><img src="/images/22/1678103470108.png" alt="1678103470108"> </p>
+<p>我要申请4k 就去找0里摘取一个；8k就找。</p>
+<h2 id="页框操作"><a href="#页框操作" class="headerlink" title="页框操作"></a>页框操作</h2><p>分配2^order个连续的物理页，并返回一个指针，指向第一个页的page结构体</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">static</span> <span class="keyword">inline</span> <span class="keyword">struct</span> page * <span class="title function_">alloc_pages</span><span class="params">(<span class="type">gfp_t</span> gfp_mask, <span class="type">unsigned</span> <span class="type">int</span> order)</span></span><br></pre></td></tr></table></figure>
+<p>返回page页面所映射的的虚拟地址</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">void</span> *<span class="title function_">page_address</span><span class="params">(<span class="type">const</span> <span class="keyword">struct</span> page *page)</span></span><br></pre></td></tr></table></figure>
+<h2 id="slab实现了内存的管理和分配"><a href="#slab实现了内存的管理和分配" class="headerlink" title="slab实现了内存的管理和分配"></a>slab实现了内存的管理和分配</h2><ul>
+<li>slab层把不同的对象划分为所谓的高速缓存(cache)组，其中每个高速缓存都存放不同类型的对象;</li>
+<li>每种对象类型对应一个高速缓存(cache) ;</li>
+<li>例如一个高速缓存存放task_struct结构体，而另外一个高速缓存存放struct inode结构体;. </li>
+<li>slab由一个或者多个物理上连续的页组成。每个高速缓存由多个slab组成。</li>
+</ul>
+<p><img src="/images/22/1678104047825.png" alt="1678104047825">|<img src="/images/22/1678104158296.png" alt="1678104158296"></p>
+<p>slad又分为三个状态，用于形容 对象的分配情况。查看右图128B的情况，128Bcache中的每个对象大小都是128个字节，就是由2^15个page组成一个对象。每个slab又是由一个或多个page组成。</p>
+<p>slab可以</p>
+<ol>
+<li>减少伙伴算法在分配小块连续内存时所产生的内部碎片;</li>
+<li>将频繁使用的对象缓存起来，减少分配、初始化和释放对象的时间开销。</li>
+<li>通过着色技术调整对象以更好的使用硬件高速缓存;</li>
+</ol>
+<p>这块没怎么看明白。。。。这里留下网址以后再继续看</p>
+<p><a target="_blank" rel="noopener" href="https://www.toutiao.com/article/6874373733595742727/?log_from=09cb26731ee35_1678104694035">linux操作系统内存大串讲：段页式，slab，共享内存-今日头条 (toutiao.com)</a></p>
+<h2 id="slab高速缓存的使用"><a href="#slab高速缓存的使用" class="headerlink" title="slab高速缓存的使用"></a>slab高速缓存的使用</h2><ol>
+<li><p>通过命令 cat /proc/slabinfo 可查看系统中的长用的</p>
+<p><img src="/images/22/1678145522310.png" alt="1678145522310"></p>
+</li>
+<li><p>内核中用 <code>struct kmem_cache</code>表示一个高速缓存。   通过下面的方法创建高速缓存</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">struct</span>  kmem_cache*  <span class="title function_">kmem_cache_create</span><span class="params">(<span class="type">const</span> <span class="type">char</span> *name,<span class="type">size_t</span> size,<span class="type">size_t</span> align,</span></span><br><span class="line"><span class="params">                                      <span class="type">unsigned</span> <span class="type">long</span> flags,<span class="type">void</span> (*ctor)(<span class="type">void</span>))</span> </span><br><span class="line">    </span><br></pre></td></tr></table></figure>
+</li>
+<li><p>申请和释放高速缓存  和申请 slab。 申请高速缓存的实现运用到了申请slab</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">void</span> *<span class="title function_">kmem_cache_alloc</span><span class="params">(<span class="keyword">struct</span> kmem_cache *cachep, <span class="type">gfp_t</span> flags)</span> </span><br><span class="line"><span class="type">void</span> <span class="title function_">kmem_cache_destroy</span><span class="params">(<span class="keyword">struct</span> kmem_cache *s)</span></span><br><span class="line">    </span><br><span class="line">static_always_inline <span class="type">void</span> * <span class="title function_">slab_alloc</span><span class="params">(<span class="keyword">struct</span> kmem_cache *cachep, <span class="type">gfp_t</span> flags, <span class="type">unsigned</span> <span class="type">long</span> caller)</span></span><br></pre></td></tr></table></figure>
+</li>
+</ol>
+<h2 id="内核中的最常用的内存申请"><a href="#内核中的最常用的内存申请" class="headerlink" title="内核中的最常用的内存申请"></a>内核中的最常用的内存申请</h2><ol>
+<li>给硬件分配内存必须连续</li>
+</ol>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">static</span> _always_inline <span class="type">void</span> *<span class="title function_">kmalloc</span><span class="params">(<span class="type">size_t</span> size, <span class="type">gfp_t</span> flags)</span></span><br><span class="line"><span class="type">static</span> <span class="keyword">inline</span> <span class="type">void</span> *<span class="title function_">kzalloc</span><span class="params">(<span class="type">size_t</span> size, <span class="type">gfp_t</span> flags)</span></span><br><span class="line"><span class="comment">//返回一个指向内存块的指针，其内存块大小至少size大小，所分配的内存在物理上是连续的。</span></span><br><span class="line"><span class="type">void</span> *<span class="title function_">vmalloc</span><span class="params">(<span class="type">unsigned</span> <span class="type">long</span> size)</span></span><br><span class="line"><span class="type">void</span> *<span class="title function_">vzalloc</span><span class="params">(<span class="type">unsigned</span> <span class="type">long</span> size)</span><span class="comment">//多了一步初始化操作 初始化成0</span></span><br><span class="line"><span class="comment">//返回一个指向内存块的指针，其内存块大小至少size大小，所分配的内存在物理上无需连续。</span></span><br></pre></td></tr></table></figure>
+<p><img src="/images/22/1678105707629.png" alt="1678105707629"></p>
+<h3 id="kzalloc实现"><a href="#kzalloc实现" class="headerlink" title="kzalloc实现"></a>kzalloc实现</h3><p>我们的代码中就用到了<img src="/images/22/1678105885291.png" alt="1678105885291"></p>
+<p>它的内部就是用kmalloc实现的，只是多了一步初始化为0的操作。</p>
+<p><img src="/images/22/1678105935522.png" alt="1678105935522"></p>
+<p>kmalloc的源码在/linux-4.9.229/include/linux/slab.h</p>
+<p><img src="/images/22/1678105981827.png" alt="1678105981827"></p>
+<p>大部分情况不会进入到if的判断里面，下图代码在 /mm/slab.c</p>
+<p><img src="/images/22/1678106254461.png" alt="1678106254461"></p>
+<p>到底依赖伙伴系统的算法。根据size和flag得到对应的高速缓存，通过调用kmalloc_slab里找到合适的缓存，然后找到对象返回到ret。kmalloc_slab的实现在/mm/slab_common.c</p>
+<p><img src="/images/22/1678106514598.png" alt="1678106514598"></p>
+<p>​        可以猜测到，通过大小查索引，是范围查找，合适的缓存。</p>
+<p><img src="/images/22/1678106829368.png" alt="1678106829368"></p>
+<p>  <img src="/images/22/1678106877955.png" alt="1678106877955"></p>
+<p>妙啊！ 除以8算出8的几倍，通过倍数当作索引来找出合适的size</p>
+<p>（这块儿看了好久都没理顺，打算先放一放往下看了。。。。）</p>
+
+          
+        
+      
+    </div>
+    
+    
+    
+
+    
+
+    
+
+    
+
+    <footer class="post-footer">
+      
+
+      
+
+      
+
+      
+      
+        <div class="post-eof"></div>
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+      
+    
+      
+      
+      
+        
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="http://hanze5.github.io/2021/12/06/2.%E5%85%B3%E4%BA%8EFPGA%E5%85%A8%E5%B1%80%E5%B8%83%E7%BA%BF/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/images/my_avatar.png">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="也许不会有人进来吧">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+                
+                <a class="post-title-link" href="/2021/12/06/2.%E5%85%B3%E4%BA%8EFPGA%E5%85%A8%E5%B1%80%E5%B8%83%E7%BA%BF/" itemprop="url">关于FPGA全局布线</a></h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2021-12-06T10:07:27+08:00">
+                2021-12-06
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E5%AD%A6%E6%97%A0%E6%AD%A2%E5%A2%83/" itemprop="url" rel="index">
+                    <span itemprop="name">学无止境</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+          
+
+          
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        
+          
+            <p>接触fpga布线是从复位杯的比赛开始。但是比赛的问题和数据已经将布线问题高度抽象化为了一个数学问题。所以个人认为无法实际支撑fpga布线的研究，因为在读相关文献的时候常常有看不懂的地方。所以从现在起阅读并翻译《MAPPING AND FPGA GLOBAL ROUTING USING MEAN FIELD ANNEALING》第三章的内容。<br>有些部分因怕翻译有误所以也copy了原文。</p>
+<div class="table-container">
+<table>
+<thead>
+<tr>
+<th><img src="/images/2/2.cover1.png" alt="封面1"></th>
+<th><img src="/images/2/2.cover2.png" alt="封面2"></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td></td>
+</tr>
+</tbody>
+</table>
+</div>
+<h1 id="FPGAs-amp-Global-Routing"><a href="#FPGAs-amp-Global-Routing" class="headerlink" title="FPGAs  &amp;  Global Routing"></a>FPGAs  &amp;  Global Routing</h1><ul>
+<li>介绍FPGA以及其物理设计的简要步骤</li>
+<li>路由架构，global routing problem 以及 经典解决方案</li>
+<li>对global routing problem 进行建模</li>
+</ul>
+<h2 id="1-Introduction-to-Field-Programmable-Gate-Arrays"><a href="#1-Introduction-to-Field-Programmable-Gate-Arrays" class="headerlink" title="1.Introduction to Field Programmable Gate Arrays"></a>1.Introduction to Field Programmable Gate Arrays</h2><p>Field Programmable gate arrays (FPGAs)是新的电子可编程集成电路，具有高集成性和高速的周转时间。在VLSI设计自动化中，制造时间是一个比较重要的问题，为了减少制造互连的时间而引入可编程器件。<br>FPGA是ASIC设计市场中非常流行的可编程器件。FPGA可以减少制造周转时间和成本。在其最简单的形式中，FPGA由一个<strong>可编程逻辑块阵列</strong>和<strong>路由网络</strong>组成，以<strong>实现逻辑块的互连</strong>。可编程逻辑块可以由用户编程来实现一个小的逻辑功能。FPGA的一个重要特性是通过使用电子可编程的switches进行重新编程。商业的FPGA在 使用何种编程技术类型、 逻辑块的结构 和 路由结构 这几个方面有所不同。FPGA的逻辑块可以像晶体管一样简单，也可以像微处理器一样复杂。它通常能够实现许多不同的组合和顺序逻辑功能。FPGA的逻辑块可以分为晶体管对、基本的小门（如两个输入的NAND）、多路复用器和查找表。</p>
+<h3 id="1-1-Logic-Blocks"><a href="#1-1-Logic-Blocks" class="headerlink" title="1.1  Logic Blocks"></a>1.1  Logic Blocks</h3><p>FPGA的不同逻辑块在尺寸和能力上有很大的不同。两个晶体管逻辑块只能实现一个反相器，但尺寸非常小，而Xilinx FPGA中使用的查找表逻辑块(look-up table，LUT)可以实现任何五个输入的逻辑功能，但它们的尺寸明显较大。<br>逻辑块可以按照粒度进行分类。粒度可以用各种方式定义，例如，逻辑块可以实现的布尔函数的数量，相当于两个输入NAND门的数量，晶体管的总数，输入和输出的数量。但一般来说，商业逻辑块可以分为两类：细粒度和粗粒度。使用细粒度逻辑块的主要优点是可使用的块被充分利用，主要缺点是需要较多的线段和可编程switch。</p>
+<h3 id="1-2-Programming-Technologies"><a href="#1-2-Programming-Technologies" class="headerlink" title="1.2 Programming Technologies"></a>1.2 Programming Technologies</h3><p>FPGA是使用电子可编程开关进行编程的。根据这些可编程开关的特性，如导通电阻和电容，编程技术可分为三个主要类型。这三种类型是<strong><em>SRAM</em></strong>、<strong><em>antifuse</em></strong> 和 <strong><em>EPROM</em></strong>。</p>
+<ul>
+<li>SRAM编程技术使用静态的RAM cells去控制门和多路复用器。在SRAM中，switch是一个由一个SRAM位的状态来控制的导通的晶体管，故SRAM是易失性的。因此FPGA必须在芯片电源启动时及时加载和配置，它需要外部辅助的永久性存储提供编程位，比如PROM or EPROM. SRAM的优点是可快速重编程，最大的缺点就是占用面积大（实现个SRAM单元需要至少5个晶体管。）</li>
+<li>antifuse是一种具有非编程状态的，两端之间具有极高的电阻。当在端之间施加一个极高的电压，两端就会被打通产生低电阻连接，这种连接是持久性的。编程antifuse需要额外的电路来提供可编程的高电压和高电流。使得antifuse本身的体积很小但是，加上额外的电路就不那么小了。</li>
+<li>浮动门编程技术使用一种特殊技术，该技术在紫外线可擦EPROM和电可擦EEPROM中被发现。EPROM的主要优点是快速可编程性。另外，他也不需要额外的持久性存储在芯片通电时对其进行编程。然而，这种技术的加工步骤更为复杂且需要更多的高祖晶体管。</li>
+</ul>
+<h3 id="1-3-路由结构"><a href="#1-3-路由结构" class="headerlink" title="1.3 路由结构"></a>1.3 路由结构</h3><p>FPGA路由结构是对可编程switch和wiring segment的放置，以实现内部的编程性的逻辑互连。图3.1展示了一个典型的路由结构的模型。<br><img src="/images/2/2.FPGA路由结构.png" alt>  </p>
+<p>一个wire segment是一条由可编程switch连接的线路，一条wire segment中可能会包含一个或多个switch。每个wire segment的末端都会附着一个switch。</p>
+<ul>
+<li>一个 track 是形成一条线段的一条或多条wire segment的序列；</li>
+<li>一个 routing channel 是一组平行的track。  </li>
+</ul>
+<p>图3.1中还包含着两种基础的结构：switch block和connection block。</p>
+<ul>
+<li>一个switch block 提供水平和垂直线段之间的互连，当然也可以是水平与水平。</li>
+<li>一个connection block在channel中提供逻辑块的输入和输出和wire segment的连接。<br><img src="/images/2/2.switch_block和connection_block.png" alt></li>
+</ul>
+<p>如图3.2所示，FPGA普遍拥有的两个重要的内部互连块。这些块内部的switch的数量对可路由性来说至关重要。switch数量越多路由选择就越多，但会影响路由质量和体积。<br>这些switch的数量及分布叫做FPGA的灵活性。switch block的灵活性记为$F_s$,connection block的灵活性记为$F_c$。$F_s$可以被定义为switch block提供给每个进入的wire segment的可以连接的总数。$F_c$可以被定义为channel中每个逻辑块可以连接的wire数。接下来展示两个商业FPGA的路由架构，它们分别来自Xilinx和Actel。</p>
+<h4 id="The-Xilinx-Routing-Architecture"><a href="#The-Xilinx-Routing-Architecture" class="headerlink" title="The Xilinx Routing Architecture"></a>The Xilinx Routing Architecture</h4><p><img src="/images/2/2.结构Xilinx_3000_FPGA.png" alt><br>逻辑块通过connection_block与channel连接。由于使用的是SRAM编程技术所以连接点体积比较大，在 Xilinx 3000的$F_c$为2~3（有5条track通过block）。逻辑块的四个边上都有connection block，它们将不同的总共11个pin连接到wire segment。当pin被连接到水平或垂直的wire segment上之后，每个sire可以连接另一侧的15个可能的wire segment中的5~6个。Xilinx 3000的architecture提供了4种wire segment：</p>
+<ul>
+<li>General-purpose interconnect由通过switch block的wire segment组成。</li>
+<li>Direct interconnect 由逻辑块直接与相邻最近的邻居逻辑块之间的互连。</li>
+<li>Long lines，跨越芯片级的长度，提供high-fanout 均匀延迟连接。</li>
+<li>Clock line，是跨越整个芯片的单个线网，由高驱动缓冲器驱动。（没理解）。</li>
+</ul>
+<h4 id="The-Actel-Routing-Architecture"><a href="#The-Actel-Routing-Architecture" class="headerlink" title="The  Actel  Routing  Architecture"></a>The  Actel  Routing  Architecture</h4><p><img src="/images/2/2.结构Actel_FPGA.png" alt><br>Actel的路由结构是非对称式的，水平方向要比垂直方向有更多的track。Actel FPGA的输入和输出引脚的连接性是不同的。对于输入引脚，每个引脚可以连接对应这一侧的channel种的所有track，。而输出引脚横跨逻辑块上面2个channel和下面2个channel，它可以连接它跨过的这四个channel中包含的所有channel。在Actel中没有独立可分离的switch block。相对应的起到该功能的东西分布在整个水平的channel中。所有的垂直的track都可以与入射的水平track相连接。每个水平的channel由22个track组成，每个track可划分成不同长度的segment。垂直的segment共有3种类型：输入段，输出端，和通过整个芯片高度或者重要部分的freeway。这允许比输出端允许的垂直距离更长。</p>
+<h2 id="2-Physical-Design-Automation-of-FPGAs"><a href="#2-Physical-Design-Automation-of-FPGAs" class="headerlink" title="2  Physical Design Automation of FPGAs"></a>2  Physical Design Automation of FPGAs</h2><p>FPGA的物理设计流程包含三个主要步骤：partitioning,placement and routing.</p>
+<h3 id="2-1-Partitioning"><a href="#2-1-Partitioning" class="headerlink" title="2.1 Partitioning"></a>2.1 Partitioning</h3><p>Partitioning is the separation of the logic into Logic  blocks. Partitioning has both a logical and physical component. The  connections within a logic blocks are constrained by the limited  routing architecture and limited number of blocks outputs. However, the quality of the resulting partitioning depends on how well the  placement can be done. The logical component has been investigated in the  context of technology mapping in logic optimization.<br>Partitioning 就是将逻辑划分成逻辑块。分区同时拥有着逻辑组件和物理组件。逻辑块内的连接受到路由结构的限制和块输出的数量。但是最终分区质量取决于分区的好坏。逻辑组件在逻辑优化的技术优化背景下应运而生。</p>
+<h3 id="2-2-Placement"><a href="#2-2-Placement" class="headerlink" title="2.2 Placement"></a>2.2 Placement</h3><p>Placement starts with logic blocks and input-output blocks in partitioned netlist and decides which corresponding blocks on the chip  should  contain them. The FPGA  placement problem is very similar to  traditional standard cell and gate array placement problems. Many  of  existing algorithm place­ment algorithms are applicable, such as simulated annealing,force  directed relaxation and min-cut.<br>Placement从逻辑块和位于分区线网表中的输入-输出块开始进行，并决定了他们应该对应在哪个芯片哪个的块上。FPGA placement问题与传统的单元和门阵列的布局问题相似。现有的很多布局算法，如模拟退火算法、强定向松弛算法、最小裁剪。</p>
+<h3 id="2-3-Routing"><a href="#2-3-Routing" class="headerlink" title="2.3 Routing"></a>2.3 Routing</h3><p>In general such a global  router divides the multipoint nets into two terminal nets and  routes  them with  minimumdistance path.<br>解决好所有电路的placement后，所有线网的每一个pin都必须连接。不同的FPGA结构有着不同的路由算法。FPGA的路由问题和standard cell和门阵列的设计一样复杂。FPGA路由可以分成：global routing and detailed routing。<br><img src="/images/2/2.Global_routing_and_Detailed_routing.png" alt><br>The global route defines route for each connection by assigning it a sequence of channel segments. After the paths are defined in terms of channel between two-pin connection detailed router chose specific wiring segments to implement the channel segment assigned during global routing.<br>主流的Global router会把多端线网花分为一组双端线网，然后使用最短路径算法。同时也要考虑平衡channel的密度。全局路由从粗粒度层面通过给出一条channel segment 序列来为每一条连接大致规划出一条路径。在这条路径以channel的形式确定下来后，由详细路由选择具体的wire segment 来实现global routing阶段设计出的路径。</p>
+<h2 id="3-Global-Routing-Problem-in-Design-Automation-of-FPGAs"><a href="#3-Global-Routing-Problem-in-Design-Automation-of-FPGAs" class="headerlink" title="3. Global Routing Problem in Design Automation of FPGAs"></a>3. Global Routing Problem in Design Automation of FPGAs</h2><p> 全局路由为每个线网选择channel然后将具体的选择哪条wire segment 和 switch这种工作留给detailed router。全局路由为每个net决定哪些pin是真正需要被连接的。全局路由的最终目标是最小化channel密度之和。在许多研究中，FPGA中的路由问题都直接分配segment，而忽略了全局路由阶段。有一个独特的FPGA全局路由器：PGAroute.该路由器类似于standard cell的全局路由器，使用LocusRoute算法。</p>
+<p>LocusRoute算法中，对每个多端线网执行以下三个步骤。<br>1) net的划分：用最小生成树算法将一个多端线网划分为一组双端线网。<br><img src="/images/2/2.简单的两转弯路径.png" alt><br>2) Route Generation and Evaluation:在这一步中考虑每一对pin之间的可能路径，并根据cost来选择最低的那条。<br>选择路径的方法是基于那些有2个转弯或者更少的路径.Locus评估两个物理pin之间所有两个弯道路径的cost，选择最低的那条。cost函数由channel的密度来定义。每个wire segment和switch block 被表示为cost array中的元素。<br>每一个cost array $H_{i,j}$中的元素,包含着通过wire segment(i,j)的路径数量.<br>The cost of path(P) is calculated as:  </p>
+<script type="math/tex; mode=display">Cost(p)=\sum_{p} H_{i,j}</script><p>3) Reconstruction：这一步将所有的双端网重新连接在一起，然后performs assigns unique numbers to distinct segments of some nets in each channel. 在每个channel中，执行分配唯一的数字在某些网的不同段。<br>Locus route利用迭代策略，即在第一次所有线网被路由之后，每个线网再依次被撕裂和重新路由。迭代减少了顺序依赖，提高路由质量。</p>
+<h2 id="4-Model-of-FPGA-for-Global-Routing"><a href="#4-Model-of-FPGA-for-Global-Routing" class="headerlink" title="4.Model of FPGA for Global Routing"></a>4.Model of FPGA for Global Routing</h2><p>商用的FPGA由以下部分组成：一个可编程逻辑块组成的规则的二维阵列（LB），一个可编程路由网络，switch boxes(SB)[3,1,2]. Logic blocks 被用来实现电路的功能；路由网络用来实现逻辑块和输入输出之间的连接。FPGA的路由网络包括wiring segment和connection blocks。基于FPGA的商业SRAM中，wiring segment可以分为三种类型（路由资源）：channel segments, long  lines and direct-interconnection.水平(垂直)的channel segment 由若干平行wire segment组成，它们连接水平(垂直)channel中的两个连续的SB。SB允许这些channel segments彼此可编程互连。direct-interconnection是相邻LB之间的连接。long  lines水平或竖直地穿过FPGA路由区域。connection block提供从LB的输入输出引脚到相应channel segments的wire segment的连接。每个引脚可以连接到一个通道中有限数量的wire segment上，这被称为connection block的灵活度。在本工作中，假设每个LB引脚可以连接到各自通道中的所有wire segment，把它作为我们的FPGA 模型的连接块。<br>direct-interconnections可以提供邻居LB之间的最小延迟的连接，long line在需要长距离传递信号是被使用（比如全局的时钟信号），这些路由资源在global routing中都没有被考虑到。因此我们关于的FPGA全局路由的模型只有可编程逻辑块（LB）,交换盒（SB）， channel segments。一个FPGA可以被建模为，二维的 由连接在水平和竖直channel segments中的LB组成的二维阵列，而SB则负责将水平和竖直的channel segments 连接在一起。<br><img src="/images/2/2.FPGA全局路由模型.png" alt><br>在本工作中我们使用最小生成树算法将多端线网划分为一组双端线网。故在此之后，文中提到的线网都指的是双端网。考虑一条双端曼哈顿距离为$d<em>h+d_v$的线网，其中$d_h$和$d_v$分别代表水平距离和垂直距离。该线网的路由区域被限制在大小为$(d_h+1)×(d_v+1)$的LB网格，如下图a所示<br><img src="/images/2/2.一条双端线网以及他子网和子网可能的路由区域.png" alt><br>然后该线网的最短距离可以被分解为三个独立的子网。该线网的每一个pin在最佳的路由区域只有一个邻居SB。所以，每一个pin都可以通过水平的或竖直的channel  segment与他的相邻的SB相连接，就如上图所示。同时，这两个pin连接的SB之间的连接的最佳路由区域就限制在$(d_h+1)×(d_v+1)$的大小的网格中。基于这个事实，我们进一步将每个线网细分为三个双端子网，及LS,SS,SL(如上图b所示)。这里，LS和SL子网代表着 LB-to-SB和SB-to-LB的连接，SS子网代表着特定网络的SB-to-SB连接。因此我们只LS和SL这两种子网考虑2条可能的路径，为SS子网考虑吧$d_h+d_v-2$条可能的包含1个或2个转弯的路径。<br>我们定义一个FPGA图(L,S,C),它是一个P×Q的二维网格，L,S,C分别代表着LB,SB,channel segments.这里P和Q代表着FPGA中水平和垂直的通道数量。每个顶点$s</em>{p,q}$代表着水平通道p和竖直通道q处的SB。网格中的每一个矩形单元$L<em>{p,q}$代表着四面相邻着$s</em>{p,q}$，$s<em>{p,q+1}$，$s</em>{p+1,q}$，$s<em>{p+1,q+1}$的LB。边被标记为$c^{h}</em>{pq}$($c^{v}<em>{pq}$),对应夹在$s</em>{p,q}$和$s<em>{p,q+1}$($s</em>{p+1,q}$)中间的channel segment。如下图所示：<br><img src="/images/2/2.FPGA_Graph.png" alt><br>全局路由问题为 寻找这些子网的路由的均匀分布 减少了搜索空间。路由的均匀分布有利于提高后续详细路由阶段寻找到可行路由的可能性。所以我们需要定义一个目标函数奖励balanced路由。因为我们前面讲到我们要避免区域性密度过高。将权重与边相关连以简化对给定路由结果的balance质量的计算。$w^{h}<em>{pq}$($w^{v}</em>{pq}$)代表$c^{h}<em>{pq}$($c^{v}</em>{pq}$)上的权重，意义是channel segment. 上的权重。通过这种模型，我们可以通过下面的公式来表示给定一条路由结果的balance质量：  </p>
+<script type="math/tex; mode=display">B(R)=\sum_{p=1}^P\sum_{q=1}^{Q-1}(w^{h}_{pq}(R))^2+\sum_{q=1}^Q\sum_{p=1}^{P-1}(w^{v}_{pq}(R))^2</script><p>公式中，每个channel segment将其密度的平方贡献给目标函数，从而惩罚不平衡的路由分布。因此全局路由问题就是最小化上式。</p>
+<h1 id="MFA-SOLUTION-FOR-GLOBAL-ROUTING-IN-FPGA"><a href="#MFA-SOLUTION-FOR-GLOBAL-ROUTING-IN-FPGA" class="headerlink" title="MFA SOLUTION FOR GLOBAL ROUTING IN FPGA"></a>MFA SOLUTION FOR GLOBAL ROUTING IN FPGA</h1><p>待续。。。。。。</p>
+
+          
+        
+      
+    </div>
+    
+    
+    
+
+    
+
+    
+
+    
+
+    <footer class="post-footer">
+      
+
+      
+
+      
+
+      
+      
+        <div class="post-eof"></div>
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+      
+    
+      
+      
+      
+        
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
     <link itemprop="mainEntityOfPage" href="http://hanze5.github.io/2021/11/21/11-C-%E5%AE%9E%E6%88%98%E2%80%94%E2%80%94http%E4%B8%9A%E5%8A%A1%E9%80%BB%E8%BE%91/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
@@ -1655,378 +2063,6 @@
 
       
     
-      
-      
-      
-        
-
-  
-
-  
-  
-  
-
-  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
-  
-  
-  
-  <div class="post-block">
-    <link itemprop="mainEntityOfPage" href="http://hanze5.github.io/2021/06/02/16-Linux%E5%86%85%E6%A0%B8%E2%80%94%E2%80%94%E5%A6%82%E4%BD%95%E5%B0%86%E9%A9%B1%E5%8A%A8%E4%BB%A3%E7%A0%81%E6%B7%BB%E5%8A%A0%E5%88%B0%E5%86%85%E6%A0%B8%E6%BA%90%E7%A0%81%E6%A0%91/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="name" content="">
-      <meta itemprop="description" content="">
-      <meta itemprop="image" content="/images/my_avatar.png">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="也许不会有人进来吧">
-    </span>
-
-    
-      <header class="post-header">
-
-        
-        
-          <h1 class="post-title" itemprop="name headline">
-                
-                <a class="post-title-link" href="/2021/06/02/16-Linux%E5%86%85%E6%A0%B8%E2%80%94%E2%80%94%E5%A6%82%E4%BD%95%E5%B0%86%E9%A9%B1%E5%8A%A8%E4%BB%A3%E7%A0%81%E6%B7%BB%E5%8A%A0%E5%88%B0%E5%86%85%E6%A0%B8%E6%BA%90%E7%A0%81%E6%A0%91/" itemprop="url">Linux内核——如何将驱动代码添加到内核源码树</a></h1>
-        
-
-        <div class="post-meta">
-          <span class="post-time">
-            
-              <span class="post-meta-item-icon">
-                <i class="fa fa-calendar-o"></i>
-              </span>
-              
-                <span class="post-meta-item-text">发表于</span>
-              
-              <time title="创建于" itemprop="dateCreated datePublished" datetime="2021-06-02T09:24:42+08:00">
-                2021-06-02
-              </time>
-            
-
-            
-
-            
-          </span>
-
-          
-            <span class="post-category" >
-            
-              <span class="post-meta-divider">|</span>
-            
-              <span class="post-meta-item-icon">
-                <i class="fa fa-folder-o"></i>
-              </span>
-              
-                <span class="post-meta-item-text">分类于</span>
-              
-              
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/%E5%AD%A6%E6%97%A0%E6%AD%A2%E5%A2%83/" itemprop="url" rel="index">
-                    <span itemprop="name">学无止境</span>
-                  </a>
-                </span>
-
-                
-                
-              
-            </span>
-          
-
-          
-            
-          
-
-          
-          
-
-          
-
-          
-
-          
-
-        </div>
-      </header>
-    
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-      
-
-      
-        
-          
-            <h1 id="以字符设备驱动为例s"><a href="#以字符设备驱动为例s" class="headerlink" title="以字符设备驱动为例s"></a>以字符设备驱动为例s</h1><ol>
-<li><p>首先，把.c文件拷贝到/driver/char中要修改源码给目录下的/driver/char中的Kconfig文件，这样才能在编译内核时看到我们驱动的配置选单，参考其他的config 有样学样</p>
-<p><img src="/images/16/1678061581009.png" alt="1678061581009"></p>
-<p>tristate字段说明 该驱动有三个选项 y m n 。 y代表编译到内核里面，m是编程驱动.ko n是不编译。</p>
-</li>
-<li><p>接下来到内核源码根目录下执行，</p>
-<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">/home/dawnlake/Downloads/linux-4.9.229$ make memuconfig</span><br></pre></td></tr></table></figure>
-</li>
-</ol>
-<p>   <img src="/images/16/1678061753376.png" alt="1678061753376"></p>
-<p>   <img src="/images/16/1678061802952.png" alt="1678061802952"></p>
-<p>   <img src="/images/16/1678061851658.png" alt="1678061851658"></p>
-<p>   查看help</p>
-<p>   <img src="/images/16/1678061906964.png" alt="1678061906964"></p>
-<ol>
-<li><p>接下来需要修改/drivers/char目录下的makefile文件 </p>
-<p><img src="/images/16/1678065704335.png" alt="1678065704335"></p>
-</li>
-</ol>
-<ol>
-<li><p>然后再回到内核源码根目录下执行，make</p>
-<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br></pre></td><td class="code"><pre><span class="line">root@dawnlake-virtual-machine:/home/dawnlake/Downloads/linux-4.9.229$ make</span><br><span class="line">scripts/kconfig/conf  --silentoldconfig Kconfig</span><br><span class="line">  CHK     include/config/kernel.release</span><br><span class="line">  CHK     include/generated/uapi/linux/version.h</span><br><span class="line">  CHK     include/generated/utsrelease.h</span><br><span class="line">  CHK     include/generated/bounds.h</span><br><span class="line">  CHK     include/generated/timeconst.h</span><br><span class="line">  CHK     include/generated/asm-offsets.h</span><br><span class="line">  CALL    scripts/checksyscalls.sh</span><br><span class="line">  CHK     scripts/mod/devicetable-offsets.h</span><br><span class="line">  CHK     include/generated/compile.h</span><br><span class="line">  CC      drivers/char/helloDev.o</span><br><span class="line">  LD      drivers/char/built-in.o</span><br><span class="line">  LD      drivers/built-in.o</span><br><span class="line">  LD      vmlinux.o</span><br><span class="line">  MODPOST vmlinux.o</span><br><span class="line">  GEN     .version</span><br><span class="line">  CHK     include/generated/compile.h</span><br><span class="line">  UPD     include/generated/compile.h</span><br><span class="line">  CC      init/version.o</span><br><span class="line">  LD      init/built-in.o</span><br><span class="line">  KSYM    .tmp_kallsyms1.o</span><br><span class="line">  KSYM    .tmp_kallsyms2.o</span><br><span class="line">  LD      vmlinux</span><br><span class="line">  SORTEX  vmlinux</span><br><span class="line">  SYSMAP  System.map</span><br><span class="line">  VOFFSET arch/x86/boot/compressed/../voffset.h</span><br><span class="line">  CC      arch/x86/boot/compressed/misc.o</span><br><span class="line">  OBJCOPY arch/x86/boot/compressed/vmlinux.bin</span><br><span class="line">  GZIP    arch/x86/boot/compressed/vmlinux.bin.gz</span><br><span class="line">  MKPIGGY arch/x86/boot/compressed/piggy.S</span><br><span class="line">  AS      arch/x86/boot/compressed/piggy.o</span><br><span class="line">  LD      arch/x86/boot/compressed/vmlinux</span><br><span class="line">ld: arch/x86/boot/compressed/head_64.o: warning: relocation in read-only section `.head.text&#x27;</span><br><span class="line">ld: warning: creating DT_TEXTREL in a PIE</span><br><span class="line">  ZOFFSET arch/x86/boot/zoffset.h</span><br><span class="line">  AS      arch/x86/boot/header.o</span><br><span class="line">  CC      arch/x86/boot/version.o</span><br><span class="line">  LD      arch/x86/boot/setup.elf</span><br><span class="line">  OBJCOPY arch/x86/boot/setup.bin</span><br><span class="line">  OBJCOPY arch/x86/boot/vmlinux.bin</span><br><span class="line">  BUILD   arch/x86/boot/bzImage</span><br><span class="line">Setup is 15580 bytes (padded to 15872 bytes).</span><br><span class="line">System is 6681 kB</span><br><span class="line">CRC 959cc45</span><br><span class="line">Kernel: arch/x86/boot/bzImage is ready  (#2)</span><br><span class="line">  Building modules, stage 2.</span><br><span class="line">  MODPOST 18 modules</span><br></pre></td></tr></table></figure>
-<p>现在内核启动时候就会自动加载我们的hello驱动，如果在menuconfig设置m而不是y（*） ，就会只生成.ko文件而不是直接加载，需要手动插入。</p>
-</li>
-</ol>
-
-          
-        
-      
-    </div>
-    
-    
-    
-
-    
-
-    
-
-    
-
-    <footer class="post-footer">
-      
-
-      
-
-      
-
-      
-      
-        <div class="post-eof"></div>
-      
-    </footer>
-  </div>
-  
-  
-  
-  </article>
-
-
-      
-    
-      
-      
-      
-        
-
-  
-
-  
-  
-  
-
-  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
-  
-  
-  
-  <div class="post-block">
-    <link itemprop="mainEntityOfPage" href="http://hanze5.github.io/2021/05/23/15-Linux%E5%86%85%E6%A0%B8%E2%80%94%E2%80%94%E7%BC%96%E5%86%99%E6%9C%80%E7%AE%80%E5%8D%95%E7%9A%84%E5%AD%97%E7%AC%A6%E8%AE%BE%E5%A4%87%E9%A9%B1%E5%8A%A8/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="name" content="">
-      <meta itemprop="description" content="">
-      <meta itemprop="image" content="/images/my_avatar.png">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="也许不会有人进来吧">
-    </span>
-
-    
-      <header class="post-header">
-
-        
-        
-          <h1 class="post-title" itemprop="name headline">
-                
-                <a class="post-title-link" href="/2021/05/23/15-Linux%E5%86%85%E6%A0%B8%E2%80%94%E2%80%94%E7%BC%96%E5%86%99%E6%9C%80%E7%AE%80%E5%8D%95%E7%9A%84%E5%AD%97%E7%AC%A6%E8%AE%BE%E5%A4%87%E9%A9%B1%E5%8A%A8/" itemprop="url">Linux内核——编写最简单的字符设备驱动</a></h1>
-        
-
-        <div class="post-meta">
-          <span class="post-time">
-            
-              <span class="post-meta-item-icon">
-                <i class="fa fa-calendar-o"></i>
-              </span>
-              
-                <span class="post-meta-item-text">发表于</span>
-              
-              <time title="创建于" itemprop="dateCreated datePublished" datetime="2021-05-23T21:54:41+08:00">
-                2021-05-23
-              </time>
-            
-
-            
-
-            
-          </span>
-
-          
-            <span class="post-category" >
-            
-              <span class="post-meta-divider">|</span>
-            
-              <span class="post-meta-item-icon">
-                <i class="fa fa-folder-o"></i>
-              </span>
-              
-                <span class="post-meta-item-text">分类于</span>
-              
-              
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/%E5%AD%A6%E6%97%A0%E6%AD%A2%E5%A2%83/" itemprop="url" rel="index">
-                    <span itemprop="name">学无止境</span>
-                  </a>
-                </span>
-
-                
-                
-              
-            </span>
-          
-
-          
-            
-          
-
-          
-          
-
-          
-
-          
-
-          
-
-        </div>
-      </header>
-    
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-      
-
-      
-        
-          
-            <p>参考链接：<a target="_blank" rel="noopener" href="https://www.toutiao.com/article/6848065724905161228/?tt_from=mobile_qq&amp;utm_campaign=client_share&amp;timestamp=1597801678&amp;app=news_article&amp;utm_source=mobile_qq&amp;utm_medium=toutiao_android&amp;use_new_style=1&amp;req_id=202008190947570100140471952C5FB432&amp;group_id=6848065724905161228&amp;wid=1678007899106">linux驱动开发第1讲：带你编写一个最简单的字符设备驱动-今日头条 (toutiao.com)</a></p>
-<h1 id="驱动内容"><a href="#驱动内容" class="headerlink" title="驱动内容"></a>驱动内容</h1><ol>
-<li><p>首先，驱动文件与一般的c文件不同，他有着自己独有的入口函数与出口函数，通过一下方式定义：</p>
-<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">module_init(hello_init); <span class="comment">//入口函数 </span></span><br><span class="line">module_exit(hello_exit); <span class="comment">//出口函数 </span></span><br><span class="line">MODULE_LICENSE(<span class="string">&quot;GPL&quot;</span>);   <span class="comment">//版权</span></span><br></pre></td></tr></table></figure>
-<p>入口函数会在插入驱动<code>insmod</code>时执行，出口函数会在<code>rmmod</code>时执行。</p>
-</li>
-<li><p>接下来看看，入口函数，出口函数也就是驱动插入删除时要做的事情。</p>
-<p><strong>入口函数 hello_init 。</strong></p>
-<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">int</span> <span class="title function_">hello_init</span><span class="params">(<span class="type">void</span>)</span></span><br><span class="line">&#123;</span><br><span class="line">    <span class="comment">//根据主次设备号生成一个devnum 主次设备号可以唯一标识</span></span><br><span class="line">    devNum = MKDEV(reg_major, reg_minor);</span><br><span class="line">    <span class="comment">//将设备号注册到内核 </span></span><br><span class="line">    <span class="keyword">if</span>(OK == register_chrdev_region(devNum, subDevNum, <span class="string">&quot;helloworld&quot;</span>))&#123;</span><br><span class="line">        printk(KERN_EMERG<span class="string">&quot;register_chrdev_region ok \n&quot;</span>); </span><br><span class="line">    &#125;<span class="keyword">else</span> &#123;</span><br><span class="line">    printk(KERN_EMERG<span class="string">&quot;register_chrdev_region error n&quot;</span>);</span><br><span class="line">        <span class="keyword">return</span> ERROR;</span><br><span class="line">    &#125;</span><br><span class="line">    printk(KERN_EMERG<span class="string">&quot; hello driver init \n&quot;</span>);</span><br><span class="line">    <span class="comment">// struct cdev 是内核中的字符设备</span></span><br><span class="line">    gDev = kzalloc(<span class="keyword">sizeof</span>(<span class="keyword">struct</span> cdev), GFP_KERNEL);</span><br><span class="line">    <span class="comment">//初始化一个file结构体 代表设备</span></span><br><span class="line">    gFile = kzalloc(<span class="keyword">sizeof</span>(<span class="keyword">struct</span> file_operations), GFP_KERNEL);</span><br><span class="line"></span><br><span class="line">    <span class="comment">//给file结构体中的函数操作赋值   右侧是函数指针 指明操作</span></span><br><span class="line">    gFile-&gt;open = hello_open;</span><br><span class="line">    gFile-&gt;read = hello_read;</span><br><span class="line">    gFile-&gt;write = hello_write;</span><br><span class="line">    gFile-&gt;owner = THIS_MODULE;</span><br><span class="line"></span><br><span class="line">    <span class="comment">//内核中找到设备号 就能找到cdev 与 file_operations</span></span><br><span class="line">    <span class="comment">//建立gDev 与 gFile之间的联系 cdev的成员</span></span><br><span class="line">    cdev_init(gDev, gFile);</span><br><span class="line">    <span class="comment">//又建立了gDev 与 设备号的联系</span></span><br><span class="line">    cdev_add(gDev, devNum, <span class="number">3</span>);</span><br><span class="line">    <span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-<p>​    <img src="/images/15/1678012806064.png" alt="1678012806064"><img src="/images/15/1678012844545.png" alt="1678012844545"></p>
-<p>总结下来，设备插入时要完成的核心功能：</p>
-<ul>
-<li>用设备的主设备号和次设备号去生成一个驱动ID方便程序调用与给驱动划分归类，暂且认为是这个作用。</li>
-<li>然后申请两块地址用于初始化两个构造体，一个构造体代表设备，一个构造体代表函数操作。内核操作设备实际上就是像操作文件一样。所以从上图<code>function_operation</code>结构体的定义可以看出有很多成员是函数指针。到时候就是要把设备要做的操作赋给这些函数指针。</li>
-<li>然后看到设备字符型<code>cDev</code>的定义中有一个成员是<code>function_operation</code>。所以接下来通过 <code>cdev_init(gDev, gFile)</code>建立起二者的联系，然后再通过<code>cdev_add(gDev, devNum, 3)</code>，让<code>devNum</code>也就是第一步获得的驱动ID也与cDev建立其联系</li>
-</ul>
-<p>至此，驱动初始化工作完成。这也是<code>insmod</code>命令执行时候要做的工作。</p>
-<p>对文件描述符的读写操作，最终会操作到一个叫做file的结构体上，这个结构体似乎和dev是一个东西。</p>
-<p><strong>出口函数hello_exit</strong> 很简单</p>
-<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//驱动的卸载</span></span><br><span class="line"><span class="type">void</span> __exit <span class="title function_">hello_exit</span><span class="params">(<span class="type">void</span>)</span></span><br><span class="line">&#123;</span><br><span class="line">    cdev_del(gDev);</span><br><span class="line">    unregister_chrdev_region(devNum, subDevNum);</span><br><span class="line">    <span class="keyword">return</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-</li>
-<li><p>最后简单定义驱动的一些功能也就是<code>function_operation</code>的成员将要被赋值的函数指针的函数的定义，就是一些简单的打印：</p>
-<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">int</span> <span class="title function_">hello_open</span><span class="params">(<span class="keyword">struct</span> inode *p, <span class="keyword">struct</span> file *f)</span></span><br><span class="line">&#123;</span><br><span class="line">    printk(KERN_EMERG<span class="string">&quot;hello_open\r\n&quot;</span>);</span><br><span class="line">    <span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="type">ssize_t</span> <span class="title function_">hello_write</span><span class="params">(<span class="keyword">struct</span> file *f, <span class="type">const</span> <span class="type">char</span> __user *u, <span class="type">size_t</span> s, <span class="type">loff_t</span> *l)</span></span><br><span class="line">&#123;</span><br><span class="line">    printk(KERN_EMERG<span class="string">&quot;hello_write\r\n&quot;</span>);</span><br><span class="line">    <span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">&#125;</span><br><span class="line"><span class="type">ssize_t</span> <span class="title function_">hello_read</span><span class="params">(<span class="keyword">struct</span> file *f, <span class="type">char</span> __user *u, <span class="type">size_t</span> s, <span class="type">loff_t</span> *l)</span></span><br><span class="line">&#123;</span><br><span class="line">    printk(KERN_EMERG<span class="string">&quot;hello_read\r\n&quot;</span>);      </span><br><span class="line">    <span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-</li>
-<li><p>让我们看看makefile文件都做了什么：</p>
-<figure class="highlight makefile"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">ifneq</span> (<span class="variable">$(KERNELRELEASE)</span>,)</span><br><span class="line">obj-m := helloDev.o                        </span><br><span class="line"><span class="keyword">else</span></span><br><span class="line">PWD := <span class="variable">$(<span class="built_in">shell</span> pwd)</span></span><br><span class="line">KDIR := /lib/modules/`uname -r`/build</span><br><span class="line"></span><br><span class="line"><span class="section">all:</span></span><br><span class="line">	make -C <span class="variable">$(KDIR)</span> M=<span class="variable">$(PWD)</span></span><br><span class="line"><span class="section">clean:	</span></span><br><span class="line">	rm -rf *.o *.ko *.mod.c *.symvers *.c~ *~</span><br><span class="line"><span class="keyword">endif</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 变量 KERNELRELEASE  由内核定义</span></span><br></pre></td></tr></table></figure>
-<p>首先，有一个寻找环境变量的判断语句，如果没找到的话，就会去到内核的根目录下执行内核的Makefile。这是因为驱动也需要链接c运行时库和glibc库，但是驱动不能链接和使用应用层的任何lib库，驱动需要引用内核的头文件和函数。所以，编译的时候需要指定内核源码的地址。这里我想在自己的环境里做实验比较方便，所以就把内核源码根目录设置为了本机内核源码的根目录。执行过后环境变量中便有了<code>KERNELRELEASE</code>。其实当前内核是否编译成功正常工作。,内核的编译系统会将所有的obj-m变量中的.o文件链接成为.ko文件,如果是obj-y 就编译内核里面。这就是驱动文件的生成。</p>
-</li>
-</ol>
-<h1 id="测试"><a href="#测试" class="headerlink" title="测试"></a>测试</h1><ol>
-<li><p>编译</p>
-<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line">root@dawnlake-virtual-machine:/home/dawnlake/Downloads/hellodev$ make</span><br><span class="line">make -C /lib/modules/`uname -r`/build M=/home/dawnlake/Downloads/hellodev</span><br><span class="line">make[1]: Entering directory &#x27;/usr/src/linux-headers-5.19.0-35-generic&#x27;</span><br><span class="line">warning: the compiler differs from the one used to build the kernel</span><br><span class="line">  The kernel was built by: x86_64-linux-gnu-gcc (Ubuntu 11.3.0-1ubuntu1~22.04) 11.3.0</span><br><span class="line">  You are using:           gcc (Ubuntu 11.3.0-1ubuntu1~22.04) 11.3.0</span><br><span class="line">  CC [M]  /home/dawnlake/Downloads/hellodev/helloDev.o</span><br><span class="line">  MODPOST /home/dawnlake/Downloads/hellodev/Module.symvers</span><br><span class="line">  CC [M]  /home/dawnlake/Downloads/hellodev/helloDev.mod.o</span><br><span class="line">  LD [M]  /home/dawnlake/Downloads/hellodev/helloDev.ko</span><br><span class="line">  BTF [M] /home/dawnlake/Downloads/hellodev/helloDev.ko</span><br><span class="line">Skipping BTF generation for /home/dawnlake/Downloads/hellodev/helloDev.ko due to unavailability of vmlinux</span><br><span class="line">make[1]: Leaving directory &#x27;/usr/src/linux-headers-5.19.0-35-generic&#x27;</span><br><span class="line">root@dawnlake-virtual-machine:/home/dawnlake/Downloads/hellodev# ls</span><br><span class="line">helloDev.c  helloDev.ko  helloDev.mod  helloDev.mod.c  helloDev.mod.o  helloDev.o  Makefile  modules.order  Module.symvers  test.c</span><br></pre></td></tr></table></figure>
-<p>可以看到先编译到<code>helloDev.mod.o</code>，再链接到<code>helloDev.ko</code></p>
-</li>
-<li><p>检查驱动的插入删除操作，<code>dmesg -c</code>清除内核日志</p>
-<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">root@dawnlake-virtual-machine:/home/dawnlake/Downloads/hellodev$ insmod helloDev.ko </span><br><span class="line">root@dawnlake-virtual-machine:/home/dawnlake/Downloads/hellodev$ dmesg -c</span><br><span class="line">[20663.380995] register_chrdev_region ok </span><br><span class="line">[20663.381004]  hello driver init </span><br><span class="line">root@dawnlake-virtual-machine:/home/dawnlake/Downloads/hellodev$ lsmod | grep hell</span><br><span class="line">helloDev               16384  0</span><br><span class="line">root@dawnlake-virtual-machine:/home/dawnlake/Downloads/hellodev$ rmmod helloDev</span><br><span class="line">root@dawnlake-virtual-machine:/home/dawnlake/Downloads/hellodev$ lsmod | grep hell</span><br><span class="line">root@dawnlake-virtual-machine:/home/dawnlake/Downloads/hellodev$</span><br></pre></td></tr></table></figure>
-<p>看看就能懂。</p>
-</li>
-<li><p>测试代码：</p>
-<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//test.c</span></span><br><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;fcntl.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;stdio.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;string.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;sys/select.h&gt;</span></span></span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> DATA_NUM    (64)</span></span><br><span class="line"><span class="type">int</span> <span class="title function_">main</span><span class="params">(<span class="type">int</span> argc, <span class="type">char</span> *argv[])</span></span><br><span class="line">&#123;</span><br><span class="line">    <span class="type">int</span> fd, i;</span><br><span class="line">    <span class="type">int</span> r_len, w_len;</span><br><span class="line">    fd_set fdset;</span><br><span class="line">    <span class="type">char</span> buf[DATA_NUM]=<span class="string">&quot;hello world&quot;</span>;</span><br><span class="line">    <span class="built_in">memset</span>(buf,<span class="number">0</span>,DATA_NUM);</span><br><span class="line">    fd = open(<span class="string">&quot;/dev/hello&quot;</span>, O_RDWR);</span><br><span class="line">	<span class="built_in">printf</span>(<span class="string">&quot;%d\r\n&quot;</span>,fd);</span><br><span class="line">    <span class="keyword">if</span>(<span class="number">-1</span> == fd) &#123;</span><br><span class="line">      	perror(<span class="string">&quot;open file error\r\n&quot;</span>);</span><br><span class="line">		<span class="keyword">return</span> <span class="number">-1</span>;</span><br><span class="line">    &#125;	</span><br><span class="line">	<span class="keyword">else</span> &#123;</span><br><span class="line">		<span class="built_in">printf</span>(<span class="string">&quot;open successe\r\n&quot;</span>);</span><br><span class="line">	&#125;</span><br><span class="line">    </span><br><span class="line">    w_len = write(fd,buf, DATA_NUM);</span><br><span class="line">    r_len = read(fd, buf, DATA_NUM);</span><br><span class="line">    <span class="built_in">printf</span>(<span class="string">&quot;%d %d\r\n&quot;</span>, w_len, r_len);</span><br><span class="line">    <span class="built_in">printf</span>(<span class="string">&quot;%s\r\n&quot;</span>,buf);</span><br><span class="line"></span><br><span class="line">    <span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-<p>执行之前需要还需要创建hello驱动的设备文件，创建设备文件，不然会显示打不开</p>
-<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">root@dawnlake-virtual-machine:/home/dawnlake/Downloads/hellodev$ ./a.out </span><br><span class="line">-1</span><br><span class="line">open file error</span><br><span class="line">: No such device or address</span><br></pre></td></tr></table></figure>
-<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">mknod /dev/hello c 232 0</span><br></pre></td></tr></table></figure>
-<p>这里的232和0要跟驱动文件里定义的主次设备号对应起来！</p>
-<p><img src="/images/15/1678022494911.png" alt="1678022494911"></p>
-</li>
-</ol>
-<p>​        分析：</p>
-<p>​        正常应用里面的read write函数是c库里面的函数，这两个函数的实现使用了系统调用。由应用层产生中断，陷入到内核里面，系统调用执行响相应动作，再把返回值返回给应用层用户空间。</p>
-<p>​        </p>
-<p>​    然后再次执行dmesg查看驱动输出，发现驱动里的hell_open, hello_write, hello_read被依次调用了。</p>
-<p>​   <img src="/images/15/1678022546541.png" alt="1678022546541"></p>
-<pre><code>忽略两次初始化。。。。。。
-</code></pre><h2 id="添加到内核源码树"><a href="#添加到内核源码树" class="headerlink" title="添加到内核源码树"></a>添加到内核源码树</h2><pre><code>字符型设备放在 /driver/char 里头
-</code></pre><h1 id="完整代码："><a href="#完整代码：" class="headerlink" title="完整代码："></a><strong>完整代码：</strong></h1><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//helloDev.c</span></span><br><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;linux/module.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;linux/moduleparam.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;linux/cdev.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;linux/fs.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;linux/wait.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;linux/poll.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;linux/sched.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;linux/slab.h&gt;</span></span></span><br><span class="line"></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> BUFFER_MAX    (10)</span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> OK            (0)</span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> ERROR         (-1)</span></span><br><span class="line"></span><br><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">cdev</span> *<span class="title">gDev</span>;</span></span><br><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">file_operations</span> *<span class="title">gFile</span>;</span></span><br><span class="line"><span class="type">dev_t</span>  devNum;</span><br><span class="line"><span class="type">unsigned</span> <span class="type">int</span> subDevNum = <span class="number">1</span>;</span><br><span class="line"><span class="type">int</span> reg_major  =  <span class="number">232</span>;    </span><br><span class="line"><span class="type">int</span> reg_minor =   <span class="number">0</span>;</span><br><span class="line"><span class="type">char</span> *buffer;</span><br><span class="line"><span class="type">int</span> flag = <span class="number">0</span>;</span><br><span class="line"><span class="type">int</span> <span class="title function_">hello_open</span><span class="params">(<span class="keyword">struct</span> inode *p, <span class="keyword">struct</span> file *f)</span></span><br><span class="line">&#123;</span><br><span class="line">    printk(KERN_EMERG<span class="string">&quot;hello_open\r\n&quot;</span>);</span><br><span class="line">    <span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="type">ssize_t</span> <span class="title function_">hello_write</span><span class="params">(<span class="keyword">struct</span> file *f, <span class="type">const</span> <span class="type">char</span> __user *u, <span class="type">size_t</span> s, <span class="type">loff_t</span> *l)</span></span><br><span class="line">&#123;</span><br><span class="line">    printk(KERN_EMERG<span class="string">&quot;hello_write\r\n&quot;</span>);</span><br><span class="line">    <span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">&#125;</span><br><span class="line"><span class="type">ssize_t</span> <span class="title function_">hello_read</span><span class="params">(<span class="keyword">struct</span> file *f, <span class="type">char</span> __user *u, <span class="type">size_t</span> s, <span class="type">loff_t</span> *l)</span></span><br><span class="line">&#123;</span><br><span class="line">    printk(KERN_EMERG<span class="string">&quot;hello_read\r\n&quot;</span>);      </span><br><span class="line">    <span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">&#125;</span><br><span class="line"><span class="type">int</span> <span class="title function_">hello_init</span><span class="params">(<span class="type">void</span>)</span></span><br><span class="line">&#123;</span><br><span class="line">    <span class="comment">//根据主次设备号生成一个devnum 主次设备号可以唯一标识</span></span><br><span class="line">    devNum = MKDEV(reg_major, reg_minor);</span><br><span class="line">    <span class="comment">//将设备号注册到内核 </span></span><br><span class="line">    <span class="keyword">if</span>(OK == register_chrdev_region(devNum, subDevNum, <span class="string">&quot;helloworld&quot;</span>))&#123;</span><br><span class="line">        printk(KERN_EMERG<span class="string">&quot;register_chrdev_region ok \n&quot;</span>); </span><br><span class="line">    &#125;<span class="keyword">else</span> &#123;</span><br><span class="line">    printk(KERN_EMERG<span class="string">&quot;register_chrdev_region error n&quot;</span>);</span><br><span class="line">        <span class="keyword">return</span> ERROR;</span><br><span class="line">    &#125;</span><br><span class="line">    printk(KERN_EMERG<span class="string">&quot; hello driver init \n&quot;</span>);</span><br><span class="line">    <span class="comment">// struct cdev 是内核中的字符设备</span></span><br><span class="line">    gDev = kzalloc(<span class="keyword">sizeof</span>(<span class="keyword">struct</span> cdev), GFP_KERNEL);</span><br><span class="line">    <span class="comment">//初始化一个file结构体 代表设备</span></span><br><span class="line">    gFile = kzalloc(<span class="keyword">sizeof</span>(<span class="keyword">struct</span> file_operations), GFP_KERNEL);</span><br><span class="line"></span><br><span class="line">    <span class="comment">//给file结构体中的函数操作赋值   右侧是函数指针 指明操作</span></span><br><span class="line">    gFile-&gt;open = hello_open;</span><br><span class="line">    gFile-&gt;read = hello_read;</span><br><span class="line">    gFile-&gt;write = hello_write;</span><br><span class="line">    gFile-&gt;owner = THIS_MODULE;</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">    <span class="comment">//内核中找到设备号 就能找到cdev 与 file_operations</span></span><br><span class="line">    <span class="comment">//建立gDev 与 gFile之间的联系 里边没看但是肯定有两个之间的互动就是了</span></span><br><span class="line">    cdev_init(gDev, gFile);</span><br><span class="line">    <span class="comment">//又建立了gDev 与 设备号的联系</span></span><br><span class="line">    cdev_add(gDev, devNum, <span class="number">3</span>);</span><br><span class="line">    <span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">&#125;</span><br><span class="line"><span class="comment">//驱动的卸载</span></span><br><span class="line"><span class="type">void</span> __exit <span class="title function_">hello_exit</span><span class="params">(<span class="type">void</span>)</span></span><br><span class="line">&#123;</span><br><span class="line">    cdev_del(gDev);</span><br><span class="line">    unregister_chrdev_region(devNum, subDevNum);</span><br><span class="line">    <span class="keyword">return</span>;</span><br><span class="line">&#125;</span><br><span class="line">module_init(hello_init);</span><br><span class="line">module_exit(hello_exit);</span><br><span class="line">MODULE_LICENSE(<span class="string">&quot;GPL&quot;</span>);</span><br><span class="line"></span><br></pre></td></tr></table></figure>
-<figure class="highlight makefile"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">##Makefile</span></span><br><span class="line"><span class="keyword">ifneq</span> (<span class="variable">$(KERNELRELEASE)</span>,)</span><br><span class="line">obj-m := helloDev.o                        </span><br><span class="line"><span class="keyword">else</span></span><br><span class="line">PWD := <span class="variable">$(<span class="built_in">shell</span> pwd)</span></span><br><span class="line"><span class="comment"># KDIR:= /lib/modules/4.4.0-31-generic/build</span></span><br><span class="line"><span class="comment"># KDIR:=/home/dawnlake/Downloads/linux-4.9.229</span></span><br><span class="line">KDIR := /lib/modules/`uname -r`/build</span><br><span class="line"><span class="section">all:</span></span><br><span class="line">	make -C <span class="variable">$(KDIR)</span> M=<span class="variable">$(PWD)</span></span><br><span class="line"><span class="section">clean:	</span></span><br><span class="line">	rm -rf *.o *.ko *.mod.c *.symvers *.c~ *~</span><br><span class="line"><span class="keyword">endif</span></span><br><span class="line"></span><br></pre></td></tr></table></figure>
-<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;fcntl.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;stdio.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;string.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;sys/select.h&gt;</span></span></span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> DATA_NUM    (64)</span></span><br><span class="line"><span class="type">int</span> <span class="title function_">main</span><span class="params">(<span class="type">int</span> argc, <span class="type">char</span> *argv[])</span></span><br><span class="line">&#123;</span><br><span class="line">    <span class="type">int</span> fd, i;</span><br><span class="line">    <span class="type">int</span> r_len, w_len;</span><br><span class="line">    fd_set fdset;</span><br><span class="line">    <span class="type">char</span> buf[DATA_NUM]=<span class="string">&quot;hello world&quot;</span>;</span><br><span class="line">    <span class="built_in">memset</span>(buf,<span class="number">0</span>,DATA_NUM);</span><br><span class="line">    fd = open(<span class="string">&quot;/dev/hello&quot;</span>, O_RDWR);</span><br><span class="line">	<span class="built_in">printf</span>(<span class="string">&quot;%d\r\n&quot;</span>,fd);</span><br><span class="line">    <span class="keyword">if</span>(<span class="number">-1</span> == fd) &#123;</span><br><span class="line">      	perror(<span class="string">&quot;open file error\r\n&quot;</span>);</span><br><span class="line">		<span class="keyword">return</span> <span class="number">-1</span>;</span><br><span class="line">    &#125;	</span><br><span class="line">	<span class="keyword">else</span> &#123;</span><br><span class="line">		<span class="built_in">printf</span>(<span class="string">&quot;open successe\r\n&quot;</span>);</span><br><span class="line">	&#125;</span><br><span class="line">    </span><br><span class="line">    w_len = write(fd,buf, DATA_NUM);</span><br><span class="line">    r_len = read(fd, buf, DATA_NUM);</span><br><span class="line">    <span class="built_in">printf</span>(<span class="string">&quot;%d %d\r\n&quot;</span>, w_len, r_len);</span><br><span class="line">    <span class="built_in">printf</span>(<span class="string">&quot;%s\r\n&quot;</span>,buf);</span><br><span class="line"></span><br><span class="line">    <span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-          
-        
-      
-    </div>
-    
-    
-    
-
-    
-
-    
-
-    
-
-    <footer class="post-footer">
-      
-
-      
-
-      
-
-      
-      
-        <div class="post-eof"></div>
-      
-    </footer>
-  </div>
-  
-  
-  
-  </article>
-
-
-      
-    
   </section>
 
   
@@ -2081,7 +2117,7 @@
               
                 <a href="/">
               
-                  <span class="site-state-item-count">23</span>
+                  <span class="site-state-item-count">25</span>
                   <span class="site-state-item-name">日志</span>
                 </a>
               </div>

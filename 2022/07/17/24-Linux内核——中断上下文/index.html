@@ -1,0 +1,790 @@
+<!DOCTYPE html>
+
+
+
+  
+
+
+<html class="theme-next pisces use-motion" lang="zh-Hans">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+<meta name="theme-color" content="#222">
+
+
+
+
+
+
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css" />
+
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=5.1.4" rel="stylesheet" type="text/css" />
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png?v=5.1.4">
+
+
+  <link rel="mask-icon" href="/images/logo.svg?v=5.1.4" color="#222">
+
+
+
+
+
+  <meta name="keywords" content="Linux内核," />
+
+
+
+
+
+
+
+
+
+
+<meta name="description" content="跟着简叔学的，可以B站搜索 简说linux 1.上下文1.1中断的种类如上下文判断方式中断可分为软件中断和硬件中断。或者BH ，这个BH是什么东西去查了查，说是软中断的实现方式，已经被弃用了。 之前讲过内核中的进程描述方式struct task_struct 中有一个thread_info，他之中保留着不同架构的对于进程的描述信息。其中有一个属性是下面这个。 32bit的变量  红色部分描述当前硬">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Linux内核——中断上下文">
+<meta property="og:url" content="http://hanze5.github.io/2022/07/17/24-Linux%E5%86%85%E6%A0%B8%E2%80%94%E2%80%94%E4%B8%AD%E6%96%AD%E4%B8%8A%E4%B8%8B%E6%96%87/index.html">
+<meta property="og:site_name" content="也许不会有人进来吧">
+<meta property="og:description" content="跟着简叔学的，可以B站搜索 简说linux 1.上下文1.1中断的种类如上下文判断方式中断可分为软件中断和硬件中断。或者BH ，这个BH是什么东西去查了查，说是软中断的实现方式，已经被弃用了。 之前讲过内核中的进程描述方式struct task_struct 中有一个thread_info，他之中保留着不同架构的对于进程的描述信息。其中有一个属性是下面这个。 32bit的变量  红色部分描述当前硬">
+<meta property="og:locale">
+<meta property="og:image" content="http://hanze5.github.io/images/24/1678170873661.png">
+<meta property="og:image" content="http://hanze5.github.io/images/24/1678171398820.png">
+<meta property="og:image" content="http://hanze5.github.io/images/24/1678172574530.png">
+<meta property="og:image" content="http://hanze5.github.io/images/24/1678175449036.png">
+<meta property="og:image" content="http://hanze5.github.io/images/24/1678176007129.png">
+<meta property="article:published_time" content="2022-07-17T08:17:23.000Z">
+<meta property="article:modified_time" content="2023-03-07T13:38:39.458Z">
+<meta property="article:author" content="Dawnlake">
+<meta property="article:tag" content="Linux内核">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="http://hanze5.github.io/images/24/1678170873661.png">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '',
+    scheme: 'Pisces',
+    version: '5.1.4',
+    sidebar: {"position":"left","display":"post","offset":12,"b2t":false,"scrollpercent":false,"onmobile":false},
+    fancybox: true,
+    tabs: true,
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    duoshuo: {
+      userId: '0',
+      author: '博主'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="http://hanze5.github.io/2022/07/17/24-Linux内核——中断上下文/"/>
+
+
+
+
+
+  <title>Linux内核——中断上下文 | 也许不会有人进来吧</title>
+  
+
+
+
+
+
+
+
+
+<meta name="generator" content="Hexo 6.3.0"></head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/"  class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">也许不会有人进来吧</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+      
+        <p class="site-subtitle"></p>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br />
+            
+            首页
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br />
+            
+            标签
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-th"></i> <br />
+            
+            分类
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br />
+            
+            归档
+          </a>
+        </li>
+      
+
+      
+    </ul>
+  
+
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="http://hanze5.github.io/2022/07/17/24-Linux%E5%86%85%E6%A0%B8%E2%80%94%E2%80%94%E4%B8%AD%E6%96%AD%E4%B8%8A%E4%B8%8B%E6%96%87/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/images/my_avatar.png">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="也许不会有人进来吧">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">Linux内核——中断上下文</h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2022-07-17T16:17:23+08:00">
+                2022-07-17
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E5%AD%A6%E6%97%A0%E6%AD%A2%E5%A2%83/" itemprop="url" rel="index">
+                    <span itemprop="name">学无止境</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+          
+
+          
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <p>跟着简叔学的，可以B站搜索 <strong>简说linux</strong></p>
+<h1 id="1-上下文"><a href="#1-上下文" class="headerlink" title="1.上下文"></a>1.上下文</h1><h3 id="1-1中断的种类如上下文判断方式"><a href="#1-1中断的种类如上下文判断方式" class="headerlink" title="1.1中断的种类如上下文判断方式"></a>1.1中断的种类如上下文判断方式</h3><p>中断可分为软件中断和硬件中断。或者BH ，这个BH是什么东西去查了查，说是软中断的实现方式，已经被弃用了。</p>
+<p>之前讲过内核中的进程描述方式struct task_struct 中有一个thread_info，他之中保留着不同架构的对于进程的描述信息。其中有一个属性是下面这个。 32bit的变量</p>
+<p><img src="/images/24/1678170873661.png" alt="1678170873661"></p>
+<p>红色部分描述当前硬中断嵌套的深度，0的话就是不是中断，不允许中断嵌套执行的话就只有0，1两种。</p>
+<p>绿色部分第8位是软中断，1的话就是软中断的处理上下文，9~15大于0也表示软中断。蓝色部分表示当前进程是否可以被抢占如果是0就是可以被抢占反之就是不能被抢占。</p>
+<p>include/linux/preempt.h</p>
+<p><img src="/images/24/1678171398820.png" alt="1678171398820"></p>
+<p>通过这些函数来确定出狱生么上下问之中，可以看到都是在用上面说的preemtycount做位运算。通过current-&gt;threadinfo得到threadinfo 然后就能得到preemtycount ，这样就能直到当前处于什么上下文</p>
+<h3 id="1-2-调用上面函数的案例"><a href="#1-2-调用上面函数的案例" class="headerlink" title="1.2 调用上面函数的案例"></a>1.2 调用上面函数的案例</h3><p> arm中 handle_irq是处理中断的总入口，arch/arm/kernel/irq.c</p>
+<p><img src="/images/24/1678172574530.png" alt="1678172574530"></p>
+<p>/kernel/irq/irqdesc.c。</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#<span class="keyword">ifdef</span> CONFIG_HANDLE_DOMAIN_IRQ</span></span><br><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment"> * __handle_domain_irq - Invoke the handler for a HW irq belonging to a domain</span></span><br><span class="line"><span class="comment"> * @domain:	The domain where to perform the lookup</span></span><br><span class="line"><span class="comment"> * @hwirq:	The HW irq number to convert to a logical one</span></span><br><span class="line"><span class="comment"> * @lookup:	Whether to perform the domain lookup or not</span></span><br><span class="line"><span class="comment"> * @regs:	Register file coming from the low-level handling code</span></span><br><span class="line"><span class="comment"> *</span></span><br><span class="line"><span class="comment"> * Returns:	0 on success, or -EINVAL if conversion has failed</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="type">int</span> __handle_domain_irq(<span class="keyword">struct</span> irq_domain *domain, <span class="type">unsigned</span> <span class="type">int</span> hwirq,</span><br><span class="line">			<span class="type">bool</span> lookup, <span class="keyword">struct</span> pt_regs *regs)</span><br><span class="line">&#123;</span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">pt_regs</span> *<span class="title">old_regs</span> =</span> set_irq_regs(regs);</span><br><span class="line">	<span class="type">unsigned</span> <span class="type">int</span> irq = hwirq;</span><br><span class="line">	<span class="type">int</span> ret = <span class="number">0</span>;</span><br><span class="line"></span><br><span class="line">	irq_enter();<span class="comment">//中断陷入</span></span><br><span class="line"></span><br><span class="line"><span class="meta">#<span class="keyword">ifdef</span> CONFIG_IRQ_DOMAIN</span></span><br><span class="line">	<span class="keyword">if</span> (lookup)</span><br><span class="line">		irq = irq_find_mapping(domain, hwirq);</span><br><span class="line"><span class="meta">#<span class="keyword">endif</span></span></span><br><span class="line"></span><br><span class="line">	<span class="comment">/*</span></span><br><span class="line"><span class="comment">	 * Some hardware gives randomly wrong interrupts.  Rather</span></span><br><span class="line"><span class="comment">	 * than crashing, do something sensible.</span></span><br><span class="line"><span class="comment">	 */</span></span><br><span class="line">	<span class="keyword">if</span> (unlikely(!irq || irq &gt;= nr_irqs)) &#123;</span><br><span class="line">		ack_bad_irq(irq);</span><br><span class="line">		ret = -EINVAL;</span><br><span class="line">	&#125; <span class="keyword">else</span> &#123;</span><br><span class="line">		generic_handle_irq(irq);</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	irq_exit();   <span class="comment">//中断退出</span></span><br><span class="line">	set_irq_regs(old_regs);</span><br><span class="line">	<span class="keyword">return</span> ret;</span><br><span class="line">&#125;</span><br><span class="line"><span class="meta">#<span class="keyword">endif</span></span></span><br></pre></td></tr></table></figure>
+<p>上面 中断陷入中断退出之间就是中断上下文。</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/*</span></span><br><span class="line"><span class="comment"> * Enter an interrupt context.</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="type">void</span> <span class="title function_">irq_enter</span><span class="params">(<span class="type">void</span>)</span></span><br><span class="line">&#123;</span><br><span class="line">	rcu_irq_enter();</span><br><span class="line">    <span class="comment">//如果当前进程是一个空闲进程并且不是在终端上上下文</span></span><br><span class="line">	<span class="keyword">if</span> (is_idle_task(current) &amp;&amp; !in_interrupt()) &#123;</span><br><span class="line">		<span class="comment">/*</span></span><br><span class="line"><span class="comment">		 * Prevent raise_softirq from needlessly waking up ksoftirqd</span></span><br><span class="line"><span class="comment">		 * here, as softirq will be serviced on return from interrupt.</span></span><br><span class="line"><span class="comment">		 */</span></span><br><span class="line">		local_bh_disable();</span><br><span class="line">		tick_irq_enter();</span><br><span class="line">		_local_bh_enable();</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	__irq_enter();</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h2 id="2-中断上下文进入时机"><a href="#2-中断上下文进入时机" class="headerlink" title="2.中断上下文进入时机"></a>2.中断上下文进入时机</h2><h3 id="2-1硬件中断进入时机"><a href="#2-1硬件中断进入时机" class="headerlink" title="2.1硬件中断进入时机"></a>2.1硬件中断进入时机</h3><p>当外设产生中断，会给cpu发送中断信号，cpu收到中断信号之后会调用（以arm为例，arch/arm/kernel/irq.c）</p>
+<p><img src="/images/24/1678175449036.png" alt="1678175449036"></p>
+<p>然后又回到上部分的代码</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/*</span></span><br><span class="line"><span class="comment"> * Enter an interrupt context.</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="type">void</span> <span class="title function_">irq_enter</span><span class="params">(<span class="type">void</span>)</span></span><br><span class="line">&#123;</span><br><span class="line">	rcu_irq_enter();</span><br><span class="line">    <span class="comment">//如果当前进程是一个空闲进程并且不是在终端上上下文</span></span><br><span class="line">	<span class="keyword">if</span> (is_idle_task(current) &amp;&amp; !in_interrupt()) &#123;</span><br><span class="line">		<span class="comment">/*</span></span><br><span class="line"><span class="comment">		 * Prevent raise_softirq from needlessly waking up ksoftirqd</span></span><br><span class="line"><span class="comment">		 * here, as softirq will be serviced on return from interrupt.</span></span><br><span class="line"><span class="comment">		 */</span></span><br><span class="line">		local_bh_disable();</span><br><span class="line">		tick_irq_enter();</span><br><span class="line">		_local_bh_enable();</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	__irq_enter();</span><br><span class="line">&#125;</span><br><span class="line"><span class="comment">/*</span></span><br><span class="line"><span class="comment"> * It is safe to do non-atomic ops on -&gt;hardirq_context,</span></span><br><span class="line"><span class="comment"> * because NMI handlers may not preempt and the ops are</span></span><br><span class="line"><span class="comment"> * always balanced, so the interrupted value of -&gt;hardirq_context</span></span><br><span class="line"><span class="comment"> * will always be restored.</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> __irq_enter()					\</span></span><br><span class="line"><span class="meta">	do &#123;						\</span></span><br><span class="line"><span class="meta">		account_irq_enter_time(current);	\</span></span><br><span class="line"><span class="meta">		preempt_count_add(HARDIRQ_OFFSET);	\</span></span><br><span class="line"><span class="meta">		trace_hardirq_enter();			\</span></span><br><span class="line"><span class="meta">	&#125; while (0)</span></span><br><span class="line"></span><br></pre></td></tr></table></figure>
+<p>可以看到<code>__irq_enter()</code>有一个操作是对<code>preempt_count</code>的操作，相当于把 <code>preempt_count</code>代表硬中断的位置为真，从此开始就进入了硬件中断的上下文。之前那些判断上下文的函数返回值就会显示是硬件中断。与irq_enter相反的操作irq_exit也是将硬件中断的位置为0；</p>
+<h3 id="2-2软件中断进入时机"><a href="#2-2软件中断进入时机" class="headerlink" title="2.2软件中断进入时机"></a>2.2软件中断进入时机</h3><p><img src="/images/24/1678176007129.png" alt="1678176007129"></p>
+<p>可以看到软中断这块有两个范围，一个是比特8，一个是比特9~15。当我们调用 BHdisable这种函数，9-15就会被置1，还有就是正常处理软中断 比特8会置为1.</p>
+<p>在/kernel/softirq.c中，</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br></pre></td><td class="code"><pre><span class="line">asmlinkage __visible <span class="type">void</span> __softirq_entry __do_softirq(<span class="type">void</span>)</span><br><span class="line">&#123;</span><br><span class="line">	<span class="type">unsigned</span> <span class="type">long</span> end = jiffies + MAX_SOFTIRQ_TIME;</span><br><span class="line">	<span class="type">unsigned</span> <span class="type">long</span> old_flags = current-&gt;flags;</span><br><span class="line">	<span class="type">int</span> max_restart = MAX_SOFTIRQ_RESTART;</span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">softirq_action</span> *<span class="title">h</span>;</span></span><br><span class="line">	<span class="type">bool</span> in_hardirq;</span><br><span class="line">	__u32 pending;</span><br><span class="line">	<span class="type">int</span> softirq_bit;</span><br><span class="line"></span><br><span class="line">	<span class="comment">/*</span></span><br><span class="line"><span class="comment">	 * Mask out PF_MEMALLOC s current task context is borrowed for the</span></span><br><span class="line"><span class="comment">	 * softirq. A softirq handled such as network RX might set PF_MEMALLOC</span></span><br><span class="line"><span class="comment">	 * again if the socket is related to swap</span></span><br><span class="line"><span class="comment">	 */</span></span><br><span class="line">	current-&gt;flags &amp;= ~PF_MEMALLOC;</span><br><span class="line"></span><br><span class="line">	pending = local_softirq_pending();</span><br><span class="line">	account_irq_enter_time(current);</span><br><span class="line"></span><br><span class="line">	__local_bh_disable_ip(_RET_IP_, SOFTIRQ_OFFSET);</span><br><span class="line">	in_hardirq = lockdep_softirq_start();</span><br><span class="line"></span><br><span class="line">restart:</span><br><span class="line">	<span class="comment">/* Reset the pending bitmask before enabling irqs */</span></span><br><span class="line">	set_softirq_pending(<span class="number">0</span>);</span><br><span class="line"></span><br><span class="line">	local_irq_enable();</span><br><span class="line"></span><br><span class="line">	h = softirq_vec;</span><br><span class="line"></span><br><span class="line">	<span class="keyword">while</span> ((softirq_bit = ffs(pending))) &#123;</span><br><span class="line">		<span class="type">unsigned</span> <span class="type">int</span> vec_nr;</span><br><span class="line">		<span class="type">int</span> prev_count;</span><br><span class="line"></span><br><span class="line">		h += softirq_bit - <span class="number">1</span>;</span><br><span class="line"></span><br><span class="line">		vec_nr = h - softirq_vec;</span><br><span class="line">		prev_count = preempt_count();</span><br><span class="line"></span><br><span class="line">		kstat_incr_softirqs_this_cpu(vec_nr);</span><br><span class="line"></span><br><span class="line">		trace_softirq_entry(vec_nr);</span><br><span class="line">		h-&gt;action(h);</span><br><span class="line">		trace_softirq_exit(vec_nr);</span><br><span class="line">		<span class="keyword">if</span> (unlikely(prev_count != preempt_count())) &#123;</span><br><span class="line">			pr_err(<span class="string">&quot;huh, entered softirq %u %s %p with preempt_count %08x, exited with %08x?\n&quot;</span>,</span><br><span class="line">			       vec_nr, softirq_to_name[vec_nr], h-&gt;action,</span><br><span class="line">			       prev_count, preempt_count());</span><br><span class="line">			preempt_count_set(prev_count);</span><br><span class="line">		&#125;</span><br><span class="line">		h++;</span><br><span class="line">		pending &gt;&gt;= softirq_bit;</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	rcu_bh_qs();</span><br><span class="line">	local_irq_disable();</span><br><span class="line"></span><br><span class="line">	pending = local_softirq_pending();</span><br><span class="line">	<span class="keyword">if</span> (pending) &#123;</span><br><span class="line">		<span class="keyword">if</span> (time_before(jiffies, end) &amp;&amp; !need_resched() &amp;&amp;</span><br><span class="line">		    --max_restart)</span><br><span class="line">			<span class="keyword">goto</span> restart;</span><br><span class="line"></span><br><span class="line">		wakeup_softirqd();</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	lockdep_softirq_end(in_hardirq);</span><br><span class="line">	account_irq_exit_time(current);</span><br><span class="line">	__local_bh_enable(SOFTIRQ_OFFSET);</span><br><span class="line">	WARN_ON_ONCE(in_interrupt());</span><br><span class="line">	tsk_restore_flags(current, old_flags, PF_MEMALLOC);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>轮询所有软中断，如果某个软中断有需要处理的数据，就会调用相应的软中断的handle。处理软中断前后会调用<code>_local_bh_disable_ip(_RET_IP_, SOFTIRQ_OFFSET);</code>和<code>__local_bh_enable(SOFTIRQ_OFFSET);</code>这两个函数的作用是会操作preemty_cnt,点进去查看会发现他操作的位是，比特8.可以说这两个函数可以对应硬中断的<code>__irq_enter()</code>    与 <code>__irq_exit()</code>。所以，在这两条函数中间，调用那些处理软函数中，是在软中断上下文环境中，这个环境中是不允许休眠和调度的。</p>
+
+      
+    </div>
+    
+    
+    
+
+    
+
+    
+
+    
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/Linux%E5%86%85%E6%A0%B8/" rel="tag"># Linux内核</a>
+          
+        </div>
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2022/07/15/23-Linux%E5%86%85%E6%A0%B8%E2%80%94%E2%80%94%E8%BF%9B%E7%A8%8B%E7%9A%84%E8%99%9A%E6%8B%9F%E5%9C%B0%E5%9D%80%E7%A9%BA%E9%97%B4/" rel="next" title="Linux内核——进程的虚拟地址空间">
+                <i class="fa fa-chevron-left"></i> Linux内核——进程的虚拟地址空间
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2022/07/20/25-Linux%E5%86%85%E6%A0%B8%E2%80%94%E2%80%94%E8%BD%AF%E4%B8%AD%E6%96%AD%E7%9A%84%E7%89%B9%E7%82%B9%E4%BB%A5%E5%8F%8A%E6%B3%A8%E5%86%8C%E5%92%8C%E8%A7%A6%E5%8F%91/" rel="prev" title="Linux内核——软中断的特点以及注册和触发">
+                Linux内核——软中断的特点以及注册和触发 <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+
+  
+
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <section class="site-overview-wrap sidebar-panel">
+        <div class="site-overview">
+          <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+            
+              <img class="site-author-image" itemprop="image"
+                src="/images/my_avatar.png"
+                alt="" />
+            
+              <p class="site-author-name" itemprop="name"></p>
+              <p class="site-description motion-element" itemprop="description"></p>
+          </div>
+
+          <nav class="site-state motion-element">
+
+            
+              <div class="site-state-item site-state-posts">
+              
+                <a href="/">
+              
+                  <span class="site-state-item-count">25</span>
+                  <span class="site-state-item-name">日志</span>
+                </a>
+              </div>
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-categories">
+                <a href="/categories/index.html">
+                  <span class="site-state-item-count">2</span>
+                  <span class="site-state-item-name">分类</span>
+                </a>
+              </div>
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-tags">
+                <a href="/tags/index.html">
+                  <span class="site-state-item-count">6</span>
+                  <span class="site-state-item-name">标签</span>
+                </a>
+              </div>
+            
+
+          </nav>
+
+          
+
+          
+
+          
+          
+
+          
+          
+
+          
+
+        </div>
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#1-%E4%B8%8A%E4%B8%8B%E6%96%87"><span class="nav-number">1.</span> <span class="nav-text">1.上下文</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#1-1%E4%B8%AD%E6%96%AD%E7%9A%84%E7%A7%8D%E7%B1%BB%E5%A6%82%E4%B8%8A%E4%B8%8B%E6%96%87%E5%88%A4%E6%96%AD%E6%96%B9%E5%BC%8F"><span class="nav-number">1.0.1.</span> <span class="nav-text">1.1中断的种类如上下文判断方式</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#1-2-%E8%B0%83%E7%94%A8%E4%B8%8A%E9%9D%A2%E5%87%BD%E6%95%B0%E7%9A%84%E6%A1%88%E4%BE%8B"><span class="nav-number">1.0.2.</span> <span class="nav-text">1.2 调用上面函数的案例</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#2-%E4%B8%AD%E6%96%AD%E4%B8%8A%E4%B8%8B%E6%96%87%E8%BF%9B%E5%85%A5%E6%97%B6%E6%9C%BA"><span class="nav-number">1.1.</span> <span class="nav-text">2.中断上下文进入时机</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#2-1%E7%A1%AC%E4%BB%B6%E4%B8%AD%E6%96%AD%E8%BF%9B%E5%85%A5%E6%97%B6%E6%9C%BA"><span class="nav-number">1.1.1.</span> <span class="nav-text">2.1硬件中断进入时机</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2-2%E8%BD%AF%E4%BB%B6%E4%B8%AD%E6%96%AD%E8%BF%9B%E5%85%A5%E6%97%B6%E6%9C%BA"><span class="nav-number">1.1.2.</span> <span class="nav-text">2.2软件中断进入时机</span></a></li></ol></li></ol></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+<div class="copyright">&copy; <span itemprop="copyrightYear">2023</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">Dawnlake</span>
+
+  
+</div>
+
+
+  <div class="powered-by">由 <a class="theme-link" target="_blank" href="https://hexo.io">Hexo</a> 强力驱动</div>
+
+
+
+  <span class="post-meta-divider">|</span>
+
+
+
+  <div class="theme-info">主题 &mdash; <a class="theme-link" target="_blank" href="https://github.com/iissnan/hexo-theme-next">NexT.Pisces</a> v5.1.4</div>
+
+
+
+
+        
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+    
+
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+  
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.4"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.4"></script>
+
+
+
+  
+  
+
+
+  <script type="text/javascript" src="/js/src/affix.js?v=5.1.4"></script>
+
+  <script type="text/javascript" src="/js/src/schemes/pisces.js?v=5.1.4"></script>
+
+
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.4"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+  
+
+  
+
+  
+  
+
+  
+  
+    <script type="text/x-mathjax-config">
+      MathJax.Hub.Config({
+        tex2jax: {
+          inlineMath: [ ['$','$'], ["\\(","\\)"]  ],
+          processEscapes: true,
+          skipTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']
+        }
+      });
+    </script>
+
+    <script type="text/x-mathjax-config">
+      MathJax.Hub.Queue(function() {
+        var all = MathJax.Hub.getAllJax(), i;
+        for (i=0; i < all.length; i += 1) {
+          all[i].SourceElement().parentNode.className += ' has-jax';
+        }
+      });
+    </script>
+    <script type="text/javascript" src="//cdn.bootcss.com/mathjax/2.7.1/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
+  
+
+
+  
+
+  
+
+</body>
+</html>
