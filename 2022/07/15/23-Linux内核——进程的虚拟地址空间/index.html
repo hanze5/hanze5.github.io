@@ -1,0 +1,798 @@
+<!DOCTYPE html>
+
+
+
+  
+
+
+<html class="theme-next pisces use-motion" lang="zh-Hans">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+<meta name="theme-color" content="#222">
+
+
+
+
+
+
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css" />
+
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=5.1.4" rel="stylesheet" type="text/css" />
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png?v=5.1.4">
+
+
+  <link rel="mask-icon" href="/images/logo.svg?v=5.1.4" color="#222">
+
+
+
+
+
+  <meta name="keywords" content="Linux内核," />
+
+
+
+
+
+
+
+
+
+
+<meta name="description" content="跟着简叔学的，可以B站搜索 简说linux 进程虚拟地址空间的管理机制什么是虚拟地址空间内存的页表映射机制实现虚拟地址到物理地址的转换。内核只需维护一个页目录表，而多个进程共享用户空间是不安全的，需要做管理,不然用户空间太大，若每个进程也只维护一个页目录表的话，查找管理不便。那么虚拟地址空间的管理机制是什么样的呢。  在linux中，proc是一个虚拟文件系统，也是一个控制中心，里面储存是当前内核">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Linux内核——进程的虚拟地址空间">
+<meta property="og:url" content="http://hanze5.github.io/2022/07/15/23-Linux%E5%86%85%E6%A0%B8%E2%80%94%E2%80%94%E8%BF%9B%E7%A8%8B%E7%9A%84%E8%99%9A%E6%8B%9F%E5%9C%B0%E5%9D%80%E7%A9%BA%E9%97%B4/index.html">
+<meta property="og:site_name" content="也许不会有人进来吧">
+<meta property="og:description" content="跟着简叔学的，可以B站搜索 简说linux 进程虚拟地址空间的管理机制什么是虚拟地址空间内存的页表映射机制实现虚拟地址到物理地址的转换。内核只需维护一个页目录表，而多个进程共享用户空间是不安全的，需要做管理,不然用户空间太大，若每个进程也只维护一个页目录表的话，查找管理不便。那么虚拟地址空间的管理机制是什么样的呢。  在linux中，proc是一个虚拟文件系统，也是一个控制中心，里面储存是当前内核">
+<meta property="og:locale">
+<meta property="og:image" content="http://hanze5.github.io/images/23/1678148132831.png">
+<meta property="og:image" content="http://hanze5.github.io/images/23/1678148938760.png">
+<meta property="og:image" content="http://hanze5.github.io/images/23/1678148993319.png">
+<meta property="og:image" content="http://hanze5.github.io/images/23/1678149193044.png">
+<meta property="og:image" content="http://hanze5.github.io/images/23/1678149419801.png">
+<meta property="og:image" content="http://hanze5.github.io/images/23/1678151170442.png">
+<meta property="og:image" content="http://hanze5.github.io/images/23/1678153727517.png">
+<meta property="article:published_time" content="2022-07-15T01:58:12.000Z">
+<meta property="article:modified_time" content="2023-03-07T01:59:28.013Z">
+<meta property="article:author" content="Dawnlake">
+<meta property="article:tag" content="Linux内核">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="http://hanze5.github.io/images/23/1678148132831.png">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '',
+    scheme: 'Pisces',
+    version: '5.1.4',
+    sidebar: {"position":"left","display":"post","offset":12,"b2t":false,"scrollpercent":false,"onmobile":false},
+    fancybox: true,
+    tabs: true,
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    duoshuo: {
+      userId: '0',
+      author: '博主'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="http://hanze5.github.io/2022/07/15/23-Linux内核——进程的虚拟地址空间/"/>
+
+
+
+
+
+  <title>Linux内核——进程的虚拟地址空间 | 也许不会有人进来吧</title>
+  
+
+
+
+
+
+
+
+
+<meta name="generator" content="Hexo 6.3.0"></head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/"  class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">也许不会有人进来吧</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+      
+        <p class="site-subtitle"></p>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br />
+            
+            首页
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br />
+            
+            标签
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-th"></i> <br />
+            
+            分类
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br />
+            
+            归档
+          </a>
+        </li>
+      
+
+      
+    </ul>
+  
+
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="http://hanze5.github.io/2022/07/15/23-Linux%E5%86%85%E6%A0%B8%E2%80%94%E2%80%94%E8%BF%9B%E7%A8%8B%E7%9A%84%E8%99%9A%E6%8B%9F%E5%9C%B0%E5%9D%80%E7%A9%BA%E9%97%B4/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/images/my_avatar.png">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="也许不会有人进来吧">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">Linux内核——进程的虚拟地址空间</h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2022-07-15T09:58:12+08:00">
+                2022-07-15
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E5%AD%A6%E6%97%A0%E6%AD%A2%E5%A2%83/" itemprop="url" rel="index">
+                    <span itemprop="name">学无止境</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+          
+
+          
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <p>跟着简叔学的，可以B站搜索 <strong>简说linux</strong></p>
+<h2 id="进程虚拟地址空间的管理机制"><a href="#进程虚拟地址空间的管理机制" class="headerlink" title="进程虚拟地址空间的管理机制"></a>进程虚拟地址空间的管理机制</h2><h3 id="什么是虚拟地址空间"><a href="#什么是虚拟地址空间" class="headerlink" title="什么是虚拟地址空间"></a>什么是虚拟地址空间</h3><p>内存的页表映射机制实现虚拟地址到物理地址的转换。内核只需维护一个页目录表，而多个进程共享用户空间是不安全的，需要做管理,不然用户空间太大，若每个进程也只维护一个页目录表的话，查找管理不便。那么虚拟地址空间的管理机制是什么样的呢。</p>
+<p><img src="/images/23/1678148132831.png" alt="1678148132831"></p>
+<p>在linux中，proc是一个虚拟文件系统，也是一个控制中心，里面储存是当前内核运行状态的一系列特殊文件；该系统只存在内存当中，以文件系统的方式为访问系统内核数据的操作提供接口，可以通过更改其中的某些文件来改变内核运行状态。</p>
+<p>写一个最简单的c语言程序并运行</p>
+<p>!<img src="/images/23/1678148938760.png" alt="1678148938760"></p>
+<p>使用top命令查看进程的ID,</p>
+<p><img src="/images/23/1678148993319.png" alt="1678148993319"></p>
+<p>使用cat /proc/232759/maps可以查看进程的虚拟地址空间的信息</p>
+<p><img src="/images/23/1678149193044.png" alt="1678149193044"></p>
+<p>含义：</p>
+<p><img src="/images/23/1678149419801.png" alt="1678149419801"></p>
+<h3 id="虚拟地址空间的管理"><a href="#虚拟地址空间的管理" class="headerlink" title="虚拟地址空间的管理"></a>虚拟地址空间的管理</h3><p>内核使用下面的数据结构来描述一个进程的的虚拟地址空间，文件路径<code>/include/linux/mm_types.h</code>，其中第一个成员 <code>vm_area_struct</code>被用来描述一个虚拟内存区域（VMA），一个地址空间由多个虚拟内存区域，可以看到是一个链表的形式。<code>pgd_t * pgd</code> 指向页目录表，地址映射必备，如果两个进程有同一个页目录表，那这两个进程甚至可以当成线程使用。</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br><span class="line">102</span><br><span class="line">103</span><br><span class="line">104</span><br><span class="line">105</span><br><span class="line">106</span><br><span class="line">107</span><br><span class="line">108</span><br><span class="line">109</span><br><span class="line">110</span><br><span class="line">111</span><br><span class="line">112</span><br><span class="line">113</span><br><span class="line">114</span><br><span class="line">115</span><br><span class="line">116</span><br><span class="line">117</span><br><span class="line">118</span><br><span class="line">119</span><br><span class="line">120</span><br><span class="line">121</span><br><span class="line">122</span><br><span class="line">123</span><br><span class="line">124</span><br><span class="line">125</span><br><span class="line">126</span><br><span class="line">127</span><br><span class="line">128</span><br><span class="line">129</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">mm_struct</span> &#123;</span></span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">vm_area_struct</span> *<span class="title">mmap</span>;</span>		<span class="comment">/* list of VMAs */</span></span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">rb_root</span> <span class="title">mm_rb</span>;</span></span><br><span class="line">	u64 vmacache_seqnum;                   <span class="comment">/* per-thread vmacache */</span></span><br><span class="line"><span class="meta">#<span class="keyword">ifdef</span> CONFIG_MMU</span></span><br><span class="line">	<span class="type">unsigned</span> <span class="title function_">long</span> <span class="params">(*get_unmapped_area)</span> <span class="params">(<span class="keyword">struct</span> file *filp,</span></span><br><span class="line"><span class="params">				<span class="type">unsigned</span> <span class="type">long</span> addr, <span class="type">unsigned</span> <span class="type">long</span> len,</span></span><br><span class="line"><span class="params">				<span class="type">unsigned</span> <span class="type">long</span> pgoff, <span class="type">unsigned</span> <span class="type">long</span> flags)</span>;</span><br><span class="line"><span class="meta">#<span class="keyword">endif</span></span></span><br><span class="line">	<span class="type">unsigned</span> <span class="type">long</span> mmap_base;		<span class="comment">/* base of mmap area */</span></span><br><span class="line">	<span class="type">unsigned</span> <span class="type">long</span> mmap_legacy_base; <span class="comment">/* base of mmap area in bottom-up allocations */</span></span><br><span class="line">	<span class="type">unsigned</span> <span class="type">long</span> task_size;		<span class="comment">/* size of task vm space */</span></span><br><span class="line">	<span class="type">unsigned</span> <span class="type">long</span> highest_vm_end;   <span class="comment">/* highest vma end address */</span></span><br><span class="line">	<span class="type">pgd_t</span> * pgd;                    <span class="comment">//页目录表的地址</span></span><br><span class="line">	<span class="type">atomic_t</span> mm_users;	<span class="comment">/* How many users with user space? */</span></span><br><span class="line">	<span class="type">atomic_t</span> mm_count;  <span class="comment">/* How many references to &quot;struct mm_struct&quot; (users count as 1) */</span></span><br><span class="line">	<span class="type">atomic_long_t</span> nr_ptes;			<span class="comment">/* PTE page table pages */</span></span><br><span class="line"><span class="meta">#<span class="keyword">if</span> CONFIG_PGTABLE_LEVELS &gt; 2</span></span><br><span class="line">	<span class="type">atomic_long_t</span> nr_pmds;			<span class="comment">/* PMD page table pages */</span></span><br><span class="line"><span class="meta">#<span class="keyword">endif</span></span></span><br><span class="line">	<span class="type">int</span> map_count;				    <span class="comment">/* number of VMAs */</span></span><br><span class="line"></span><br><span class="line">	<span class="type">spinlock_t</span> page_table_lock;		<span class="comment">/* Protects page tables and some counters */</span></span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">rw_semaphore</span> <span class="title">mmap_sem</span>;</span></span><br><span class="line"></span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">list_head</span> <span class="title">mmlist</span>;</span>		<span class="comment">/* List of maybe swapped mm&#x27;s.	These are globally strung</span></span><br><span class="line"><span class="comment">						 * together off init_mm.mmlist, and are protected</span></span><br><span class="line"><span class="comment">						 * by mmlist_lock</span></span><br><span class="line"><span class="comment">						 */</span></span><br><span class="line"></span><br><span class="line"></span><br><span class="line">	<span class="type">unsigned</span> <span class="type">long</span> hiwater_rss;	<span class="comment">/* High-watermark of RSS usage */</span></span><br><span class="line">	<span class="type">unsigned</span> <span class="type">long</span> hiwater_vm;	<span class="comment">/* High-water virtual memory usage */</span></span><br><span class="line"></span><br><span class="line">	<span class="type">unsigned</span> <span class="type">long</span> total_vm;		<span class="comment">/* Total pages mapped */</span></span><br><span class="line">	<span class="type">unsigned</span> <span class="type">long</span> locked_vm;	<span class="comment">/* Pages that have PG_mlocked set */</span></span><br><span class="line">	<span class="type">unsigned</span> <span class="type">long</span> pinned_vm;	<span class="comment">/* Refcount permanently increased */</span></span><br><span class="line">	<span class="type">unsigned</span> <span class="type">long</span> data_vm;		<span class="comment">/* VM_WRITE &amp; ~VM_SHARED &amp; ~VM_STACK */</span></span><br><span class="line">	<span class="type">unsigned</span> <span class="type">long</span> exec_vm;		<span class="comment">/* VM_EXEC &amp; ~VM_WRITE &amp; ~VM_STACK */</span></span><br><span class="line">	<span class="type">unsigned</span> <span class="type">long</span> stack_vm;		<span class="comment">/* VM_STACK */</span></span><br><span class="line">	<span class="type">unsigned</span> <span class="type">long</span> def_flags;</span><br><span class="line">	<span class="type">unsigned</span> <span class="type">long</span> start_code, end_code, start_data, end_data;</span><br><span class="line">	<span class="type">unsigned</span> <span class="type">long</span> start_brk, brk, start_stack;</span><br><span class="line">	<span class="type">unsigned</span> <span class="type">long</span> arg_start, arg_end, env_start, env_end;</span><br><span class="line"></span><br><span class="line">	<span class="type">unsigned</span> <span class="type">long</span> saved_auxv[AT_VECTOR_SIZE]; <span class="comment">/* for /proc/PID/auxv */</span></span><br><span class="line"></span><br><span class="line">	<span class="comment">/*</span></span><br><span class="line"><span class="comment">	 * Special counters, in some configurations protected by the</span></span><br><span class="line"><span class="comment">	 * page_table_lock, in other configurations by being atomic.</span></span><br><span class="line"><span class="comment">	 */</span></span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">mm_rss_stat</span> <span class="title">rss_stat</span>;</span></span><br><span class="line"></span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">linux_binfmt</span> *<span class="title">binfmt</span>;</span></span><br><span class="line"></span><br><span class="line">	<span class="type">cpumask_var_t</span> cpu_vm_mask_var;</span><br><span class="line"></span><br><span class="line">	<span class="comment">/* Architecture-specific MM context */</span></span><br><span class="line">	<span class="type">mm_context_t</span> context;</span><br><span class="line"></span><br><span class="line">	<span class="type">unsigned</span> <span class="type">long</span> flags; <span class="comment">/* Must use atomic bitops to access the bits */</span></span><br><span class="line"></span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">core_state</span> *<span class="title">core_state</span>;</span> <span class="comment">/* coredumping support */</span></span><br><span class="line"><span class="meta">#<span class="keyword">ifdef</span> CONFIG_AIO</span></span><br><span class="line">	<span class="type">spinlock_t</span>			ioctx_lock;</span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">kioctx_table</span> __<span class="title">rcu</span>	*<span class="title">ioctx_table</span>;</span></span><br><span class="line"><span class="meta">#<span class="keyword">endif</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">ifdef</span> CONFIG_MEMCG</span></span><br><span class="line">	<span class="comment">/*</span></span><br><span class="line"><span class="comment">	 * &quot;owner&quot; points to a task that is regarded as the canonical</span></span><br><span class="line"><span class="comment">	 * user/owner of this mm. All of the following must be true in</span></span><br><span class="line"><span class="comment">	 * order for it to be changed:</span></span><br><span class="line"><span class="comment">	 *</span></span><br><span class="line"><span class="comment">	 * current == mm-&gt;owner</span></span><br><span class="line"><span class="comment">	 * current-&gt;mm != mm</span></span><br><span class="line"><span class="comment">	 * new_owner-&gt;mm == mm</span></span><br><span class="line"><span class="comment">	 * new_owner-&gt;alloc_lock is held</span></span><br><span class="line"><span class="comment">	 */</span></span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">task_struct</span> __<span class="title">rcu</span> *<span class="title">owner</span>;</span></span><br><span class="line"><span class="meta">#<span class="keyword">endif</span></span></span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">user_namespace</span> *<span class="title">user_ns</span>;</span></span><br><span class="line"></span><br><span class="line">	<span class="comment">/* store ref to file /proc/&lt;pid&gt;/exe symlink points to */</span></span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">file</span> __<span class="title">rcu</span> *<span class="title">exe_file</span>;</span></span><br><span class="line"><span class="meta">#<span class="keyword">ifdef</span> CONFIG_MMU_NOTIFIER</span></span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">mmu_notifier_mm</span> *<span class="title">mmu_notifier_mm</span>;</span></span><br><span class="line"><span class="meta">#<span class="keyword">endif</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">if</span> defined(CONFIG_TRANSPARENT_HUGEPAGE) &amp;&amp; !USE_SPLIT_PMD_PTLOCKS</span></span><br><span class="line">	<span class="type">pgtable_t</span> pmd_huge_pte; <span class="comment">/* protected by page_table_lock */</span></span><br><span class="line"><span class="meta">#<span class="keyword">endif</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">ifdef</span> CONFIG_CPUMASK_OFFSTACK</span></span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">cpumask</span> <span class="title">cpumask_allocation</span>;</span></span><br><span class="line"><span class="meta">#<span class="keyword">endif</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">ifdef</span> CONFIG_NUMA_BALANCING</span></span><br><span class="line">	<span class="comment">/*</span></span><br><span class="line"><span class="comment">	 * numa_next_scan is the next time that the PTEs will be marked</span></span><br><span class="line"><span class="comment">	 * pte_numa. NUMA hinting faults will gather statistics and migrate</span></span><br><span class="line"><span class="comment">	 * pages to new nodes if necessary.</span></span><br><span class="line"><span class="comment">	 */</span></span><br><span class="line">	<span class="type">unsigned</span> <span class="type">long</span> numa_next_scan;</span><br><span class="line"></span><br><span class="line">	<span class="comment">/* Restart point for scanning and setting pte_numa */</span></span><br><span class="line">	<span class="type">unsigned</span> <span class="type">long</span> numa_scan_offset;</span><br><span class="line"></span><br><span class="line">	<span class="comment">/* numa_scan_seq prevents two threads setting pte_numa */</span></span><br><span class="line">	<span class="type">int</span> numa_scan_seq;</span><br><span class="line"><span class="meta">#<span class="keyword">endif</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">if</span> defined(CONFIG_NUMA_BALANCING) || defined(CONFIG_COMPACTION)</span></span><br><span class="line">	<span class="comment">/*</span></span><br><span class="line"><span class="comment">	 * An operation with batched TLB flushing is going on. Anything that</span></span><br><span class="line"><span class="comment">	 * can move process memory needs to flush the TLB when moving a</span></span><br><span class="line"><span class="comment">	 * PROT_NONE or PROT_NUMA mapped page.</span></span><br><span class="line"><span class="comment">	 */</span></span><br><span class="line">	<span class="type">bool</span> tlb_flush_pending;</span><br><span class="line"><span class="meta">#<span class="keyword">endif</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">ifdef</span> CONFIG_ARCH_WANT_BATCHED_UNMAP_TLB_FLUSH</span></span><br><span class="line">	<span class="comment">/* See flush_tlb_batched_pending() */</span></span><br><span class="line">	<span class="type">bool</span> tlb_flush_batched;</span><br><span class="line"><span class="meta">#<span class="keyword">endif</span></span></span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">uprobes_state</span> <span class="title">uprobes_state</span>;</span></span><br><span class="line"><span class="meta">#<span class="keyword">ifdef</span> CONFIG_X86_INTEL_MPX</span></span><br><span class="line">	<span class="comment">/* address of the bounds directory */</span></span><br><span class="line">	<span class="type">void</span> __user *bd_addr;</span><br><span class="line"><span class="meta">#<span class="keyword">endif</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">ifdef</span> CONFIG_HUGETLB_PAGE</span></span><br><span class="line">	<span class="type">atomic_long_t</span> hugetlb_usage;</span><br><span class="line"><span class="meta">#<span class="keyword">endif</span></span></span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">work_struct</span> <span class="title">async_put_work</span>;</span></span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+<p>那我们再来看看虚拟内存区域的（VMA）这个结构，内核将每个内存区域当作一个单独的内存对象管理，因此我们程序的代码段、数据段、未初始化全局变量、堆栈这种都有自己的 <code>vm_area_struct</code>然后再由虚拟地址空间把这些 <code>vm_area_struct</code>给串起来。</p>
+<p>这里面 有一个mm_struct指针 而mm_struct又与tast_struct有一一的对应关系，因此就可以知道这块虚拟内存区域属于的哪一个进程。</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/*</span></span><br><span class="line"><span class="comment"> * This struct defines a memory VMM memory area. There is one of these</span></span><br><span class="line"><span class="comment"> * per VM-area/task.  A VM area is any part of the process virtual memory</span></span><br><span class="line"><span class="comment"> * space that has a special rule for the page-fault handlers (ie a shared</span></span><br><span class="line"><span class="comment"> * library, the executable area etc).</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">vm_area_struct</span> &#123;</span></span><br><span class="line">	<span class="comment">/* The first cache line has the info for VMA tree walking. */</span></span><br><span class="line"></span><br><span class="line">	<span class="type">unsigned</span> <span class="type">long</span> vm_start;		<span class="comment">/* Our start address within vm_mm. */</span></span><br><span class="line">	<span class="type">unsigned</span> <span class="type">long</span> vm_end;		<span class="comment">/* The first byte after our end address</span></span><br><span class="line"><span class="comment">					   within vm_mm. */</span></span><br><span class="line"></span><br><span class="line">	<span class="comment">/* linked list of VM areas per task, sorted by address */</span></span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">vm_area_struct</span> *<span class="title">vm_next</span>, *<span class="title">vm_prev</span>;</span></span><br><span class="line"></span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">rb_node</span> <span class="title">vm_rb</span>;</span></span><br><span class="line"></span><br><span class="line">	<span class="comment">/*</span></span><br><span class="line"><span class="comment">	 * Largest free memory gap in bytes to the left of this VMA.</span></span><br><span class="line"><span class="comment">	 * Either between this VMA and vma-&gt;vm_prev, or between one of the</span></span><br><span class="line"><span class="comment">	 * VMAs below us in the VMA rbtree and its -&gt;vm_prev. This helps</span></span><br><span class="line"><span class="comment">	 * get_unmapped_area find a free area of the right size.</span></span><br><span class="line"><span class="comment">	 */</span></span><br><span class="line">	<span class="type">unsigned</span> <span class="type">long</span> rb_subtree_gap;</span><br><span class="line"></span><br><span class="line">	<span class="comment">/* Second cache line starts here. */</span></span><br><span class="line"></span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">mm_struct</span> *<span class="title">vm_mm</span>;</span>	<span class="comment">/* The address space we belong to. */</span></span><br><span class="line">	<span class="type">pgprot_t</span> vm_page_prot;		<span class="comment">/* Access permissions of this VMA. */</span></span><br><span class="line">	<span class="type">unsigned</span> <span class="type">long</span> vm_flags;		<span class="comment">/* Flags, see mm.h. 就是权限 可读可写还是什么的  */</span></span><br><span class="line"></span><br><span class="line">	<span class="comment">/*</span></span><br><span class="line"><span class="comment">	 * For areas with an address space and backing store,</span></span><br><span class="line"><span class="comment">	 * linkage into the address_space-&gt;i_mmap interval tree.</span></span><br><span class="line"><span class="comment">	 */</span></span><br><span class="line">	<span class="class"><span class="keyword">struct</span> &#123;</span></span><br><span class="line">		<span class="class"><span class="keyword">struct</span> <span class="title">rb_node</span> <span class="title">rb</span>;</span></span><br><span class="line">		<span class="type">unsigned</span> <span class="type">long</span> rb_subtree_last;</span><br><span class="line">	&#125; shared;</span><br><span class="line"></span><br><span class="line">	<span class="comment">/*</span></span><br><span class="line"><span class="comment">	 * A file&#x27;s MAP_PRIVATE vma can be in both i_mmap tree and anon_vma</span></span><br><span class="line"><span class="comment">	 * list, after a COW of one of the file pages.	A MAP_SHARED vma</span></span><br><span class="line"><span class="comment">	 * can only be in the i_mmap tree.  An anonymous MAP_PRIVATE, stack</span></span><br><span class="line"><span class="comment">	 * or brk vma (with NULL file) can only be in an anon_vma list.</span></span><br><span class="line"><span class="comment">	 */</span></span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">list_head</span> <span class="title">anon_vma_chain</span>;</span> <span class="comment">/* Serialized by mmap_sem &amp;</span></span><br><span class="line"><span class="comment">					  * page_table_lock */</span></span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">anon_vma</span> *<span class="title">anon_vma</span>;</span>	<span class="comment">/* Serialized by page_table_lock */</span></span><br><span class="line"></span><br><span class="line">	<span class="comment">/* Function pointers to deal with this struct. */</span></span><br><span class="line">	<span class="type">const</span> <span class="class"><span class="keyword">struct</span> <span class="title">vm_operations_struct</span> *<span class="title">vm_ops</span>;</span></span><br><span class="line"></span><br><span class="line">	<span class="comment">/* Information about our backing store: */</span></span><br><span class="line">	<span class="type">unsigned</span> <span class="type">long</span> vm_pgoff;		<span class="comment">/* Offset (within vm_file) in PAGE_SIZE</span></span><br><span class="line"><span class="comment">					   units */</span></span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">file</span> * <span class="title">vm_file</span>;</span>		<span class="comment">/* File we map to (can be NULL). */</span></span><br><span class="line">	<span class="type">void</span> * vm_private_data;		<span class="comment">/* was vm_pte (shared mem) */</span></span><br><span class="line"></span><br><span class="line"><span class="meta">#<span class="keyword">ifndef</span> CONFIG_MMU</span></span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">vm_region</span> *<span class="title">vm_region</span>;</span>	<span class="comment">/* NOMMU mapping region */</span></span><br><span class="line"><span class="meta">#<span class="keyword">endif</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">ifdef</span> CONFIG_NUMA</span></span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">mempolicy</span> *<span class="title">vm_policy</span>;</span>	<span class="comment">/* NUMA policy for the VMA */</span></span><br><span class="line"><span class="meta">#<span class="keyword">endif</span></span></span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">vm_userfaultfd_ctx</span> <span class="title">vm_userfaultfd_ctx</span>;</span></span><br><span class="line">&#125;;</span><br><span class="line"></span><br></pre></td></tr></table></figure>
+<p>下面这个图太牛了</p>
+<p><img src="/images/23/1678151170442.png" alt="1678151170442"></p>
+<p>使用以下函数可以把文件映射到进程的地址空间里，具体就是再给这个进程分配一个VMA并把这个东西加到<code>mm_struct</code>里边</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;sys/mman.h&gt;</span></span></span><br><span class="line"><span class="type">void</span> *<span class="title function_">mmap</span><span class="params">(<span class="type">void</span> *addr， <span class="type">size_t</span> length, <span class="type">int</span> prot, <span class="type">int</span> flags,<span class="type">int</span> fd, <span class="type">off_t</span> offset)</span>;</span><br><span class="line"><span class="type">int</span> <span class="title function_">munmap</span><span class="params">(<span class="type">void</span> *addr, <span class="type">size_t</span> length)</span> ;</span><br></pre></td></tr></table></figure>
+<p>在linux中，如果clone()时设置CLONE_VM标志，我们把这样的进程称作为线程。线程之间共享同样的虚拟内存空间。fork()函数利用copy_mm()函数复制父进程的mm_struct,也就是current-&gt;mm域给其子进程。(/kernel/fork.c) 参数中的<code>struct task_struct *tsk</code>是子进程的task struct</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;kernel/fork.c&gt;</span></span></span><br><span class="line"><span class="type">static</span> <span class="type">int</span> <span class="title function_">copy_mm</span> <span class="params">(<span class="type">unsigned</span> <span class="type">long</span> clone_flags,<span class="keyword">struct</span> task_struct *tsk)</span>&#123;&#125;</span><br><span class="line"></span><br><span class="line"><span class="type">static</span> <span class="type">int</span> <span class="title function_">copy_mm</span><span class="params">(<span class="type">unsigned</span> <span class="type">long</span> clone_flags, <span class="keyword">struct</span> task_struct *tsk)</span></span><br><span class="line">&#123;</span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">mm_struct</span> *<span class="title">mm</span>, *<span class="title">oldmm</span>;</span></span><br><span class="line">	<span class="type">int</span> retval;</span><br><span class="line"></span><br><span class="line">	tsk-&gt;min_flt = tsk-&gt;maj_flt = <span class="number">0</span>;</span><br><span class="line">	tsk-&gt;nvcsw = tsk-&gt;nivcsw = <span class="number">0</span>;</span><br><span class="line"><span class="meta">#<span class="keyword">ifdef</span> CONFIG_DETECT_HUNG_TASK</span></span><br><span class="line">	tsk-&gt;last_switch_count = tsk-&gt;nvcsw + tsk-&gt;nivcsw;</span><br><span class="line"><span class="meta">#<span class="keyword">endif</span></span></span><br><span class="line"></span><br><span class="line">	tsk-&gt;mm = <span class="literal">NULL</span>;</span><br><span class="line">	tsk-&gt;active_mm = <span class="literal">NULL</span>;</span><br><span class="line"></span><br><span class="line">	<span class="comment">/*</span></span><br><span class="line"><span class="comment">	 * Are we cloning a kernel thread?</span></span><br><span class="line"><span class="comment">	 *</span></span><br><span class="line"><span class="comment">	 * We need to steal a active VM for that..</span></span><br><span class="line"><span class="comment">	 */</span></span><br><span class="line">    <span class="comment">//取当前进程的mm</span></span><br><span class="line">	oldmm = current-&gt;mm;</span><br><span class="line">	<span class="keyword">if</span> (!oldmm)</span><br><span class="line">		<span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line"></span><br><span class="line">	<span class="comment">/* initialize the new vmacache entries */</span></span><br><span class="line">	vmacache_flush(tsk);</span><br><span class="line"></span><br><span class="line">	<span class="keyword">if</span> (clone_flags &amp; CLONE_VM) &#123;</span><br><span class="line">		<span class="type">atomic_inc</span>(&amp;oldmm-&gt;mm_users);</span><br><span class="line">		mm = oldmm;</span><br><span class="line">		<span class="keyword">goto</span> good_mm;</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	retval = -ENOMEM;</span><br><span class="line">	mm = dup_mm(tsk);</span><br><span class="line">	<span class="keyword">if</span> (!mm)</span><br><span class="line">		<span class="keyword">goto</span> fail_nomem;</span><br><span class="line"></span><br><span class="line"><span class="comment">//把mm赋给子进程的mm</span></span><br><span class="line"></span><br><span class="line">good_mm:</span><br><span class="line">	tsk-&gt;mm = mm;</span><br><span class="line">	tsk-&gt;active_mm = mm;</span><br><span class="line">	<span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line"></span><br><span class="line">fail_nomem:</span><br><span class="line">	<span class="keyword">return</span> retval;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h2 id="用户空间的mmap函数在内核中的实现"><a href="#用户空间的mmap函数在内核中的实现" class="headerlink" title="用户空间的mmap函数在内核中的实现"></a>用户空间的mmap函数在内核中的实现</h2><p>用户空间使用mmap函数可以将一个文件或者设备映射到进程的地址空间去，上面说的，创建一个VMA加进去，到底是不是这样呢？映射的作用是，这样读写文件会快，如果不这么做的话，还会有用户空间和内核空间的数据拷贝过程，数据多的时候会极大影响性能。</p>
+<p>用户空间的mmap()会通过系统调用调用到内核的do_mmap()函数。<br>do_mmap()函数会:<br>1.首先创建一个新的VMA并初始化，然后加入进程的虚拟地址空间里。<br>2.然后调用底层的mmap函数建立VMA和实际物理地址的联系（建立页表) 底层的mmap会根据文件类型不同有差异化。</p>
+<h3 id="驱动的mmap实现"><a href="#驱动的mmap实现" class="headerlink" title="驱动的mmap实现"></a>驱动的mmap实现</h3><p>设备驱动的mmap实现主要是将这个物理设备的可操作区域映射到一个进程的虚拟地址空间。这样用户空间就可以直接采用指针的方式访问设备的可操作区域。在驱动中的mmap实现主要是完成一件事，就是建立设备的可操作区域到进程虚拟空间地址的映射过程。同时也需要保证这段映射的虚拟存储器区域不会被进程当做一般的空间使用，因此需要添加一系列的保护方式。</p>
+<h4 id="驱动的mmap建立虚拟地址和物理地址的映射"><a href="#驱动的mmap建立虚拟地址和物理地址的映射" class="headerlink" title="驱动的mmap建立虚拟地址和物理地址的映射"></a>驱动的mmap建立虚拟地址和物理地址的映射</h4><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//建立vma和物理地址的映射的工作由remap_pfn_range来完成，原型如下:</span></span><br><span class="line"><span class="type">int</span>  <span class="title function_">remap_pfn_range</span><span class="params">(<span class="keyword">struct</span> vm_area_struct *vma，, <span class="type">unsigned</span> <span class="type">long</span></span></span><br><span class="line"><span class="params">virt_addr，<span class="type">unsigned</span> <span class="type">long</span> pfn，<span class="type">unsigned</span> <span class="type">long</span> size，<span class="type">pgprot_t</span> prot)</span></span><br><span class="line"><span class="comment">/*</span></span><br><span class="line"><span class="comment">vma            需要建立映射的VMA</span></span><br><span class="line"><span class="comment">virt_addr      需要建立映射的VMA的起始地址</span></span><br><span class="line"><span class="comment">pfn            页帧号，对应虚拟地址应当被映射的物理地址．这个页帧号简单地是物理地址右移 PAGE_SHIFT位 一般是12位</span></span><br><span class="line"><span class="comment">size           需要建立映射的VMA的大小，以字节.</span></span><br><span class="line"><span class="comment">prot           使用在vma-&gt;vm_page _prot中找到的值.</span></span><br><span class="line"><span class="comment">*/</span></span><br></pre></td></tr></table></figure>
+<p>我们可以重新回去看看file_operation这个结构体，这个就代表这驱动提供的能力，也就是要让驱动有mmap的能力，就需要实现 int(*mmap)函数，建立file 与 VMA的映射。就是用上面 的函数</p>
+<p><img src="/images/23/1678153727517.png" alt="1678153727517"></p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">int</span> (*mmap) (<span class="keyword">struct</span> file *, <span class="keyword">struct</span> vm_area_struct *);</span><br></pre></td></tr></table></figure>
+<p>因此mmap是一种零拷贝技术。</p>
+
+      
+    </div>
+    
+    
+    
+
+    
+
+    
+
+    
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/Linux%E5%86%85%E6%A0%B8/" rel="tag"># Linux内核</a>
+          
+        </div>
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2022/07/13/22-Linux%E5%86%85%E6%A0%B8%E2%80%94%E2%80%94%E5%86%85%E6%A0%B8%E7%A9%BA%E9%97%B4%E7%9A%84%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86%E4%B8%8E%E5%88%86%E9%85%8D/" rel="next" title="Linux内核——内核空间的内存管理与分配">
+                <i class="fa fa-chevron-left"></i> Linux内核——内核空间的内存管理与分配
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2022/09/28/3.C-%E5%AE%9E%E6%88%98%E2%80%94%E2%80%94%E5%85%88%E6%8A%8A%E9%A1%B9%E7%9B%AE%E8%B7%91%E8%B5%B7%E6%9D%A5/" rel="prev" title="C++实战——先把项目跑起来">
+                C++实战——先把项目跑起来 <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+
+  
+
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <section class="site-overview-wrap sidebar-panel">
+        <div class="site-overview">
+          <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+            
+              <img class="site-author-image" itemprop="image"
+                src="/images/my_avatar.png"
+                alt="" />
+            
+              <p class="site-author-name" itemprop="name"></p>
+              <p class="site-description motion-element" itemprop="description"></p>
+          </div>
+
+          <nav class="site-state motion-element">
+
+            
+              <div class="site-state-item site-state-posts">
+              
+                <a href="/">
+              
+                  <span class="site-state-item-count">23</span>
+                  <span class="site-state-item-name">日志</span>
+                </a>
+              </div>
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-categories">
+                <a href="/categories/index.html">
+                  <span class="site-state-item-count">2</span>
+                  <span class="site-state-item-name">分类</span>
+                </a>
+              </div>
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-tags">
+                <a href="/tags/index.html">
+                  <span class="site-state-item-count">6</span>
+                  <span class="site-state-item-name">标签</span>
+                </a>
+              </div>
+            
+
+          </nav>
+
+          
+
+          
+
+          
+          
+
+          
+          
+
+          
+
+        </div>
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E8%BF%9B%E7%A8%8B%E8%99%9A%E6%8B%9F%E5%9C%B0%E5%9D%80%E7%A9%BA%E9%97%B4%E7%9A%84%E7%AE%A1%E7%90%86%E6%9C%BA%E5%88%B6"><span class="nav-number">1.</span> <span class="nav-text">进程虚拟地址空间的管理机制</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E4%BB%80%E4%B9%88%E6%98%AF%E8%99%9A%E6%8B%9F%E5%9C%B0%E5%9D%80%E7%A9%BA%E9%97%B4"><span class="nav-number">1.1.</span> <span class="nav-text">什么是虚拟地址空间</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E8%99%9A%E6%8B%9F%E5%9C%B0%E5%9D%80%E7%A9%BA%E9%97%B4%E7%9A%84%E7%AE%A1%E7%90%86"><span class="nav-number">1.2.</span> <span class="nav-text">虚拟地址空间的管理</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E7%94%A8%E6%88%B7%E7%A9%BA%E9%97%B4%E7%9A%84mmap%E5%87%BD%E6%95%B0%E5%9C%A8%E5%86%85%E6%A0%B8%E4%B8%AD%E7%9A%84%E5%AE%9E%E7%8E%B0"><span class="nav-number">2.</span> <span class="nav-text">用户空间的mmap函数在内核中的实现</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E9%A9%B1%E5%8A%A8%E7%9A%84mmap%E5%AE%9E%E7%8E%B0"><span class="nav-number">2.1.</span> <span class="nav-text">驱动的mmap实现</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#%E9%A9%B1%E5%8A%A8%E7%9A%84mmap%E5%BB%BA%E7%AB%8B%E8%99%9A%E6%8B%9F%E5%9C%B0%E5%9D%80%E5%92%8C%E7%89%A9%E7%90%86%E5%9C%B0%E5%9D%80%E7%9A%84%E6%98%A0%E5%B0%84"><span class="nav-number">2.1.1.</span> <span class="nav-text">驱动的mmap建立虚拟地址和物理地址的映射</span></a></li></ol></li></ol></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+<div class="copyright">&copy; <span itemprop="copyrightYear">2023</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">Dawnlake</span>
+
+  
+</div>
+
+
+  <div class="powered-by">由 <a class="theme-link" target="_blank" href="https://hexo.io">Hexo</a> 强力驱动</div>
+
+
+
+  <span class="post-meta-divider">|</span>
+
+
+
+  <div class="theme-info">主题 &mdash; <a class="theme-link" target="_blank" href="https://github.com/iissnan/hexo-theme-next">NexT.Pisces</a> v5.1.4</div>
+
+
+
+
+        
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+    
+
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+  
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.4"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.4"></script>
+
+
+
+  
+  
+
+
+  <script type="text/javascript" src="/js/src/affix.js?v=5.1.4"></script>
+
+  <script type="text/javascript" src="/js/src/schemes/pisces.js?v=5.1.4"></script>
+
+
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.4"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+  
+
+  
+
+  
+  
+
+  
+  
+    <script type="text/x-mathjax-config">
+      MathJax.Hub.Config({
+        tex2jax: {
+          inlineMath: [ ['$','$'], ["\\(","\\)"]  ],
+          processEscapes: true,
+          skipTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']
+        }
+      });
+    </script>
+
+    <script type="text/x-mathjax-config">
+      MathJax.Hub.Queue(function() {
+        var all = MathJax.Hub.getAllJax(), i;
+        for (i=0; i < all.length; i += 1) {
+          all[i].SourceElement().parentNode.className += ' has-jax';
+        }
+      });
+    </script>
+    <script type="text/javascript" src="//cdn.bootcss.com/mathjax/2.7.1/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
+  
+
+
+  
+
+  
+
+</body>
+</html>

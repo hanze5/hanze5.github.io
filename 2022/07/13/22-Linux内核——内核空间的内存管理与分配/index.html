@@ -86,24 +86,24 @@
 <meta property="og:site_name" content="也许不会有人进来吧">
 <meta property="og:description" content="跟着简叔学的，可以B站搜索 简说linux 页框和伙伴算法 定义:内核使用struct page结构体描述每个物理页，也叫页框。一般一个页框对应一个4k的空间 场景:内核在很多情况下，需要申请连续的页框，而且数量不定，比如4个，5个，9个等。 实现: Linux把所有的空闲页框分组为11个块链表，每个链表上的页框块是固定的。在第i条链表中每个页框块都包含2的i次方个连续页。 注意:系统中每个页框块">
 <meta property="og:locale">
-<meta property="og:image" content="http://hanze5.github.io/C:/Users/DawnLake/AppData/Roaming/Typora/typora-user-images/1678103470108.png">
-<meta property="og:image" content="http://hanze5.github.io/C:/Users/DawnLake/AppData/Roaming/Typora/typora-user-images/1678104047825.png">
-<meta property="og:image" content="http://hanze5.github.io/C:/Users/DawnLake/AppData/Roaming/Typora/typora-user-images/1678104158296.png">
-<meta property="og:image" content="http://hanze5.github.io/C:/Users/DawnLake/AppData/Roaming/Typora/typora-user-images/1678145522310.png">
-<meta property="og:image" content="http://hanze5.github.io/C:/Users/DawnLake/AppData/Roaming/Typora/typora-user-images/1678105707629.png">
-<meta property="og:image" content="http://hanze5.github.io/C:/Users/DawnLake/AppData/Roaming/Typora/typora-user-images/1678105885291.png">
-<meta property="og:image" content="http://hanze5.github.io/C:/Users/DawnLake/AppData/Roaming/Typora/typora-user-images/1678105935522.png">
-<meta property="og:image" content="http://hanze5.github.io/C:/Users/DawnLake/AppData/Roaming/Typora/typora-user-images/1678105981827.png">
-<meta property="og:image" content="http://hanze5.github.io/C:/Users/DawnLake/AppData/Roaming/Typora/typora-user-images/1678106254461.png">
-<meta property="og:image" content="http://hanze5.github.io/C:/Users/DawnLake/AppData/Roaming/Typora/typora-user-images/1678106514598.png">
-<meta property="og:image" content="http://hanze5.github.io/C:/Users/DawnLake/AppData/Roaming/Typora/typora-user-images/1678106829368.png">
-<meta property="og:image" content="http://hanze5.github.io/C:/Users/DawnLake/AppData/Roaming/Typora/typora-user-images/1678106877955.png">
+<meta property="og:image" content="http://hanze5.github.io/images/22/1678103470108.png">
+<meta property="og:image" content="http://hanze5.github.io/images/22/1678104047825.png">
+<meta property="og:image" content="http://hanze5.github.io/images/22/1678104158296.png">
+<meta property="og:image" content="http://hanze5.github.io/images/22/1678145522310.png">
+<meta property="og:image" content="http://hanze5.github.io/images/22/1678105707629.png">
+<meta property="og:image" content="http://hanze5.github.io/images/22/1678105885291.png">
+<meta property="og:image" content="http://hanze5.github.io/images/22/1678105935522.png">
+<meta property="og:image" content="http://hanze5.github.io/images/22/1678105981827.png">
+<meta property="og:image" content="http://hanze5.github.io/images/22/1678106254461.png">
+<meta property="og:image" content="http://hanze5.github.io/images/22/1678106514598.png">
+<meta property="og:image" content="http://hanze5.github.io/images/22/1678106829368.png">
+<meta property="og:image" content="http://hanze5.github.io/images/22/1678106877955.png">
 <meta property="article:published_time" content="2022-07-13T00:05:12.000Z">
-<meta property="article:modified_time" content="2023-03-07T00:17:17.325Z">
+<meta property="article:modified_time" content="2023-03-07T00:31:35.065Z">
 <meta property="article:author" content="Dawnlake">
 <meta property="article:tag" content="Linux内核">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:image" content="http://hanze5.github.io/C:/Users/DawnLake/AppData/Roaming/Typora/typora-user-images/1678103470108.png">
+<meta name="twitter:image" content="http://hanze5.github.io/images/22/1678103470108.png">
 
 
 
@@ -362,7 +362,7 @@
 <li>实现: Linux把所有的空闲页框分组为11个块链表，每个链表上的页框块是固定的。在第i条链表中每个页框块都包含2的i次方个连续页。</li>
 <li>注意:系统中每个页框块的第一个页框的物理地址是该块大小的整数倍。例如:大小为16个页框的块，其起始地址是16*2^12的倍数。</li>
 </ul>
-<p><img src="/C:/Users\DawnLake\AppData\Roaming\Typora\typora-user-images\1678103470108.png" alt="1678103470108"> </p>
+<p><img src="/images/22/1678103470108.png" alt="1678103470108"> </p>
 <p>我要申请4k 就去找0里摘取一个；8k就找。</p>
 <h2 id="页框操作"><a href="#页框操作" class="headerlink" title="页框操作"></a>页框操作</h2><p>分配2^order个连续的物理页，并返回一个指针，指向第一个页的page结构体</p>
 <figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">static</span> <span class="keyword">inline</span> <span class="keyword">struct</span> page * <span class="title function_">alloc_pages</span><span class="params">(<span class="type">gfp_t</span> gfp_mask, <span class="type">unsigned</span> <span class="type">int</span> order)</span></span><br></pre></td></tr></table></figure>
@@ -374,7 +374,7 @@
 <li>例如一个高速缓存存放task_struct结构体，而另外一个高速缓存存放struct inode结构体;. </li>
 <li>slab由一个或者多个物理上连续的页组成。每个高速缓存由多个slab组成。</li>
 </ul>
-<p><img src="/C:/Users\DawnLake\AppData\Roaming\Typora\typora-user-images\1678104047825.png" alt="1678104047825">|<img src="/C:/Users\DawnLake\AppData\Roaming\Typora\typora-user-images\1678104158296.png" alt="1678104158296"></p>
+<p><img src="/images/22/1678104047825.png" alt="1678104047825">|<img src="/images/22/1678104158296.png" alt="1678104158296"></p>
 <p>slad又分为三个状态，用于形容 对象的分配情况。查看右图128B的情况，128Bcache中的每个对象大小都是128个字节，就是由2^15个page组成一个对象。每个slab又是由一个或多个page组成。</p>
 <p>slab可以</p>
 <ol>
@@ -386,7 +386,7 @@
 <p><a target="_blank" rel="noopener" href="https://www.toutiao.com/article/6874373733595742727/?log_from=09cb26731ee35_1678104694035">linux操作系统内存大串讲：段页式，slab，共享内存-今日头条 (toutiao.com)</a></p>
 <h2 id="slab高速缓存的使用"><a href="#slab高速缓存的使用" class="headerlink" title="slab高速缓存的使用"></a>slab高速缓存的使用</h2><ol>
 <li><p>通过命令 cat /proc/slabinfo 可查看系统中的长用的</p>
-<p><img src="/C:/Users\DawnLake\AppData\Roaming\Typora\typora-user-images\1678145522310.png" alt="1678145522310"></p>
+<p><img src="/images/22/1678145522310.png" alt="1678145522310"></p>
 </li>
 <li><p>内核中用 <code>struct kmem_cache</code>表示一个高速缓存。   通过下面的方法创建高速缓存</p>
 <figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">struct</span>  kmem_cache*  <span class="title function_">kmem_cache_create</span><span class="params">(<span class="type">const</span> <span class="type">char</span> *name,<span class="type">size_t</span> size,<span class="type">size_t</span> align,</span></span><br><span class="line"><span class="params">                                      <span class="type">unsigned</span> <span class="type">long</span> flags,<span class="type">void</span> (*ctor)(<span class="type">void</span>))</span> </span><br><span class="line">    </span><br></pre></td></tr></table></figure>
@@ -399,19 +399,19 @@
 <li>给硬件分配内存必须连续</li>
 </ol>
 <figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">static</span> _always_inline <span class="type">void</span> *<span class="title function_">kmalloc</span><span class="params">(<span class="type">size_t</span> size, <span class="type">gfp_t</span> flags)</span></span><br><span class="line"><span class="type">static</span> <span class="keyword">inline</span> <span class="type">void</span> *<span class="title function_">kzalloc</span><span class="params">(<span class="type">size_t</span> size, <span class="type">gfp_t</span> flags)</span></span><br><span class="line"><span class="comment">//返回一个指向内存块的指针，其内存块大小至少size大小，所分配的内存在物理上是连续的。</span></span><br><span class="line"><span class="type">void</span> *<span class="title function_">vmalloc</span><span class="params">(<span class="type">unsigned</span> <span class="type">long</span> size)</span></span><br><span class="line"><span class="type">void</span> *<span class="title function_">vzalloc</span><span class="params">(<span class="type">unsigned</span> <span class="type">long</span> size)</span><span class="comment">//多了一步初始化操作 初始化成0</span></span><br><span class="line"><span class="comment">//返回一个指向内存块的指针，其内存块大小至少size大小，所分配的内存在物理上无需连续。</span></span><br></pre></td></tr></table></figure>
-<p><img src="/C:/Users\DawnLake\AppData\Roaming\Typora\typora-user-images\1678105707629.png" alt="1678105707629"></p>
-<h3 id="kzalloc实现"><a href="#kzalloc实现" class="headerlink" title="kzalloc实现"></a>kzalloc实现</h3><p>我们的代码中就用到了<img src="/C:/Users\DawnLake\AppData\Roaming\Typora\typora-user-images\1678105885291.png" alt="1678105885291"></p>
+<p><img src="/images/22/1678105707629.png" alt="1678105707629"></p>
+<h3 id="kzalloc实现"><a href="#kzalloc实现" class="headerlink" title="kzalloc实现"></a>kzalloc实现</h3><p>我们的代码中就用到了<img src="/images/22/1678105885291.png" alt="1678105885291"></p>
 <p>它的内部就是用kmalloc实现的，只是多了一步初始化为0的操作。</p>
-<p><img src="/C:/Users\DawnLake\AppData\Roaming\Typora\typora-user-images\1678105935522.png" alt="1678105935522"></p>
+<p><img src="/images/22/1678105935522.png" alt="1678105935522"></p>
 <p>kmalloc的源码在/linux-4.9.229/include/linux/slab.h</p>
-<p><img src="/C:/Users\DawnLake\AppData\Roaming\Typora\typora-user-images\1678105981827.png" alt="1678105981827"></p>
+<p><img src="/images/22/1678105981827.png" alt="1678105981827"></p>
 <p>大部分情况不会进入到if的判断里面，下图代码在 /mm/slab.c</p>
-<p><img src="/C:/Users\DawnLake\AppData\Roaming\Typora\typora-user-images\1678106254461.png" alt="1678106254461"></p>
+<p><img src="/images/22/1678106254461.png" alt="1678106254461"></p>
 <p>到底依赖伙伴系统的算法。根据size和flag得到对应的高速缓存，通过调用kmalloc_slab里找到合适的缓存，然后找到对象返回到ret。kmalloc_slab的实现在/mm/slab_common.c</p>
-<p><img src="/C:/Users\DawnLake\AppData\Roaming\Typora\typora-user-images\1678106514598.png" alt="1678106514598"></p>
+<p><img src="/images/22/1678106514598.png" alt="1678106514598"></p>
 <p>​        可以猜测到，通过大小查索引，是范围查找，合适的缓存。</p>
-<p><img src="/C:/Users\DawnLake\AppData\Roaming\Typora\typora-user-images\1678106829368.png" alt="1678106829368"></p>
-<p>  <img src="/C:/Users\DawnLake\AppData\Roaming\Typora\typora-user-images\1678106877955.png" alt="1678106877955"></p>
+<p><img src="/images/22/1678106829368.png" alt="1678106829368"></p>
+<p>  <img src="/images/22/1678106877955.png" alt="1678106877955"></p>
 <p>妙啊！ 除以8算出8的几倍，通过倍数当作索引来找出合适的size</p>
 <p>（这块儿看了好久都没理顺，打算先放一放往下看了。。。。）</p>
 
@@ -454,8 +454,8 @@
 
           <div class="post-nav-prev post-nav-item">
             
-              <a href="/2022/10/12/6.%E6%96%87%E4%BB%B6I-O/" rel="prev" title="文件I/O">
-                文件I/O <i class="fa fa-chevron-right"></i>
+              <a href="/2022/07/15/23-Linux%E5%86%85%E6%A0%B8%E2%80%94%E2%80%94%E8%BF%9B%E7%A8%8B%E7%9A%84%E8%99%9A%E6%8B%9F%E5%9C%B0%E5%9D%80%E7%A9%BA%E9%97%B4/" rel="prev" title="Linux内核——进程的虚拟地址空间">
+                Linux内核——进程的虚拟地址空间 <i class="fa fa-chevron-right"></i>
               </a>
             
           </div>
@@ -537,7 +537,7 @@
               
                 <a href="/">
               
-                  <span class="site-state-item-count">22</span>
+                  <span class="site-state-item-count">23</span>
                   <span class="site-state-item-name">日志</span>
                 </a>
               </div>

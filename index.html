@@ -1027,6 +1027,705 @@
   
   
   <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="http://hanze5.github.io/2022/10/02/5.%E9%9D%99%E6%80%81%E5%BA%93%E5%92%8C%E5%8A%A8%E6%80%81%E5%BA%93/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/images/my_avatar.png">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="也许不会有人进来吧">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+                
+                <a class="post-title-link" href="/2022/10/02/5.%E9%9D%99%E6%80%81%E5%BA%93%E5%92%8C%E5%8A%A8%E6%80%81%E5%BA%93/" itemprop="url">静态库和动态库</a></h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2022-10-02T19:11:53+08:00">
+                2022-10-02
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E5%AD%A6%E6%97%A0%E6%AD%A2%E5%A2%83/" itemprop="url" rel="index">
+                    <span itemprop="name">学无止境</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+          
+
+          
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        
+          
+            <h1 id="静态库和动态库"><a href="#静态库和动态库" class="headerlink" title="静态库和动态库"></a>静态库和动态库</h1><h2 id="什么是库"><a href="#什么是库" class="headerlink" title="什么是库"></a>什么是库</h2><p>库文件是计算机上的一类文件，可以简单的把库文件看成一种代码仓库，它提供给使用者一些可以直接拿来用的变量、类、函数等<br>库是一种特殊的程序，编写库文件和编写一般的程序的区别不大，只是库文件不能单独运行。<br>库文件有两种，静态库和动态库(共享库) ，他们的<strong>区别是</strong></p>
+<ul>
+<li>​    静态库在程序的链接阶段就被复制到了程序中，</li>
+<li>​    而动态库在链接阶段只是被记录的一些信息(如文件名)，而没有把动态库复制到程序中，而是在程序运行 阶段由系统动态加载到内存中供程序调用。</li>
+</ul>
+<p>库的好处：代码保密(c++程序即使被反编译也只能还原20%左右) 、方便部署和发布    </p>
+<h2 id="静态库命名规则："><a href="#静态库命名规则：" class="headerlink" title="静态库命名规则："></a>静态库命名规则：</h2><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">linux：libxxx.a</span><br><span class="line">	lib:固定前缀</span><br><span class="line">	xxx:库的名字</span><br><span class="line">	 .a:固定后缀</span><br><span class="line">windows：libxxx.lib</span><br></pre></td></tr></table></figure>
+<h2 id="静态库的制作"><a href="#静态库的制作" class="headerlink" title="静态库的制作"></a>静态库的制作</h2><p>​    gcc获得.o文件</p>
+<p>​    将.o文件打包，使用ar工具（archive)</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">ar rcs libxxx.a xxx.o xxx.o</span><br><span class="line"><span class="meta prompt_">#</span><span class="language-bash">r - 将文件插入备存文件中</span></span><br><span class="line"><span class="meta prompt_">#</span><span class="language-bash">c - 建立备存文件</span></span><br><span class="line"><span class="meta prompt_">#</span><span class="language-bash">s - 索引</span></span><br></pre></td></tr></table></figure>
+<p><img src="/images/5/1677754140889.png" alt="1677754140889"></p>
+<p>库文件需要头文件配合一起使用，因为头文件知名库文件里实现的函数。</p>
+<p>编译时</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">-I 头文件目录  -l库文件 -L库文件路径</span><br></pre></td></tr></table></figure>
+<h2 id="动态库命名规则："><a href="#动态库命名规则：" class="headerlink" title="动态库命名规则："></a>动态库命名规则：</h2><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">linux：libxxx.so</span><br><span class="line">	lib:固定前缀</span><br><span class="line">	xxx:库的名字</span><br><span class="line">	.so:固定后缀</span><br><span class="line">	linux下动态库是一个可执行文件</span><br><span class="line">windows：libxxx.dll</span><br></pre></td></tr></table></figure>
+<h2 id="动态库的制作"><a href="#动态库的制作" class="headerlink" title="动态库的制作"></a>动态库的制作</h2><p>​    gcc获得.o文件,得到和位置无关的代码</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">gcc -c -fpic/-fPIC a.c b.c</span><br><span class="line">gcc -share a.o b.o -o libxxx.so</span><br></pre></td></tr></table></figure>
+<p>​    这里就不制作了 挺简单的。</p>
+<h2 id="静态库和动态库的工作原理"><a href="#静态库和动态库的工作原理" class="headerlink" title="静态库和动态库的工作原理"></a>静态库和动态库的工作原理</h2><p>静态库:GCC进行链接时,会把静态库中的代码打包到可执行程序中</p>
+<p>动态库:GCC进行链接时,动态库的代码不会被打包到可执行程序中 在程序启动之后，动态库会被动态加载到内存中。但是可以被多个程序共享（shared）</p>
+<p>通过ldd(list dynamic dependcies)命令检查可执行文件动态库依赖关系 </p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">ldd a.out</span><br></pre></td></tr></table></figure>
+<h2 id="区别"><a href="#区别" class="headerlink" title="区别"></a>区别</h2><p><img src="/images/5/1677755090849.png" alt="1677755090849"></p>
+<p><img src="/images/5/1677755114608.png" alt="1677755114608"></p>
+<p><img src="/images/5/1677755128214.png" alt="1677755128214"></p>
+<p><img src="/images/5/1677755166902.png" alt="1677755166902"></p>
+
+          
+        
+      
+    </div>
+    
+    
+    
+
+    
+
+    
+
+    
+
+    <footer class="post-footer">
+      
+
+      
+
+      
+
+      
+      
+        <div class="post-eof"></div>
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+      
+    
+      
+      
+      
+        
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="http://hanze5.github.io/2022/10/01/4.makefile%E6%98%AF%E4%B8%AA%E5%95%A5/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/images/my_avatar.png">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="也许不会有人进来吧">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+                
+                <a class="post-title-link" href="/2022/10/01/4.makefile%E6%98%AF%E4%B8%AA%E5%95%A5/" itemprop="url">makefile是个啥</a></h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2022-10-01T18:07:00+08:00">
+                2022-10-01
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E5%AD%A6%E6%97%A0%E6%AD%A2%E5%A2%83/" itemprop="url" rel="index">
+                    <span itemprop="name">学无止境</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+          
+
+          
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        
+          
+            <p>GCC编译</p>
+<ol>
+<li><p>安装GCC编译器</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">sudo apt intsall build-essential</span><br></pre></td></tr></table></figure>
+</li>
+<li><p>GCC工作流程<img src="/images/4/1677748615935.png" alt="1677748615935">预处理阶段会去掉注释，再把头文件内容拷贝到cpp文件中，再替换宏。可用下面这个语句。查看对cpp文件预处理过后的文件<code>-E</code>选项意味着 预处理指定文件而不进行编译。</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">gcc -E test.c -o test.i</span><br></pre></td></tr></table></figure>
+<figure class="highlight plaintext"><figcaption><span>``` 代表着 编译指定源文件但是不进行汇编。</span></figcaption><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"></span><br><span class="line">```shell</span><br><span class="line">gcc -S test.c -o test.S</span><br></pre></td></tr></table></figure>
+<figure class="highlight plaintext"><figcaption><span>表示编译、汇编指定的源文件，但是不进行链接，也就是生成目标文件。</span></figcaption><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"></span><br><span class="line">```shell</span><br><span class="line">gcc -c test.S -o test.o</span><br></pre></td></tr></table></figure>
+<p>什么都不加的化会直接生成可执行文件</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">gcc test.c -o a.out</span><br></pre></td></tr></table></figure>
+<p>| -g   | 该程序可以被调试器调试     |<br>| —— | :————————————- |<br>| -D   | 在程序编译的时候指定一个宏 |<br>| -w   | 不产生任何警告信息         |<br>| -l   | 编译时使用指定的库         |<br>| -L   | 编译时搜索库的路径         |</p>
+<p>等等。</p>
+</li>
+</ol>
+<h1 id="Makefile"><a href="#Makefile" class="headerlink" title="Makefile"></a>Makefile</h1><h2 id="简介"><a href="#简介" class="headerlink" title="简介"></a>简介</h2><p> 一个工程中的源文件不计其数(一个项目有有很多的文件)，现在的项目基本都是按模块进行划分的，而这些模块存放在若干目录中。makefile中定义了一系列的规则(这些规则定义了一系列如何编译程序的操作，比如哪些文件需要编译、哪些临时文件需要及时的清除等)，如此以来我们只需要通过make命令就可以一键编译源程序了。所以常常说makefile带来的最大的好处就是”自动化编译”，因为只需要一个make命令，整个工程完全自动编译，极大的提高了软件开发效率。</p>
+<p>make是一个命令工具，它能够解释Makefile文件中的指令，一般来说大多数IDE都具备这样的功能。</p>
+<p>原文链接：<a target="_blank" rel="noopener" href="https://blog.csdn.net/weixin_46120107/article/details/126149556">https://blog.csdn.net/weixin_46120107/article/details/126149556</a></p>
+<h2 id="makefile的编写的规则"><a href="#makefile的编写的规则" class="headerlink" title="makefile的编写的规则"></a>makefile的编写的规则</h2><figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta prompt_">#</span><span class="language-bash">目标。。。:依赖。。。</span></span><br><span class="line"><span class="meta prompt_"># </span><span class="language-bash">   命令  （shell命令）</span></span><br><span class="line"><span class="meta prompt_"># </span><span class="language-bash">   。。。</span></span><br><span class="line"><span class="meta prompt_">#</span><span class="language-bash">例如：</span></span><br><span class="line">app: a.c b.c c.c d.c main.c</span><br><span class="line">	gcc a.c b.c c.c d.c main.c -o app</span><br><span class="line"><span class="meta prompt_">#</span><span class="language-bash">第一行说明了需要依赖哪些文件，第二行是具体的命令</span></span><br></pre></td></tr></table></figure>
+<p>目标:最终要生成的文件(伪目标除外)<br>依赖:生成目标所需要的文件或目标(这里的目标是子目标)<br>命令:通过执行命令来操作依赖来生成目标</p>
+<p>个人认为就是一系列编译指令组成的一个脚本。</p>
+<p><img src="/images/4/1677750491136.png" alt="1677750491136">上面这个例子，app所需的依赖由其他规则生成，所以要先检查其他规则并执行其他规则。并且他会比较依赖文件的时间，以此检查改动，从而再次make的时候就只执行改变的部分。</p>
+<p><strong><em>不想一点一点写了，下面一看就懂！！！</em></strong></p>
+<p>变量的定义方式如下：</p>
+<p><img src="/images/4/1677751001217.png" alt="1677751001217"></p>
+<p>CC变量是自带的。</p>
+<p>（待更新。。。）</p>
+<p><a target="_blank" rel="noopener" href="https://blog.csdn.net/weixin_46120107/article/details/126149556?ops_request_misc=%7B%22request%5Fid%22%3A%22167774541916800182767941%22%2C%22scm%22%3A%2220140713.130102334.pc%5Fblog.%22%7D&amp;request_id=167774541916800182767941&amp;biz_id=0&amp;utm_medium=distribute.pc_search_result.none-task-blog-2~blog~first_rank_ecpm_v1~rank_v31_ecpm-4-126149556-null-null.blog_rank_default&amp;utm_term=c%2B%2B&amp;spm=1018.2226.3001.4450">参考(12条消息) C++项目实战-makefile<em>c++ makefile</em>干饭小白的博客-CSDN博客</a></p>
+
+          
+        
+      
+    </div>
+    
+    
+    
+
+    
+
+    
+
+    
+
+    <footer class="post-footer">
+      
+
+      
+
+      
+
+      
+      
+        <div class="post-eof"></div>
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+      
+    
+      
+      
+      
+        
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="http://hanze5.github.io/2022/09/28/3.C-%E5%AE%9E%E6%88%98%E2%80%94%E2%80%94%E5%85%88%E6%8A%8A%E9%A1%B9%E7%9B%AE%E8%B7%91%E8%B5%B7%E6%9D%A5/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/images/my_avatar.png">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="也许不会有人进来吧">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+                
+                <a class="post-title-link" href="/2022/09/28/3.C-%E5%AE%9E%E6%88%98%E2%80%94%E2%80%94%E5%85%88%E6%8A%8A%E9%A1%B9%E7%9B%AE%E8%B7%91%E8%B5%B7%E6%9D%A5/" itemprop="url">C++实战——先把项目跑起来</a></h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2022-09-28T16:47:43+08:00">
+                2022-09-28
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E5%AD%A6%E6%97%A0%E6%AD%A2%E5%A2%83/" itemprop="url" rel="index">
+                    <span itemprop="name">学无止境</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+          
+
+          
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        
+          
+            <p>参考文章：</p>
+<p><a target="_blank" rel="noopener" href="https://www.ipangbo.cn/linux/272.html#:~:text=Ubuntu22.04使用apt安装MySQL8指南 当今，MySQL8的文档还停留在支持Ubuntu 20.04上，甚至使用官方的 mysql-apt-config 安装也会提示不支持。 但是使用apt却可以很顺利地在Ubuntu,22.04的实体机%2F虚拟机%2F容器上安装MySQL8。 使用apt的安装过程轻松又愉快，只需 sudo apt install mysql-server">Ubuntu22.04使用apt安装MySQL8指南 – 气势磅礴 (ipangbo.cn)</a><br>文章代码来源:<a target="_blank" rel="noopener" href="https://github.com/gaojingcome/WebServer">高并发Web服务器</a><br>环境：</p>
+<p>​    vmware 16 pro</p>
+<p>​    ubuntu 22.04</p>
+<ol>
+<li>安装mysql,及开发工具</li>
+</ol>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">sudo apt install mysql-server</span><br><span class="line">sudo apt install musql-client</span><br><span class="line">sudo apt-get install libmysqlclient-dev</span><br><span class="line"><span class="meta prompt_">#</span><span class="language-bash">检查是否安装成功</span></span><br><span class="line">sudo service mysql status</span><br></pre></td></tr></table></figure>
+<p><img src="/images/3/1677744637196.png" alt="1677744637196"></p>
+<ol>
+<li><p>正常root权限可以直接通过mysql指令进入数据库。</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">mysql&gt; SHOW DATABASES;</span><br></pre></td></tr></table></figure>
+<p>Mysql安装成功后，默认的root用户密码为空，你可以使用以下命令来创建root用户的密码：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">mysqladmin -u root password &quot;new_password&quot;;</span><br><span class="line">#接着可以使用 进入数据库 mysql -h 主机名 -u 用户名 -p  登录本地可忽略 -h选项</span><br><span class="line">mysql -u root -p </span><br></pre></td></tr></table></figure>
+</li>
+<li><p>创建数据库 </p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line">mysql&gt; create database webserver;</span><br><span class="line">Query OK, 1 row affected (0.00 sec)</span><br><span class="line"></span><br><span class="line">mysql&gt; use webserver;</span><br><span class="line">Database changed</span><br><span class="line">//创建user表</span><br><span class="line">mysql&gt; CREATE TABLE user(</span><br><span class="line">    -&gt;     username char(50) NULL,</span><br><span class="line">    -&gt;     password char(50) NULL</span><br><span class="line">    -&gt; )ENGINE=InnoDB;</span><br><span class="line">Query OK, 0 rows affected (0.01 sec)</span><br><span class="line"></span><br><span class="line">mysql&gt; INSERT INTO user(username, password) VALUES(&#x27;nowcoder&#x27;, &#x27;nowcoder&#x27;);</span><br><span class="line">Query OK, 1 row affected (0.01 sec)</span><br></pre></td></tr></table></figure>
+</li>
+</ol>
+<ol>
+<li><p>克隆代码</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br></pre></td><td class="code"><pre><span class="line">git clone https://github.com/gaojingcome/WebServer.git</span><br><span class="line"><span class="meta prompt_">#</span><span class="language-bash">代码目录树如下</span></span><br><span class="line">dawnlake@dawnlake-virtual-machine:~/workspace/C++/WebServer$ tree</span><br><span class="line">.</span><br><span class="line">├── build</span><br><span class="line">│   └── Makefile</span><br><span class="line">├── code</span><br><span class="line">│   ├── buffer</span><br><span class="line">│   │   ├── buffer.cpp</span><br><span class="line">│   │   └── buffer.h</span><br><span class="line">│   ├── config</span><br><span class="line">│   │   └── config.h</span><br><span class="line">│   ├── http</span><br><span class="line">│   │   ├── httpconn.cpp</span><br><span class="line">│   │   ├── httpconn.h</span><br><span class="line">│   │   ├── httprequest.cpp</span><br><span class="line">│   │   ├── httprequest.h</span><br><span class="line">│   │   ├── httpresponse.cpp</span><br><span class="line">│   │   ├── httpresponse.h</span><br><span class="line">│   │   └── readme.md</span><br><span class="line">│   ├── log</span><br><span class="line">│   │   ├── blockqueue.h</span><br><span class="line">│   │   ├── log.cpp</span><br><span class="line">│   │   ├── log.h</span><br><span class="line">│   │   └── readme.md</span><br><span class="line">│   ├── main.cpp</span><br><span class="line">│   ├── pool</span><br><span class="line">│   │   ├── readme.md</span><br><span class="line">│   │   ├── sqlconnpool.cpp</span><br><span class="line">│   │   ├── sqlconnpool.h</span><br><span class="line">│   │   ├── sqlconnRAII.h</span><br><span class="line">│   │   └── threadpool.h</span><br><span class="line">│   ├── readme.md</span><br><span class="line">│   ├── server</span><br><span class="line">│   │   ├── epoller.cpp</span><br><span class="line">│   │   ├── epoller.h</span><br><span class="line">│   │   ├── webserver.cpp</span><br><span class="line">│   │   └── webserver.h</span><br><span class="line">│   └── timer</span><br><span class="line">│       ├── heaptimer.cpp</span><br><span class="line">│       ├── heaptimer.h</span><br><span class="line">│       └── readme.md</span><br><span class="line">├── LICENSE</span><br><span class="line">├── Makefile</span><br><span class="line">├── readme.assest</span><br><span class="line">│   └── 压力测试.png</span><br><span class="line">├── readme.md</span><br><span class="line">├── resources</span><br><span class="line">│   ├── 400.html</span><br><span class="line">│   ├── 403.html</span><br><span class="line">│   ├── 404.html</span><br><span class="line">│   ├── 405.html</span><br><span class="line">│   ├── css</span><br><span class="line">│   │   ├── animate.css</span><br><span class="line">│   │   ├── bootstrap.min.css</span><br><span class="line">│   │   ├── font-awesome.min.css</span><br><span class="line">│   │   ├── magnific-popup.css</span><br><span class="line">│   │   └── style.css</span><br><span class="line">│   ├── error.html</span><br><span class="line">│   ├── fonts</span><br><span class="line">│   │   ├── FontAwesome.otf</span><br><span class="line">│   │   ├── fontawesome-webfont.eot</span><br><span class="line">│   │   ├── fontawesome-webfont.svg</span><br><span class="line">│   │   ├── fontawesome-webfont.ttf</span><br><span class="line">│   │   ├── fontawesome-webfont.woff</span><br><span class="line">│   │   └── fontawesome-webfont.woff2</span><br><span class="line">│   ├── images</span><br><span class="line">│   │   ├── favicon.ico</span><br><span class="line">│   │   ├── instagram-image1.jpg</span><br><span class="line">│   │   ├── instagram-image2.jpg</span><br><span class="line">│   │   ├── instagram-image3.jpg</span><br><span class="line">│   │   ├── instagram-image4.jpg</span><br><span class="line">│   │   ├── instagram-image5.jpg</span><br><span class="line">│   │   └── profile-image.jpg</span><br><span class="line">│   ├── index.html</span><br><span class="line">│   ├── js</span><br><span class="line">│   │   ├── bootstrap.min.js</span><br><span class="line">│   │   ├── custom.js</span><br><span class="line">│   │   ├── jquery.js</span><br><span class="line">│   │   ├── jquery.magnific-popup.min.js</span><br><span class="line">│   │   ├── magnific-popup-options.js</span><br><span class="line">│   │   ├── smoothscroll.js</span><br><span class="line">│   │   └── wow.min.js</span><br><span class="line">│   ├── login.html</span><br><span class="line">│   ├── picture.html</span><br><span class="line">│   ├── register.html</span><br><span class="line">│   ├── video</span><br><span class="line">│   │   └── xxx.mp4</span><br><span class="line">│   ├── video.html</span><br><span class="line">│   └── welcome.html</span><br><span class="line">├── test</span><br><span class="line">│   ├── Makefile</span><br><span class="line">│   ├── readme.md</span><br><span class="line">│   └── test.cpp</span><br><span class="line">└── webbench-1.5</span><br><span class="line">    ├── Makefile</span><br><span class="line">    ├── socket.c</span><br><span class="line">    └── webbench.c</span><br></pre></td></tr></table></figure>
+</li>
+<li><p>编译之后执行可运行程序<img src="/images/3/1677746577228.png" alt="1677746577228">然后可以从外部主机，访问虚拟机的ip地址加端口号<img src="/images/3/1677746955685.png" alt="1677746955685"></p>
+</li>
+<li><p>main函数代码比较简单</p>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;unistd.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&quot;server/webserver.h&quot;</span></span></span><br><span class="line"></span><br><span class="line"><span class="function"><span class="type">int</span> <span class="title">main</span><span class="params">()</span> </span>&#123;</span><br><span class="line">    <span class="comment">/* 守护进程 后台运行 */</span></span><br><span class="line">    <span class="comment">//daemon(1, 0); </span></span><br><span class="line"></span><br><span class="line">    <span class="function">WebServer <span class="title">server</span><span class="params">(</span></span></span><br><span class="line"><span class="params"><span class="function">        <span class="number">1316</span>, <span class="number">3</span>, <span class="number">60000</span>, <span class="literal">false</span>,             <span class="comment">/* 端口 ET模式 timeoutMs 优雅退出  */</span></span></span></span><br><span class="line"><span class="params"><span class="function">        <span class="number">3306</span>, <span class="string">&quot;nowcoder&quot;</span>, <span class="string">&quot;nowcoder&quot;</span>, <span class="string">&quot;webserver&quot;</span>, <span class="comment">/* Mysql配置  端口号 ， 用户名 ， 密码 ， 数据库名*/</span></span></span></span><br><span class="line"><span class="params"><span class="function">        <span class="number">12</span>, <span class="number">6</span>, <span class="literal">true</span>, <span class="number">1</span>, <span class="number">1024</span>)</span></span>;             <span class="comment">/* 连接池数量 线程池数量 日志开关 日志等级 日志异步队列容量 */</span></span><br><span class="line">    server.<span class="built_in">Start</span>();</span><br><span class="line">&#125; </span><br><span class="line">  </span><br></pre></td></tr></table></figure>
+</li>
+</ol>
+<ol>
+<li>​    </li>
+<li></li>
+<li></li>
+</ol>
+
+          
+        
+      
+    </div>
+    
+    
+    
+
+    
+
+    
+
+    
+
+    <footer class="post-footer">
+      
+
+      
+
+      
+
+      
+      
+        <div class="post-eof"></div>
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+      
+    
+      
+      
+      
+        
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="http://hanze5.github.io/2022/07/15/23-Linux%E5%86%85%E6%A0%B8%E2%80%94%E2%80%94%E8%BF%9B%E7%A8%8B%E7%9A%84%E8%99%9A%E6%8B%9F%E5%9C%B0%E5%9D%80%E7%A9%BA%E9%97%B4/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/images/my_avatar.png">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="也许不会有人进来吧">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+                
+                <a class="post-title-link" href="/2022/07/15/23-Linux%E5%86%85%E6%A0%B8%E2%80%94%E2%80%94%E8%BF%9B%E7%A8%8B%E7%9A%84%E8%99%9A%E6%8B%9F%E5%9C%B0%E5%9D%80%E7%A9%BA%E9%97%B4/" itemprop="url">Linux内核——进程的虚拟地址空间</a></h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2022-07-15T09:58:12+08:00">
+                2022-07-15
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E5%AD%A6%E6%97%A0%E6%AD%A2%E5%A2%83/" itemprop="url" rel="index">
+                    <span itemprop="name">学无止境</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+          
+
+          
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        
+          
+            <p>跟着简叔学的，可以B站搜索 <strong>简说linux</strong></p>
+<h2 id="进程虚拟地址空间的管理机制"><a href="#进程虚拟地址空间的管理机制" class="headerlink" title="进程虚拟地址空间的管理机制"></a>进程虚拟地址空间的管理机制</h2><h3 id="什么是虚拟地址空间"><a href="#什么是虚拟地址空间" class="headerlink" title="什么是虚拟地址空间"></a>什么是虚拟地址空间</h3><p>内存的页表映射机制实现虚拟地址到物理地址的转换。内核只需维护一个页目录表，而多个进程共享用户空间是不安全的，需要做管理,不然用户空间太大，若每个进程也只维护一个页目录表的话，查找管理不便。那么虚拟地址空间的管理机制是什么样的呢。</p>
+<p><img src="/images/23/1678148132831.png" alt="1678148132831"></p>
+<p>在linux中，proc是一个虚拟文件系统，也是一个控制中心，里面储存是当前内核运行状态的一系列特殊文件；该系统只存在内存当中，以文件系统的方式为访问系统内核数据的操作提供接口，可以通过更改其中的某些文件来改变内核运行状态。</p>
+<p>写一个最简单的c语言程序并运行</p>
+<p>!<img src="/images/23/1678148938760.png" alt="1678148938760"></p>
+<p>使用top命令查看进程的ID,</p>
+<p><img src="/images/23/1678148993319.png" alt="1678148993319"></p>
+<p>使用cat /proc/232759/maps可以查看进程的虚拟地址空间的信息</p>
+<p><img src="/images/23/1678149193044.png" alt="1678149193044"></p>
+<p>含义：</p>
+<p><img src="/images/23/1678149419801.png" alt="1678149419801"></p>
+<h3 id="虚拟地址空间的管理"><a href="#虚拟地址空间的管理" class="headerlink" title="虚拟地址空间的管理"></a>虚拟地址空间的管理</h3><p>内核使用下面的数据结构来描述一个进程的的虚拟地址空间，文件路径<code>/include/linux/mm_types.h</code>，其中第一个成员 <code>vm_area_struct</code>被用来描述一个虚拟内存区域（VMA），一个地址空间由多个虚拟内存区域，可以看到是一个链表的形式。<code>pgd_t * pgd</code> 指向页目录表，地址映射必备，如果两个进程有同一个页目录表，那这两个进程甚至可以当成线程使用。</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br><span class="line">102</span><br><span class="line">103</span><br><span class="line">104</span><br><span class="line">105</span><br><span class="line">106</span><br><span class="line">107</span><br><span class="line">108</span><br><span class="line">109</span><br><span class="line">110</span><br><span class="line">111</span><br><span class="line">112</span><br><span class="line">113</span><br><span class="line">114</span><br><span class="line">115</span><br><span class="line">116</span><br><span class="line">117</span><br><span class="line">118</span><br><span class="line">119</span><br><span class="line">120</span><br><span class="line">121</span><br><span class="line">122</span><br><span class="line">123</span><br><span class="line">124</span><br><span class="line">125</span><br><span class="line">126</span><br><span class="line">127</span><br><span class="line">128</span><br><span class="line">129</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">mm_struct</span> &#123;</span></span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">vm_area_struct</span> *<span class="title">mmap</span>;</span>		<span class="comment">/* list of VMAs */</span></span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">rb_root</span> <span class="title">mm_rb</span>;</span></span><br><span class="line">	u64 vmacache_seqnum;                   <span class="comment">/* per-thread vmacache */</span></span><br><span class="line"><span class="meta">#<span class="keyword">ifdef</span> CONFIG_MMU</span></span><br><span class="line">	<span class="type">unsigned</span> <span class="title function_">long</span> <span class="params">(*get_unmapped_area)</span> <span class="params">(<span class="keyword">struct</span> file *filp,</span></span><br><span class="line"><span class="params">				<span class="type">unsigned</span> <span class="type">long</span> addr, <span class="type">unsigned</span> <span class="type">long</span> len,</span></span><br><span class="line"><span class="params">				<span class="type">unsigned</span> <span class="type">long</span> pgoff, <span class="type">unsigned</span> <span class="type">long</span> flags)</span>;</span><br><span class="line"><span class="meta">#<span class="keyword">endif</span></span></span><br><span class="line">	<span class="type">unsigned</span> <span class="type">long</span> mmap_base;		<span class="comment">/* base of mmap area */</span></span><br><span class="line">	<span class="type">unsigned</span> <span class="type">long</span> mmap_legacy_base; <span class="comment">/* base of mmap area in bottom-up allocations */</span></span><br><span class="line">	<span class="type">unsigned</span> <span class="type">long</span> task_size;		<span class="comment">/* size of task vm space */</span></span><br><span class="line">	<span class="type">unsigned</span> <span class="type">long</span> highest_vm_end;   <span class="comment">/* highest vma end address */</span></span><br><span class="line">	<span class="type">pgd_t</span> * pgd;                    <span class="comment">//页目录表的地址</span></span><br><span class="line">	<span class="type">atomic_t</span> mm_users;	<span class="comment">/* How many users with user space? */</span></span><br><span class="line">	<span class="type">atomic_t</span> mm_count;  <span class="comment">/* How many references to &quot;struct mm_struct&quot; (users count as 1) */</span></span><br><span class="line">	<span class="type">atomic_long_t</span> nr_ptes;			<span class="comment">/* PTE page table pages */</span></span><br><span class="line"><span class="meta">#<span class="keyword">if</span> CONFIG_PGTABLE_LEVELS &gt; 2</span></span><br><span class="line">	<span class="type">atomic_long_t</span> nr_pmds;			<span class="comment">/* PMD page table pages */</span></span><br><span class="line"><span class="meta">#<span class="keyword">endif</span></span></span><br><span class="line">	<span class="type">int</span> map_count;				    <span class="comment">/* number of VMAs */</span></span><br><span class="line"></span><br><span class="line">	<span class="type">spinlock_t</span> page_table_lock;		<span class="comment">/* Protects page tables and some counters */</span></span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">rw_semaphore</span> <span class="title">mmap_sem</span>;</span></span><br><span class="line"></span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">list_head</span> <span class="title">mmlist</span>;</span>		<span class="comment">/* List of maybe swapped mm&#x27;s.	These are globally strung</span></span><br><span class="line"><span class="comment">						 * together off init_mm.mmlist, and are protected</span></span><br><span class="line"><span class="comment">						 * by mmlist_lock</span></span><br><span class="line"><span class="comment">						 */</span></span><br><span class="line"></span><br><span class="line"></span><br><span class="line">	<span class="type">unsigned</span> <span class="type">long</span> hiwater_rss;	<span class="comment">/* High-watermark of RSS usage */</span></span><br><span class="line">	<span class="type">unsigned</span> <span class="type">long</span> hiwater_vm;	<span class="comment">/* High-water virtual memory usage */</span></span><br><span class="line"></span><br><span class="line">	<span class="type">unsigned</span> <span class="type">long</span> total_vm;		<span class="comment">/* Total pages mapped */</span></span><br><span class="line">	<span class="type">unsigned</span> <span class="type">long</span> locked_vm;	<span class="comment">/* Pages that have PG_mlocked set */</span></span><br><span class="line">	<span class="type">unsigned</span> <span class="type">long</span> pinned_vm;	<span class="comment">/* Refcount permanently increased */</span></span><br><span class="line">	<span class="type">unsigned</span> <span class="type">long</span> data_vm;		<span class="comment">/* VM_WRITE &amp; ~VM_SHARED &amp; ~VM_STACK */</span></span><br><span class="line">	<span class="type">unsigned</span> <span class="type">long</span> exec_vm;		<span class="comment">/* VM_EXEC &amp; ~VM_WRITE &amp; ~VM_STACK */</span></span><br><span class="line">	<span class="type">unsigned</span> <span class="type">long</span> stack_vm;		<span class="comment">/* VM_STACK */</span></span><br><span class="line">	<span class="type">unsigned</span> <span class="type">long</span> def_flags;</span><br><span class="line">	<span class="type">unsigned</span> <span class="type">long</span> start_code, end_code, start_data, end_data;</span><br><span class="line">	<span class="type">unsigned</span> <span class="type">long</span> start_brk, brk, start_stack;</span><br><span class="line">	<span class="type">unsigned</span> <span class="type">long</span> arg_start, arg_end, env_start, env_end;</span><br><span class="line"></span><br><span class="line">	<span class="type">unsigned</span> <span class="type">long</span> saved_auxv[AT_VECTOR_SIZE]; <span class="comment">/* for /proc/PID/auxv */</span></span><br><span class="line"></span><br><span class="line">	<span class="comment">/*</span></span><br><span class="line"><span class="comment">	 * Special counters, in some configurations protected by the</span></span><br><span class="line"><span class="comment">	 * page_table_lock, in other configurations by being atomic.</span></span><br><span class="line"><span class="comment">	 */</span></span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">mm_rss_stat</span> <span class="title">rss_stat</span>;</span></span><br><span class="line"></span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">linux_binfmt</span> *<span class="title">binfmt</span>;</span></span><br><span class="line"></span><br><span class="line">	<span class="type">cpumask_var_t</span> cpu_vm_mask_var;</span><br><span class="line"></span><br><span class="line">	<span class="comment">/* Architecture-specific MM context */</span></span><br><span class="line">	<span class="type">mm_context_t</span> context;</span><br><span class="line"></span><br><span class="line">	<span class="type">unsigned</span> <span class="type">long</span> flags; <span class="comment">/* Must use atomic bitops to access the bits */</span></span><br><span class="line"></span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">core_state</span> *<span class="title">core_state</span>;</span> <span class="comment">/* coredumping support */</span></span><br><span class="line"><span class="meta">#<span class="keyword">ifdef</span> CONFIG_AIO</span></span><br><span class="line">	<span class="type">spinlock_t</span>			ioctx_lock;</span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">kioctx_table</span> __<span class="title">rcu</span>	*<span class="title">ioctx_table</span>;</span></span><br><span class="line"><span class="meta">#<span class="keyword">endif</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">ifdef</span> CONFIG_MEMCG</span></span><br><span class="line">	<span class="comment">/*</span></span><br><span class="line"><span class="comment">	 * &quot;owner&quot; points to a task that is regarded as the canonical</span></span><br><span class="line"><span class="comment">	 * user/owner of this mm. All of the following must be true in</span></span><br><span class="line"><span class="comment">	 * order for it to be changed:</span></span><br><span class="line"><span class="comment">	 *</span></span><br><span class="line"><span class="comment">	 * current == mm-&gt;owner</span></span><br><span class="line"><span class="comment">	 * current-&gt;mm != mm</span></span><br><span class="line"><span class="comment">	 * new_owner-&gt;mm == mm</span></span><br><span class="line"><span class="comment">	 * new_owner-&gt;alloc_lock is held</span></span><br><span class="line"><span class="comment">	 */</span></span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">task_struct</span> __<span class="title">rcu</span> *<span class="title">owner</span>;</span></span><br><span class="line"><span class="meta">#<span class="keyword">endif</span></span></span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">user_namespace</span> *<span class="title">user_ns</span>;</span></span><br><span class="line"></span><br><span class="line">	<span class="comment">/* store ref to file /proc/&lt;pid&gt;/exe symlink points to */</span></span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">file</span> __<span class="title">rcu</span> *<span class="title">exe_file</span>;</span></span><br><span class="line"><span class="meta">#<span class="keyword">ifdef</span> CONFIG_MMU_NOTIFIER</span></span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">mmu_notifier_mm</span> *<span class="title">mmu_notifier_mm</span>;</span></span><br><span class="line"><span class="meta">#<span class="keyword">endif</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">if</span> defined(CONFIG_TRANSPARENT_HUGEPAGE) &amp;&amp; !USE_SPLIT_PMD_PTLOCKS</span></span><br><span class="line">	<span class="type">pgtable_t</span> pmd_huge_pte; <span class="comment">/* protected by page_table_lock */</span></span><br><span class="line"><span class="meta">#<span class="keyword">endif</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">ifdef</span> CONFIG_CPUMASK_OFFSTACK</span></span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">cpumask</span> <span class="title">cpumask_allocation</span>;</span></span><br><span class="line"><span class="meta">#<span class="keyword">endif</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">ifdef</span> CONFIG_NUMA_BALANCING</span></span><br><span class="line">	<span class="comment">/*</span></span><br><span class="line"><span class="comment">	 * numa_next_scan is the next time that the PTEs will be marked</span></span><br><span class="line"><span class="comment">	 * pte_numa. NUMA hinting faults will gather statistics and migrate</span></span><br><span class="line"><span class="comment">	 * pages to new nodes if necessary.</span></span><br><span class="line"><span class="comment">	 */</span></span><br><span class="line">	<span class="type">unsigned</span> <span class="type">long</span> numa_next_scan;</span><br><span class="line"></span><br><span class="line">	<span class="comment">/* Restart point for scanning and setting pte_numa */</span></span><br><span class="line">	<span class="type">unsigned</span> <span class="type">long</span> numa_scan_offset;</span><br><span class="line"></span><br><span class="line">	<span class="comment">/* numa_scan_seq prevents two threads setting pte_numa */</span></span><br><span class="line">	<span class="type">int</span> numa_scan_seq;</span><br><span class="line"><span class="meta">#<span class="keyword">endif</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">if</span> defined(CONFIG_NUMA_BALANCING) || defined(CONFIG_COMPACTION)</span></span><br><span class="line">	<span class="comment">/*</span></span><br><span class="line"><span class="comment">	 * An operation with batched TLB flushing is going on. Anything that</span></span><br><span class="line"><span class="comment">	 * can move process memory needs to flush the TLB when moving a</span></span><br><span class="line"><span class="comment">	 * PROT_NONE or PROT_NUMA mapped page.</span></span><br><span class="line"><span class="comment">	 */</span></span><br><span class="line">	<span class="type">bool</span> tlb_flush_pending;</span><br><span class="line"><span class="meta">#<span class="keyword">endif</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">ifdef</span> CONFIG_ARCH_WANT_BATCHED_UNMAP_TLB_FLUSH</span></span><br><span class="line">	<span class="comment">/* See flush_tlb_batched_pending() */</span></span><br><span class="line">	<span class="type">bool</span> tlb_flush_batched;</span><br><span class="line"><span class="meta">#<span class="keyword">endif</span></span></span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">uprobes_state</span> <span class="title">uprobes_state</span>;</span></span><br><span class="line"><span class="meta">#<span class="keyword">ifdef</span> CONFIG_X86_INTEL_MPX</span></span><br><span class="line">	<span class="comment">/* address of the bounds directory */</span></span><br><span class="line">	<span class="type">void</span> __user *bd_addr;</span><br><span class="line"><span class="meta">#<span class="keyword">endif</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">ifdef</span> CONFIG_HUGETLB_PAGE</span></span><br><span class="line">	<span class="type">atomic_long_t</span> hugetlb_usage;</span><br><span class="line"><span class="meta">#<span class="keyword">endif</span></span></span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">work_struct</span> <span class="title">async_put_work</span>;</span></span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+<p>那我们再来看看虚拟内存区域的（VMA）这个结构，内核将每个内存区域当作一个单独的内存对象管理，因此我们程序的代码段、数据段、未初始化全局变量、堆栈这种都有自己的 <code>vm_area_struct</code>然后再由虚拟地址空间把这些 <code>vm_area_struct</code>给串起来。</p>
+<p>这里面 有一个mm_struct指针 而mm_struct又与tast_struct有一一的对应关系，因此就可以知道这块虚拟内存区域属于的哪一个进程。</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/*</span></span><br><span class="line"><span class="comment"> * This struct defines a memory VMM memory area. There is one of these</span></span><br><span class="line"><span class="comment"> * per VM-area/task.  A VM area is any part of the process virtual memory</span></span><br><span class="line"><span class="comment"> * space that has a special rule for the page-fault handlers (ie a shared</span></span><br><span class="line"><span class="comment"> * library, the executable area etc).</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">vm_area_struct</span> &#123;</span></span><br><span class="line">	<span class="comment">/* The first cache line has the info for VMA tree walking. */</span></span><br><span class="line"></span><br><span class="line">	<span class="type">unsigned</span> <span class="type">long</span> vm_start;		<span class="comment">/* Our start address within vm_mm. */</span></span><br><span class="line">	<span class="type">unsigned</span> <span class="type">long</span> vm_end;		<span class="comment">/* The first byte after our end address</span></span><br><span class="line"><span class="comment">					   within vm_mm. */</span></span><br><span class="line"></span><br><span class="line">	<span class="comment">/* linked list of VM areas per task, sorted by address */</span></span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">vm_area_struct</span> *<span class="title">vm_next</span>, *<span class="title">vm_prev</span>;</span></span><br><span class="line"></span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">rb_node</span> <span class="title">vm_rb</span>;</span></span><br><span class="line"></span><br><span class="line">	<span class="comment">/*</span></span><br><span class="line"><span class="comment">	 * Largest free memory gap in bytes to the left of this VMA.</span></span><br><span class="line"><span class="comment">	 * Either between this VMA and vma-&gt;vm_prev, or between one of the</span></span><br><span class="line"><span class="comment">	 * VMAs below us in the VMA rbtree and its -&gt;vm_prev. This helps</span></span><br><span class="line"><span class="comment">	 * get_unmapped_area find a free area of the right size.</span></span><br><span class="line"><span class="comment">	 */</span></span><br><span class="line">	<span class="type">unsigned</span> <span class="type">long</span> rb_subtree_gap;</span><br><span class="line"></span><br><span class="line">	<span class="comment">/* Second cache line starts here. */</span></span><br><span class="line"></span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">mm_struct</span> *<span class="title">vm_mm</span>;</span>	<span class="comment">/* The address space we belong to. */</span></span><br><span class="line">	<span class="type">pgprot_t</span> vm_page_prot;		<span class="comment">/* Access permissions of this VMA. */</span></span><br><span class="line">	<span class="type">unsigned</span> <span class="type">long</span> vm_flags;		<span class="comment">/* Flags, see mm.h. 就是权限 可读可写还是什么的  */</span></span><br><span class="line"></span><br><span class="line">	<span class="comment">/*</span></span><br><span class="line"><span class="comment">	 * For areas with an address space and backing store,</span></span><br><span class="line"><span class="comment">	 * linkage into the address_space-&gt;i_mmap interval tree.</span></span><br><span class="line"><span class="comment">	 */</span></span><br><span class="line">	<span class="class"><span class="keyword">struct</span> &#123;</span></span><br><span class="line">		<span class="class"><span class="keyword">struct</span> <span class="title">rb_node</span> <span class="title">rb</span>;</span></span><br><span class="line">		<span class="type">unsigned</span> <span class="type">long</span> rb_subtree_last;</span><br><span class="line">	&#125; shared;</span><br><span class="line"></span><br><span class="line">	<span class="comment">/*</span></span><br><span class="line"><span class="comment">	 * A file&#x27;s MAP_PRIVATE vma can be in both i_mmap tree and anon_vma</span></span><br><span class="line"><span class="comment">	 * list, after a COW of one of the file pages.	A MAP_SHARED vma</span></span><br><span class="line"><span class="comment">	 * can only be in the i_mmap tree.  An anonymous MAP_PRIVATE, stack</span></span><br><span class="line"><span class="comment">	 * or brk vma (with NULL file) can only be in an anon_vma list.</span></span><br><span class="line"><span class="comment">	 */</span></span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">list_head</span> <span class="title">anon_vma_chain</span>;</span> <span class="comment">/* Serialized by mmap_sem &amp;</span></span><br><span class="line"><span class="comment">					  * page_table_lock */</span></span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">anon_vma</span> *<span class="title">anon_vma</span>;</span>	<span class="comment">/* Serialized by page_table_lock */</span></span><br><span class="line"></span><br><span class="line">	<span class="comment">/* Function pointers to deal with this struct. */</span></span><br><span class="line">	<span class="type">const</span> <span class="class"><span class="keyword">struct</span> <span class="title">vm_operations_struct</span> *<span class="title">vm_ops</span>;</span></span><br><span class="line"></span><br><span class="line">	<span class="comment">/* Information about our backing store: */</span></span><br><span class="line">	<span class="type">unsigned</span> <span class="type">long</span> vm_pgoff;		<span class="comment">/* Offset (within vm_file) in PAGE_SIZE</span></span><br><span class="line"><span class="comment">					   units */</span></span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">file</span> * <span class="title">vm_file</span>;</span>		<span class="comment">/* File we map to (can be NULL). */</span></span><br><span class="line">	<span class="type">void</span> * vm_private_data;		<span class="comment">/* was vm_pte (shared mem) */</span></span><br><span class="line"></span><br><span class="line"><span class="meta">#<span class="keyword">ifndef</span> CONFIG_MMU</span></span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">vm_region</span> *<span class="title">vm_region</span>;</span>	<span class="comment">/* NOMMU mapping region */</span></span><br><span class="line"><span class="meta">#<span class="keyword">endif</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">ifdef</span> CONFIG_NUMA</span></span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">mempolicy</span> *<span class="title">vm_policy</span>;</span>	<span class="comment">/* NUMA policy for the VMA */</span></span><br><span class="line"><span class="meta">#<span class="keyword">endif</span></span></span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">vm_userfaultfd_ctx</span> <span class="title">vm_userfaultfd_ctx</span>;</span></span><br><span class="line">&#125;;</span><br><span class="line"></span><br></pre></td></tr></table></figure>
+<p>下面这个图太牛了</p>
+<p><img src="/images/23/1678151170442.png" alt="1678151170442"></p>
+<p>使用以下函数可以把文件映射到进程的地址空间里，具体就是再给这个进程分配一个VMA并把这个东西加到<code>mm_struct</code>里边</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;sys/mman.h&gt;</span></span></span><br><span class="line"><span class="type">void</span> *<span class="title function_">mmap</span><span class="params">(<span class="type">void</span> *addr， <span class="type">size_t</span> length, <span class="type">int</span> prot, <span class="type">int</span> flags,<span class="type">int</span> fd, <span class="type">off_t</span> offset)</span>;</span><br><span class="line"><span class="type">int</span> <span class="title function_">munmap</span><span class="params">(<span class="type">void</span> *addr, <span class="type">size_t</span> length)</span> ;</span><br></pre></td></tr></table></figure>
+<p>在linux中，如果clone()时设置CLONE_VM标志，我们把这样的进程称作为线程。线程之间共享同样的虚拟内存空间。fork()函数利用copy_mm()函数复制父进程的mm_struct,也就是current-&gt;mm域给其子进程。(/kernel/fork.c) 参数中的<code>struct task_struct *tsk</code>是子进程的task struct</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;kernel/fork.c&gt;</span></span></span><br><span class="line"><span class="type">static</span> <span class="type">int</span> <span class="title function_">copy_mm</span> <span class="params">(<span class="type">unsigned</span> <span class="type">long</span> clone_flags,<span class="keyword">struct</span> task_struct *tsk)</span>&#123;&#125;</span><br><span class="line"></span><br><span class="line"><span class="type">static</span> <span class="type">int</span> <span class="title function_">copy_mm</span><span class="params">(<span class="type">unsigned</span> <span class="type">long</span> clone_flags, <span class="keyword">struct</span> task_struct *tsk)</span></span><br><span class="line">&#123;</span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">mm_struct</span> *<span class="title">mm</span>, *<span class="title">oldmm</span>;</span></span><br><span class="line">	<span class="type">int</span> retval;</span><br><span class="line"></span><br><span class="line">	tsk-&gt;min_flt = tsk-&gt;maj_flt = <span class="number">0</span>;</span><br><span class="line">	tsk-&gt;nvcsw = tsk-&gt;nivcsw = <span class="number">0</span>;</span><br><span class="line"><span class="meta">#<span class="keyword">ifdef</span> CONFIG_DETECT_HUNG_TASK</span></span><br><span class="line">	tsk-&gt;last_switch_count = tsk-&gt;nvcsw + tsk-&gt;nivcsw;</span><br><span class="line"><span class="meta">#<span class="keyword">endif</span></span></span><br><span class="line"></span><br><span class="line">	tsk-&gt;mm = <span class="literal">NULL</span>;</span><br><span class="line">	tsk-&gt;active_mm = <span class="literal">NULL</span>;</span><br><span class="line"></span><br><span class="line">	<span class="comment">/*</span></span><br><span class="line"><span class="comment">	 * Are we cloning a kernel thread?</span></span><br><span class="line"><span class="comment">	 *</span></span><br><span class="line"><span class="comment">	 * We need to steal a active VM for that..</span></span><br><span class="line"><span class="comment">	 */</span></span><br><span class="line">    <span class="comment">//取当前进程的mm</span></span><br><span class="line">	oldmm = current-&gt;mm;</span><br><span class="line">	<span class="keyword">if</span> (!oldmm)</span><br><span class="line">		<span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line"></span><br><span class="line">	<span class="comment">/* initialize the new vmacache entries */</span></span><br><span class="line">	vmacache_flush(tsk);</span><br><span class="line"></span><br><span class="line">	<span class="keyword">if</span> (clone_flags &amp; CLONE_VM) &#123;</span><br><span class="line">		<span class="type">atomic_inc</span>(&amp;oldmm-&gt;mm_users);</span><br><span class="line">		mm = oldmm;</span><br><span class="line">		<span class="keyword">goto</span> good_mm;</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	retval = -ENOMEM;</span><br><span class="line">	mm = dup_mm(tsk);</span><br><span class="line">	<span class="keyword">if</span> (!mm)</span><br><span class="line">		<span class="keyword">goto</span> fail_nomem;</span><br><span class="line"></span><br><span class="line"><span class="comment">//把mm赋给子进程的mm</span></span><br><span class="line"></span><br><span class="line">good_mm:</span><br><span class="line">	tsk-&gt;mm = mm;</span><br><span class="line">	tsk-&gt;active_mm = mm;</span><br><span class="line">	<span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line"></span><br><span class="line">fail_nomem:</span><br><span class="line">	<span class="keyword">return</span> retval;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h2 id="用户空间的mmap函数在内核中的实现"><a href="#用户空间的mmap函数在内核中的实现" class="headerlink" title="用户空间的mmap函数在内核中的实现"></a>用户空间的mmap函数在内核中的实现</h2><p>用户空间使用mmap函数可以将一个文件或者设备映射到进程的地址空间去，上面说的，创建一个VMA加进去，到底是不是这样呢？映射的作用是，这样读写文件会快，如果不这么做的话，还会有用户空间和内核空间的数据拷贝过程，数据多的时候会极大影响性能。</p>
+<p>用户空间的mmap()会通过系统调用调用到内核的do_mmap()函数。<br>do_mmap()函数会:<br>1.首先创建一个新的VMA并初始化，然后加入进程的虚拟地址空间里。<br>2.然后调用底层的mmap函数建立VMA和实际物理地址的联系（建立页表) 底层的mmap会根据文件类型不同有差异化。</p>
+<h3 id="驱动的mmap实现"><a href="#驱动的mmap实现" class="headerlink" title="驱动的mmap实现"></a>驱动的mmap实现</h3><p>设备驱动的mmap实现主要是将这个物理设备的可操作区域映射到一个进程的虚拟地址空间。这样用户空间就可以直接采用指针的方式访问设备的可操作区域。在驱动中的mmap实现主要是完成一件事，就是建立设备的可操作区域到进程虚拟空间地址的映射过程。同时也需要保证这段映射的虚拟存储器区域不会被进程当做一般的空间使用，因此需要添加一系列的保护方式。</p>
+<h4 id="驱动的mmap建立虚拟地址和物理地址的映射"><a href="#驱动的mmap建立虚拟地址和物理地址的映射" class="headerlink" title="驱动的mmap建立虚拟地址和物理地址的映射"></a>驱动的mmap建立虚拟地址和物理地址的映射</h4><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//建立vma和物理地址的映射的工作由remap_pfn_range来完成，原型如下:</span></span><br><span class="line"><span class="type">int</span>  <span class="title function_">remap_pfn_range</span><span class="params">(<span class="keyword">struct</span> vm_area_struct *vma，, <span class="type">unsigned</span> <span class="type">long</span></span></span><br><span class="line"><span class="params">virt_addr，<span class="type">unsigned</span> <span class="type">long</span> pfn，<span class="type">unsigned</span> <span class="type">long</span> size，<span class="type">pgprot_t</span> prot)</span></span><br><span class="line"><span class="comment">/*</span></span><br><span class="line"><span class="comment">vma            需要建立映射的VMA</span></span><br><span class="line"><span class="comment">virt_addr      需要建立映射的VMA的起始地址</span></span><br><span class="line"><span class="comment">pfn            页帧号，对应虚拟地址应当被映射的物理地址．这个页帧号简单地是物理地址右移 PAGE_SHIFT位 一般是12位</span></span><br><span class="line"><span class="comment">size           需要建立映射的VMA的大小，以字节.</span></span><br><span class="line"><span class="comment">prot           使用在vma-&gt;vm_page _prot中找到的值.</span></span><br><span class="line"><span class="comment">*/</span></span><br></pre></td></tr></table></figure>
+<p>我们可以重新回去看看file_operation这个结构体，这个就代表这驱动提供的能力，也就是要让驱动有mmap的能力，就需要实现 int(*mmap)函数，建立file 与 VMA的映射。就是用上面 的函数</p>
+<p><img src="/images/23/1678153727517.png" alt="1678153727517"></p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">int</span> (*mmap) (<span class="keyword">struct</span> file *, <span class="keyword">struct</span> vm_area_struct *);</span><br></pre></td></tr></table></figure>
+<p>因此mmap是一种零拷贝技术。</p>
+
+          
+        
+      
+    </div>
+    
+    
+    
+
+    
+
+    
+
+    
+
+    <footer class="post-footer">
+      
+
+      
+
+      
+
+      
+      
+        <div class="post-eof"></div>
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+      
+    
+      
+      
+      
+        
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
     <link itemprop="mainEntityOfPage" href="http://hanze5.github.io/2022/07/13/22-Linux%E5%86%85%E6%A0%B8%E2%80%94%E2%80%94%E5%86%85%E6%A0%B8%E7%A9%BA%E9%97%B4%E7%9A%84%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86%E4%B8%8E%E5%88%86%E9%85%8D/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
@@ -1127,7 +1826,7 @@
 <li>实现: Linux把所有的空闲页框分组为11个块链表，每个链表上的页框块是固定的。在第i条链表中每个页框块都包含2的i次方个连续页。</li>
 <li>注意:系统中每个页框块的第一个页框的物理地址是该块大小的整数倍。例如:大小为16个页框的块，其起始地址是16*2^12的倍数。</li>
 </ul>
-<p><img src="/C:/Users\DawnLake\AppData\Roaming\Typora\typora-user-images\1678103470108.png" alt="1678103470108"> </p>
+<p><img src="/images/22/1678103470108.png" alt="1678103470108"> </p>
 <p>我要申请4k 就去找0里摘取一个；8k就找。</p>
 <h2 id="页框操作"><a href="#页框操作" class="headerlink" title="页框操作"></a>页框操作</h2><p>分配2^order个连续的物理页，并返回一个指针，指向第一个页的page结构体</p>
 <figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">static</span> <span class="keyword">inline</span> <span class="keyword">struct</span> page * <span class="title function_">alloc_pages</span><span class="params">(<span class="type">gfp_t</span> gfp_mask, <span class="type">unsigned</span> <span class="type">int</span> order)</span></span><br></pre></td></tr></table></figure>
@@ -1139,7 +1838,7 @@
 <li>例如一个高速缓存存放task_struct结构体，而另外一个高速缓存存放struct inode结构体;. </li>
 <li>slab由一个或者多个物理上连续的页组成。每个高速缓存由多个slab组成。</li>
 </ul>
-<p><img src="/C:/Users\DawnLake\AppData\Roaming\Typora\typora-user-images\1678104047825.png" alt="1678104047825">|<img src="/C:/Users\DawnLake\AppData\Roaming\Typora\typora-user-images\1678104158296.png" alt="1678104158296"></p>
+<p><img src="/images/22/1678104047825.png" alt="1678104047825">|<img src="/images/22/1678104158296.png" alt="1678104158296"></p>
 <p>slad又分为三个状态，用于形容 对象的分配情况。查看右图128B的情况，128Bcache中的每个对象大小都是128个字节，就是由2^15个page组成一个对象。每个slab又是由一个或多个page组成。</p>
 <p>slab可以</p>
 <ol>
@@ -1151,7 +1850,7 @@
 <p><a target="_blank" rel="noopener" href="https://www.toutiao.com/article/6874373733595742727/?log_from=09cb26731ee35_1678104694035">linux操作系统内存大串讲：段页式，slab，共享内存-今日头条 (toutiao.com)</a></p>
 <h2 id="slab高速缓存的使用"><a href="#slab高速缓存的使用" class="headerlink" title="slab高速缓存的使用"></a>slab高速缓存的使用</h2><ol>
 <li><p>通过命令 cat /proc/slabinfo 可查看系统中的长用的</p>
-<p><img src="/C:/Users\DawnLake\AppData\Roaming\Typora\typora-user-images\1678145522310.png" alt="1678145522310"></p>
+<p><img src="/images/22/1678145522310.png" alt="1678145522310"></p>
 </li>
 <li><p>内核中用 <code>struct kmem_cache</code>表示一个高速缓存。   通过下面的方法创建高速缓存</p>
 <figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">struct</span>  kmem_cache*  <span class="title function_">kmem_cache_create</span><span class="params">(<span class="type">const</span> <span class="type">char</span> *name,<span class="type">size_t</span> size,<span class="type">size_t</span> align,</span></span><br><span class="line"><span class="params">                                      <span class="type">unsigned</span> <span class="type">long</span> flags,<span class="type">void</span> (*ctor)(<span class="type">void</span>))</span> </span><br><span class="line">    </span><br></pre></td></tr></table></figure>
@@ -1164,19 +1863,19 @@
 <li>给硬件分配内存必须连续</li>
 </ol>
 <figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">static</span> _always_inline <span class="type">void</span> *<span class="title function_">kmalloc</span><span class="params">(<span class="type">size_t</span> size, <span class="type">gfp_t</span> flags)</span></span><br><span class="line"><span class="type">static</span> <span class="keyword">inline</span> <span class="type">void</span> *<span class="title function_">kzalloc</span><span class="params">(<span class="type">size_t</span> size, <span class="type">gfp_t</span> flags)</span></span><br><span class="line"><span class="comment">//返回一个指向内存块的指针，其内存块大小至少size大小，所分配的内存在物理上是连续的。</span></span><br><span class="line"><span class="type">void</span> *<span class="title function_">vmalloc</span><span class="params">(<span class="type">unsigned</span> <span class="type">long</span> size)</span></span><br><span class="line"><span class="type">void</span> *<span class="title function_">vzalloc</span><span class="params">(<span class="type">unsigned</span> <span class="type">long</span> size)</span><span class="comment">//多了一步初始化操作 初始化成0</span></span><br><span class="line"><span class="comment">//返回一个指向内存块的指针，其内存块大小至少size大小，所分配的内存在物理上无需连续。</span></span><br></pre></td></tr></table></figure>
-<p><img src="/C:/Users\DawnLake\AppData\Roaming\Typora\typora-user-images\1678105707629.png" alt="1678105707629"></p>
-<h3 id="kzalloc实现"><a href="#kzalloc实现" class="headerlink" title="kzalloc实现"></a>kzalloc实现</h3><p>我们的代码中就用到了<img src="/C:/Users\DawnLake\AppData\Roaming\Typora\typora-user-images\1678105885291.png" alt="1678105885291"></p>
+<p><img src="/images/22/1678105707629.png" alt="1678105707629"></p>
+<h3 id="kzalloc实现"><a href="#kzalloc实现" class="headerlink" title="kzalloc实现"></a>kzalloc实现</h3><p>我们的代码中就用到了<img src="/images/22/1678105885291.png" alt="1678105885291"></p>
 <p>它的内部就是用kmalloc实现的，只是多了一步初始化为0的操作。</p>
-<p><img src="/C:/Users\DawnLake\AppData\Roaming\Typora\typora-user-images\1678105935522.png" alt="1678105935522"></p>
+<p><img src="/images/22/1678105935522.png" alt="1678105935522"></p>
 <p>kmalloc的源码在/linux-4.9.229/include/linux/slab.h</p>
-<p><img src="/C:/Users\DawnLake\AppData\Roaming\Typora\typora-user-images\1678105981827.png" alt="1678105981827"></p>
+<p><img src="/images/22/1678105981827.png" alt="1678105981827"></p>
 <p>大部分情况不会进入到if的判断里面，下图代码在 /mm/slab.c</p>
-<p><img src="/C:/Users\DawnLake\AppData\Roaming\Typora\typora-user-images\1678106254461.png" alt="1678106254461"></p>
+<p><img src="/images/22/1678106254461.png" alt="1678106254461"></p>
 <p>到底依赖伙伴系统的算法。根据size和flag得到对应的高速缓存，通过调用kmalloc_slab里找到合适的缓存，然后找到对象返回到ret。kmalloc_slab的实现在/mm/slab_common.c</p>
-<p><img src="/C:/Users\DawnLake\AppData\Roaming\Typora\typora-user-images\1678106514598.png" alt="1678106514598"></p>
+<p><img src="/images/22/1678106514598.png" alt="1678106514598"></p>
 <p>​        可以猜测到，通过大小查索引，是范围查找，合适的缓存。</p>
-<p><img src="/C:/Users\DawnLake\AppData\Roaming\Typora\typora-user-images\1678106829368.png" alt="1678106829368"></p>
-<p>  <img src="/C:/Users\DawnLake\AppData\Roaming\Typora\typora-user-images\1678106877955.png" alt="1678106877955"></p>
+<p><img src="/images/22/1678106829368.png" alt="1678106829368"></p>
+<p>  <img src="/images/22/1678106877955.png" alt="1678106877955"></p>
 <p>妙啊！ 除以8算出8的几倍，通过倍数当作索引来找出合适的size</p>
 <p>（这块儿看了好久都没理顺，打算先放一放往下看了。。。。）</p>
 
@@ -1419,672 +2118,6 @@
 
       
     
-      
-      
-      
-        
-
-  
-
-  
-  
-  
-
-  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
-  
-  
-  
-  <div class="post-block">
-    <link itemprop="mainEntityOfPage" href="http://hanze5.github.io/2021/11/21/11-C-%E5%AE%9E%E6%88%98%E2%80%94%E2%80%94http%E4%B8%9A%E5%8A%A1%E9%80%BB%E8%BE%91/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="name" content="">
-      <meta itemprop="description" content="">
-      <meta itemprop="image" content="/images/my_avatar.png">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="也许不会有人进来吧">
-    </span>
-
-    
-      <header class="post-header">
-
-        
-        
-          <h1 class="post-title" itemprop="name headline">
-                
-                <a class="post-title-link" href="/2021/11/21/11-C-%E5%AE%9E%E6%88%98%E2%80%94%E2%80%94http%E4%B8%9A%E5%8A%A1%E9%80%BB%E8%BE%91/" itemprop="url">C++实战——Http业务逻辑</a></h1>
-        
-
-        <div class="post-meta">
-          <span class="post-time">
-            
-              <span class="post-meta-item-icon">
-                <i class="fa fa-calendar-o"></i>
-              </span>
-              
-                <span class="post-meta-item-text">发表于</span>
-              
-              <time title="创建于" itemprop="dateCreated datePublished" datetime="2021-11-21T20:18:14+08:00">
-                2021-11-21
-              </time>
-            
-
-            
-
-            
-          </span>
-
-          
-            <span class="post-category" >
-            
-              <span class="post-meta-divider">|</span>
-            
-              <span class="post-meta-item-icon">
-                <i class="fa fa-folder-o"></i>
-              </span>
-              
-                <span class="post-meta-item-text">分类于</span>
-              
-              
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/%E5%AD%A6%E6%97%A0%E6%AD%A2%E5%A2%83/" itemprop="url" rel="index">
-                    <span itemprop="name">学无止境</span>
-                  </a>
-                </span>
-
-                
-                
-              
-            </span>
-          
-
-          
-            
-          
-
-          
-          
-
-          
-
-          
-
-          
-
-        </div>
-      </header>
-    
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-      
-
-      
-        
-          
-            <p>文章代码来源:<a target="_blank" rel="noopener" href="https://github.com/gaojingcome/WebServer">高并发Web服务器</a></p>
-<h2 id="简单介绍"><a href="#简单介绍" class="headerlink" title="简单介绍"></a>简单介绍</h2><p>书接上文，这里是http处理业务请求的具体逻辑内容。</p>
-<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="type">bool</span> <span class="title">HttpConn::process</span><span class="params">()</span> </span>&#123;</span><br><span class="line">    <span class="comment">//初始化</span></span><br><span class="line">    request_.<span class="built_in">Init</span>();</span><br><span class="line">    <span class="comment">//没有数据可读直接返回false</span></span><br><span class="line">    <span class="keyword">if</span>(readBuff_.<span class="built_in">ReadableBytes</span>() &lt;= <span class="number">0</span>) &#123;</span><br><span class="line">        <span class="keyword">return</span> <span class="literal">false</span>;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">else</span> <span class="keyword">if</span>(request_.<span class="built_in">parse</span>(readBuff_))  <span class="comment">//请求解析成功后 初始化相应</span></span><br><span class="line">    &#123;</span><br><span class="line">        <span class="built_in">LOG_DEBUG</span>(<span class="string">&quot;%s&quot;</span>, request_.<span class="built_in">path</span>().<span class="built_in">c_str</span>());</span><br><span class="line">        response_.<span class="built_in">Init</span>(srcDir, request_.<span class="built_in">path</span>(), request_.<span class="built_in">IsKeepAlive</span>(), <span class="number">200</span>);</span><br><span class="line">    &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">        <span class="comment">//400代表解析不成功</span></span><br><span class="line">        response_.<span class="built_in">Init</span>(srcDir, request_.<span class="built_in">path</span>(), <span class="literal">false</span>, <span class="number">400</span>);</span><br><span class="line">    &#125;</span><br><span class="line">	<span class="comment">//创造相应</span></span><br><span class="line">    response_.<span class="built_in">MakeResponse</span>(writeBuff_);</span><br><span class="line">    <span class="comment">/* 响应头 */</span></span><br><span class="line">    iov_[<span class="number">0</span>].iov_base = <span class="built_in">const_cast</span>&lt;<span class="type">char</span>*&gt;(writeBuff_.<span class="built_in">Peek</span>());</span><br><span class="line">    iov_[<span class="number">0</span>].iov_len = writeBuff_.<span class="built_in">ReadableBytes</span>();</span><br><span class="line">    iovCnt_ = <span class="number">1</span>;</span><br><span class="line"></span><br><span class="line">    <span class="comment">/* 文件 */</span></span><br><span class="line">    <span class="keyword">if</span>(response_.<span class="built_in">FileLen</span>() &gt; <span class="number">0</span>  &amp;&amp; response_.<span class="built_in">File</span>()) &#123;</span><br><span class="line">        iov_[<span class="number">1</span>].iov_base = response_.<span class="built_in">File</span>();</span><br><span class="line">        iov_[<span class="number">1</span>].iov_len = response_.<span class="built_in">FileLen</span>();</span><br><span class="line">        iovCnt_ = <span class="number">2</span>;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="built_in">LOG_DEBUG</span>(<span class="string">&quot;filesize:%d, %d  to %d&quot;</span>, response_.<span class="built_in">FileLen</span>() , iovCnt_, <span class="built_in">ToWriteBytes</span>());</span><br><span class="line">    <span class="keyword">return</span> <span class="literal">true</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-<h2 id="解析http请求的逻辑"><a href="#解析http请求的逻辑" class="headerlink" title="解析http请求的逻辑"></a>解析http请求的逻辑</h2><p>下面简单分析，对http请求的解析的逻辑。</p>
-<p><img src="/images/11/1677937698830.png" alt="1677937698830"></p>
-<p>从http的请求报文的格式可看出，可以分为三个部分，<strong>请求首行</strong>、<strong>请求头部</strong>、<strong>请求数据</strong> 也叫<strong>请求体（body）</strong>，http解析也以此划分阶段。当解析数据还有剩余，会依据当前状态解析相应的部分。如：<code>ParseRequestLine_()</code>、<code>ParseHeader_()</code>、<code>ParseBody_</code>.</p>
-<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="type">bool</span> <span class="title">HttpRequest::parse</span><span class="params">(Buffer&amp; buff)</span> </span>&#123;</span><br><span class="line">    <span class="type">const</span> <span class="type">char</span> CRLF[] = <span class="string">&quot;\r\n&quot;</span>;</span><br><span class="line">    <span class="keyword">if</span>(buff.<span class="built_in">ReadableBytes</span>() &lt;= <span class="number">0</span>) &#123;</span><br><span class="line">        <span class="keyword">return</span> <span class="literal">false</span>;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="comment">//还有数据且状态不为解析完毕则不会跳出循环</span></span><br><span class="line">    <span class="keyword">while</span>(buff.<span class="built_in">ReadableBytes</span>() &amp;&amp; state_ != FINISH) &#123;</span><br><span class="line">        <span class="type">const</span> <span class="type">char</span>* lineEnd = <span class="built_in">search</span>(buff.<span class="built_in">Peek</span>(), buff.<span class="built_in">BeginWriteConst</span>(), CRLF, CRLF + <span class="number">2</span>);</span><br><span class="line">        <span class="function">std::string <span class="title">line</span><span class="params">(buff.Peek(), lineEnd)</span></span>;</span><br><span class="line">        <span class="keyword">switch</span>(state_)</span><br><span class="line">        &#123;</span><br><span class="line">        <span class="keyword">case</span> REQUEST_LINE:</span><br><span class="line">            <span class="keyword">if</span>(!<span class="built_in">ParseRequestLine_</span>(line)) &#123;</span><br><span class="line">                <span class="keyword">return</span> <span class="literal">false</span>;</span><br><span class="line">            &#125;</span><br><span class="line">            <span class="built_in">ParsePath_</span>();</span><br><span class="line">            <span class="keyword">break</span>;    </span><br><span class="line">        <span class="keyword">case</span> HEADERS:</span><br><span class="line">            <span class="built_in">ParseHeader_</span>(line);</span><br><span class="line">            <span class="keyword">if</span>(buff.<span class="built_in">ReadableBytes</span>() &lt;= <span class="number">2</span>) &#123;</span><br><span class="line">                state_ = FINISH;</span><br><span class="line">            &#125;</span><br><span class="line">            <span class="keyword">break</span>;</span><br><span class="line">        <span class="keyword">case</span> BODY:</span><br><span class="line">            <span class="built_in">ParseBody_</span>(line);</span><br><span class="line">            <span class="keyword">break</span>;</span><br><span class="line">        <span class="keyword">default</span>:</span><br><span class="line">            <span class="keyword">break</span>;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">if</span>(lineEnd == buff.<span class="built_in">BeginWrite</span>()) &#123; <span class="keyword">break</span>; &#125;</span><br><span class="line">        buff.<span class="built_in">RetrieveUntil</span>(lineEnd + <span class="number">2</span>);</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="built_in">LOG_DEBUG</span>(<span class="string">&quot;[%s], [%s], [%s]&quot;</span>, method_.<span class="built_in">c_str</span>(), path_.<span class="built_in">c_str</span>(), version_.<span class="built_in">c_str</span>());</span><br><span class="line">    <span class="keyword">return</span> <span class="literal">true</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-<h3 id="创建响应的逻辑"><a href="#创建响应的逻辑" class="headerlink" title="创建响应的逻辑"></a>创建响应的逻辑</h3><p>同样，当请求的资源存在，可以响应时，也依次此创建响应。</p>
-<p><img src="/images/11/1677939294522.png" alt="1677939294522"></p>
-<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="type">void</span> <span class="title">HttpResponse::MakeResponse</span><span class="params">(Buffer&amp; buff)</span> </span>&#123;</span><br><span class="line">    <span class="comment">/* 判断请求的资源文件 */</span></span><br><span class="line">    <span class="keyword">if</span>(<span class="built_in">stat</span>((srcDir_ + path_).<span class="built_in">data</span>(), &amp;mmFileStat_) &lt; <span class="number">0</span> || <span class="built_in">S_ISDIR</span>(mmFileStat_.st_mode)) &#123;</span><br><span class="line">        code_ = <span class="number">404</span>; <span class="comment">//访问的是目录不是具体资源？？？</span></span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">else</span> <span class="keyword">if</span>(!(mmFileStat_.st_mode &amp; S_IROTH)) &#123;</span><br><span class="line">        code_ = <span class="number">403</span>;   <span class="comment">//权限不够</span></span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">else</span> <span class="keyword">if</span>(code_ == <span class="number">-1</span>) &#123; </span><br><span class="line">        code_ = <span class="number">200</span>;   <span class="comment">//</span></span><br><span class="line">    &#125;</span><br><span class="line">    <span class="built_in">ErrorHtml_</span>();         <span class="comment">//提醒错误的网页</span></span><br><span class="line">    <span class="built_in">AddStateLine_</span>(buff);  <span class="comment">//创建响应首行</span></span><br><span class="line">    <span class="built_in">AddHeader_</span>(buff);     <span class="comment">//创建响应头部</span></span><br><span class="line">    <span class="built_in">AddContent_</span>(buff);     <span class="comment">//创建内容</span></span><br><span class="line">&#125;</span><br><span class="line"></span><br></pre></td></tr></table></figure>
-
-          
-        
-      
-    </div>
-    
-    
-    
-
-    
-
-    
-
-    
-
-    <footer class="post-footer">
-      
-
-      
-
-      
-
-      
-      
-        <div class="post-eof"></div>
-      
-    </footer>
-  </div>
-  
-  
-  
-  </article>
-
-
-      
-    
-      
-      
-      
-        
-
-  
-
-  
-  
-  
-
-  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
-  
-  
-  
-  <div class="post-block">
-    <link itemprop="mainEntityOfPage" href="http://hanze5.github.io/2021/11/19/10-C-%E5%AE%9E%E6%88%98%E2%80%94%E2%80%94%E9%AB%98%E5%B9%B6%E5%8F%91%E6%9C%8D%E5%8A%A1%E5%99%A8/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="name" content="">
-      <meta itemprop="description" content="">
-      <meta itemprop="image" content="/images/my_avatar.png">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="也许不会有人进来吧">
-    </span>
-
-    
-      <header class="post-header">
-
-        
-        
-          <h1 class="post-title" itemprop="name headline">
-                
-                <a class="post-title-link" href="/2021/11/19/10-C-%E5%AE%9E%E6%88%98%E2%80%94%E2%80%94%E9%AB%98%E5%B9%B6%E5%8F%91%E6%9C%8D%E5%8A%A1%E5%99%A8/" itemprop="url">C++实战——高并发服务器</a></h1>
-        
-
-        <div class="post-meta">
-          <span class="post-time">
-            
-              <span class="post-meta-item-icon">
-                <i class="fa fa-calendar-o"></i>
-              </span>
-              
-                <span class="post-meta-item-text">发表于</span>
-              
-              <time title="创建于" itemprop="dateCreated datePublished" datetime="2021-11-19T21:34:35+08:00">
-                2021-11-19
-              </time>
-            
-
-            
-
-            
-          </span>
-
-          
-            <span class="post-category" >
-            
-              <span class="post-meta-divider">|</span>
-            
-              <span class="post-meta-item-icon">
-                <i class="fa fa-folder-o"></i>
-              </span>
-              
-                <span class="post-meta-item-text">分类于</span>
-              
-              
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/%E5%AD%A6%E6%97%A0%E6%AD%A2%E5%A2%83/" itemprop="url" rel="index">
-                    <span itemprop="name">学无止境</span>
-                  </a>
-                </span>
-
-                
-                
-              
-            </span>
-          
-
-          
-            
-          
-
-          
-          
-
-          
-
-          
-
-          
-
-        </div>
-      </header>
-    
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-      
-
-      
-        
-          
-            <p>文章代码来源:<a target="_blank" rel="noopener" href="https://github.com/gaojingcome/WebServer">高并发Web服务器</a></p>
-<h2 id="简单介绍"><a href="#简单介绍" class="headerlink" title="简单介绍"></a>简单介绍</h2><p>服务器的工作实际上就是监听并且处理各种各样的事件。当服务器处于启动状态，就会不断用Epoll去监听，正在被监听的文件描述符事件。根据返回值和事件类型做出相应的处理。</p>
-<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">while</span>(!isClose_) &#123;</span><br><span class="line">	<span class="keyword">if</span>(timeoutMS_ &gt; <span class="number">0</span>) &#123;</span><br><span class="line">   	timeMS = timer_-&gt;<span class="built_in">GetNextTick</span>();</span><br><span class="line">   &#125;</span><br><span class="line">   <span class="comment">//一直使用 epoller_-&gt;Wait 去检测事件 返回值 有多少个</span></span><br><span class="line">   <span class="type">int</span> eventCnt = epoller_-&gt;<span class="built_in">Wait</span>(timeMS);</span><br><span class="line">   <span class="comment">//遍历这些事件</span></span><br><span class="line">   <span class="keyword">for</span>(<span class="type">int</span> i = <span class="number">0</span>; i &lt; eventCnt; i++) &#123;</span><br><span class="line">       <span class="comment">/* 处理事件 */</span></span><br><span class="line">       <span class="type">int</span> fd = epoller_-&gt;<span class="built_in">GetEventFd</span>(i);</span><br><span class="line">       <span class="type">uint32_t</span> events = epoller_-&gt;<span class="built_in">GetEvents</span>(i);</span><br><span class="line">       <span class="comment">//如果是监听描述符    说明有监听进来</span></span><br><span class="line">       <span class="keyword">if</span>(fd == listenFd_) &#123;</span><br><span class="line">           <span class="built_in">DealListen_</span>();   <span class="comment">//处理事件监听</span></span><br><span class="line">       &#125;</span><br><span class="line">       <span class="comment">//出现了错误   关闭文件描述符</span></span><br><span class="line">       <span class="keyword">else</span> <span class="keyword">if</span>(events &amp; (EPOLLRDHUP | EPOLLHUP | EPOLLERR)) &#123;</span><br><span class="line">           <span class="built_in">assert</span>(users_.<span class="built_in">count</span>(fd) &gt; <span class="number">0</span>);</span><br><span class="line">           <span class="built_in">CloseConn_</span>(&amp;users_[fd]);</span><br><span class="line">       &#125;</span><br><span class="line">       <span class="comment">//非监听文件描述符有事件    处理读操作</span></span><br><span class="line">       <span class="keyword">else</span> <span class="keyword">if</span>(events &amp; EPOLLIN) &#123;</span><br><span class="line">           <span class="built_in">assert</span>(users_.<span class="built_in">count</span>(fd) &gt; <span class="number">0</span>);</span><br><span class="line">           <span class="built_in">DealRead_</span>(&amp;users_[fd]);</span><br><span class="line">       &#125;</span><br><span class="line">       <span class="comment">//处理写操作</span></span><br><span class="line">       <span class="keyword">else</span> <span class="keyword">if</span>(events &amp; EPOLLOUT) &#123;</span><br><span class="line">           <span class="built_in">assert</span>(users_.<span class="built_in">count</span>(fd) &gt; <span class="number">0</span>);</span><br><span class="line">           <span class="built_in">DealWrite_</span>(&amp;users_[fd]);</span><br><span class="line">       &#125; <span class="keyword">else</span> &#123;<span class="comment">//关闭连接</span></span><br><span class="line">       	<span class="built_in">LOG_ERROR</span>(<span class="string">&quot;Unexpected event&quot;</span>);</span><br><span class="line">       &#125;</span><br><span class="line">   &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-<p>这里面就挑选个人感觉比较重要的 两个时间的处理代码。</p>
-<h3 id="处理监听事件"><a href="#处理监听事件" class="headerlink" title="处理监听事件"></a>处理监听事件</h3><figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="type">void</span> <span class="title">WebServer::AddClient_</span><span class="params">(<span class="type">int</span> fd, sockaddr_in addr)</span> </span>&#123;</span><br><span class="line">    <span class="built_in">assert</span>(fd &gt; <span class="number">0</span>);</span><br><span class="line">    users_[fd].<span class="built_in">init</span>(fd, addr);</span><br><span class="line">    <span class="keyword">if</span>(timeoutMS_ &gt; <span class="number">0</span>) &#123;</span><br><span class="line">        timer_-&gt;<span class="built_in">add</span>(fd, timeoutMS_, std::<span class="built_in">bind</span>(&amp;WebServer::CloseConn_, <span class="keyword">this</span>, &amp;users_[fd]));</span><br><span class="line">    &#125;</span><br><span class="line">    epoller_-&gt;<span class="built_in">AddFd</span>(fd, EPOLLIN | connEvent_);</span><br><span class="line">    <span class="built_in">SetFdNonblock</span>(fd);</span><br><span class="line">    <span class="built_in">LOG_INFO</span>(<span class="string">&quot;Client[%d] in!&quot;</span>, users_[fd].<span class="built_in">GetFd</span>());</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="type">void</span> <span class="title">WebServer::DealListen_</span><span class="params">()</span> </span>&#123;</span><br><span class="line">    <span class="keyword">struct</span> <span class="title class_">sockaddr_in</span> addr;</span><br><span class="line">    <span class="type">socklen_t</span> len = <span class="built_in">sizeof</span>(addr);</span><br><span class="line">    <span class="keyword">do</span> &#123;</span><br><span class="line">        <span class="type">int</span> fd = <span class="built_in">accept</span>(listenFd_, (<span class="keyword">struct</span> sockaddr *)&amp;addr, &amp;len);</span><br><span class="line">        <span class="keyword">if</span>(fd &lt;= <span class="number">0</span>) &#123; <span class="keyword">return</span>;&#125;</span><br><span class="line">        <span class="comment">//超过最大数量 做相应处理 </span></span><br><span class="line">        <span class="keyword">else</span> <span class="keyword">if</span>(HttpConn::userCount &gt;= MAX_FD) &#123;</span><br><span class="line">            <span class="built_in">SendError_</span>(fd, <span class="string">&quot;Server busy!&quot;</span>);</span><br><span class="line">            <span class="built_in">LOG_WARN</span>(<span class="string">&quot;Clients is full!&quot;</span>);</span><br><span class="line">            <span class="keyword">return</span>;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="built_in">AddClient_</span>(fd, addr);<span class="comment">//添加客户端</span></span><br><span class="line">    &#125; <span class="keyword">while</span>(listenEvent_ &amp; EPOLLET); <span class="comment">//如果是ET模式  就必须一次性把事件读完</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-<h3 id="处理读写"><a href="#处理读写" class="headerlink" title="处理读写"></a>处理读写</h3><p>处理读写事件主要工作相当于将读数据的任务发布给线程池。经过了很多封装，这里面要去源码去层层查看理解。</p>
-<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="type">void</span> <span class="title">WebServer::DealRead_</span><span class="params">(HttpConn* client)</span> </span>&#123;</span><br><span class="line">    <span class="built_in">assert</span>(client);</span><br><span class="line">    <span class="built_in">ExtentTime_</span>(client);</span><br><span class="line">    threadpool_-&gt;<span class="built_in">AddTask</span>(std::<span class="built_in">bind</span>(&amp;WebServer::OnRead_, <span class="keyword">this</span>, client));</span><br><span class="line">&#125;</span><br><span class="line"><span class="function"><span class="type">void</span> <span class="title">WebServer::DealWrite_</span><span class="params">(HttpConn* client)</span> </span>&#123;</span><br><span class="line">    <span class="built_in">assert</span>(client);</span><br><span class="line">    <span class="built_in">ExtentTime_</span>(client);</span><br><span class="line">    threadpool_-&gt;<span class="built_in">AddTask</span>(std::<span class="built_in">bind</span>(&amp;WebServer::OnWrite_, <span class="keyword">this</span>, client));</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="type">void</span> <span class="title">WebServer::OnRead_</span><span class="params">(HttpConn* client)</span> </span>&#123;</span><br><span class="line">    <span class="built_in">assert</span>(client);</span><br><span class="line">    <span class="type">int</span> ret = <span class="number">-1</span>;</span><br><span class="line">    <span class="type">int</span> readErrno = <span class="number">0</span>;</span><br><span class="line">    ret = client-&gt;<span class="built_in">read</span>(&amp;readErrno); <span class="comment">//读取客户端数据</span></span><br><span class="line">    <span class="keyword">if</span>(ret &lt;= <span class="number">0</span> &amp;&amp; readErrno != EAGAIN) &#123;</span><br><span class="line">        <span class="built_in">CloseConn_</span>(client);</span><br><span class="line">        <span class="keyword">return</span>;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="comment">//业务逻辑处理</span></span><br><span class="line">    <span class="built_in">OnProcess</span>(client);</span><br><span class="line">&#125;</span><br><span class="line"><span class="function"><span class="type">void</span> <span class="title">WebServer::OnWrite_</span><span class="params">(HttpConn* client)</span> </span>&#123;</span><br><span class="line">    <span class="built_in">assert</span>(client);</span><br><span class="line">    <span class="type">int</span> ret = <span class="number">-1</span>;</span><br><span class="line">    <span class="type">int</span> writeErrno = <span class="number">0</span>;</span><br><span class="line">    ret = client-&gt;<span class="built_in">write</span>(&amp;writeErrno);</span><br><span class="line">    <span class="keyword">if</span>(client-&gt;<span class="built_in">ToWriteBytes</span>() == <span class="number">0</span>) &#123;</span><br><span class="line">        <span class="comment">/* 传输完成 */</span></span><br><span class="line">        <span class="keyword">if</span>(client-&gt;<span class="built_in">IsKeepAlive</span>()) &#123;</span><br><span class="line">            <span class="comment">//业务逻辑处理</span></span><br><span class="line">            <span class="built_in">OnProcess</span>(client);</span><br><span class="line">            <span class="keyword">return</span>;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">else</span> <span class="keyword">if</span>(ret &lt; <span class="number">0</span>) &#123;</span><br><span class="line">        <span class="keyword">if</span>(writeErrno == EAGAIN) &#123;</span><br><span class="line">            <span class="comment">/* 继续传输 */</span></span><br><span class="line">            epoller_-&gt;<span class="built_in">ModFd</span>(client-&gt;<span class="built_in">GetFd</span>(), connEvent_ | EPOLLOUT);</span><br><span class="line">            <span class="keyword">return</span>;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="built_in">CloseConn_</span>(client);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-<h3 id="业务处理逻辑"><a href="#业务处理逻辑" class="headerlink" title="业务处理逻辑"></a>业务处理逻辑</h3><p>主要解释上部分处理读写事件中的<code>OnProcess</code>的，这部分代码 线程池里的子线程处理 。注意这里并不是真正的处理逻辑，真正的处理逻辑是<code>client-&gt;process()</code>，他的返回值为真的话，说明处理完一个用户请求了，该做出相应了所以可以看到监听描述符的时间是<code>EPOLLOUT</code>。当监听到TCP缓冲区不满也就是可写，就会开始写的任务。否则就还是处理读（监听读使事件）。注意这里的读写是对于TCP缓冲区而言。</p>
-<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="type">void</span> <span class="title">WebServer::OnProcess</span><span class="params">(HttpConn* client)</span> </span>&#123;</span><br><span class="line">    <span class="comment">//如果client-&gt;process()为真 则说明处理完请求，要做出相应 所以事件是EPOLLOUT</span></span><br><span class="line">    <span class="keyword">if</span>(client-&gt;<span class="built_in">process</span>()) &#123;</span><br><span class="line">        epoller_-&gt;<span class="built_in">ModFd</span>(client-&gt;<span class="built_in">GetFd</span>(), connEvent_ | EPOLLOUT);</span><br><span class="line">    &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">        epoller_-&gt;<span class="built_in">ModFd</span>(client-&gt;<span class="built_in">GetFd</span>(), connEvent_ | EPOLLIN);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-<p>（待更新。。。）</p>
-
-          
-        
-      
-    </div>
-    
-    
-    
-
-    
-
-    
-
-    
-
-    <footer class="post-footer">
-      
-
-      
-
-      
-
-      
-      
-        <div class="post-eof"></div>
-      
-    </footer>
-  </div>
-  
-  
-  
-  </article>
-
-
-      
-    
-      
-      
-      
-        
-
-  
-
-  
-  
-  
-
-  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
-  
-  
-  
-  <div class="post-block">
-    <link itemprop="mainEntityOfPage" href="http://hanze5.github.io/2021/11/18/9-C-%E5%AE%9E%E6%88%98%E2%80%94%E2%80%94Socket%E5%88%9D%E5%A7%8B%E5%8C%96%E6%B5%81%E7%A8%8B/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="name" content="">
-      <meta itemprop="description" content="">
-      <meta itemprop="image" content="/images/my_avatar.png">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="也许不会有人进来吧">
-    </span>
-
-    
-      <header class="post-header">
-
-        
-        
-          <h1 class="post-title" itemprop="name headline">
-                
-                <a class="post-title-link" href="/2021/11/18/9-C-%E5%AE%9E%E6%88%98%E2%80%94%E2%80%94Socket%E5%88%9D%E5%A7%8B%E5%8C%96%E6%B5%81%E7%A8%8B/" itemprop="url">C++实战——Socket初始化流程</a></h1>
-        
-
-        <div class="post-meta">
-          <span class="post-time">
-            
-              <span class="post-meta-item-icon">
-                <i class="fa fa-calendar-o"></i>
-              </span>
-              
-                <span class="post-meta-item-text">发表于</span>
-              
-              <time title="创建于" itemprop="dateCreated datePublished" datetime="2021-11-18T20:24:00+08:00">
-                2021-11-18
-              </time>
-            
-
-            
-
-            
-          </span>
-
-          
-            <span class="post-category" >
-            
-              <span class="post-meta-divider">|</span>
-            
-              <span class="post-meta-item-icon">
-                <i class="fa fa-folder-o"></i>
-              </span>
-              
-                <span class="post-meta-item-text">分类于</span>
-              
-              
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/%E5%AD%A6%E6%97%A0%E6%AD%A2%E5%A2%83/" itemprop="url" rel="index">
-                    <span itemprop="name">学无止境</span>
-                  </a>
-                </span>
-
-                
-                
-              
-            </span>
-          
-
-          
-            
-          
-
-          
-          
-
-          
-
-          
-
-          
-
-        </div>
-      </header>
-    
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-      
-
-      
-        
-          
-            <p>文章代码来源:<a target="_blank" rel="noopener" href="https://github.com/gaojingcome/WebServer">高并发Web服务器</a></p>
-<p>Socket 初始化流程</p>
-<ol>
-<li>首先检查端口是否合法，不可使用公知端口，以及超出最大端口大小</li>
-<li>创建监听文件描述符，当有连接到来时会产生事件，被Epoll监测到</li>
-<li>文件描述符绑定ip地址</li>
-<li>开始监听，并将监听文件描述符添加进Epoll的事件监听集合中（具体使用那种数据结构没有仔细探究）</li>
-<li>设置监听文件描述符非阻塞。这一步很重要，不然如果一直没有连接到来服务器会被阻塞。</li>
-</ol>
-<p>以上这些步骤所需要的功能底层都用c语言实现（就是一些经典的库函数），但是都做了良好的封装</p>
-<h2 id="初始化-Socket代码："><a href="#初始化-Socket代码：" class="headerlink" title="初始化 Socket代码："></a>初始化 Socket代码：</h2><figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br></pre></td><td class="code"><pre><span class="line">* Create listenFd */</span><br><span class="line"><span class="function"><span class="type">bool</span> <span class="title">WebServer::InitSocket_</span><span class="params">()</span> </span>&#123;</span><br><span class="line">    <span class="type">int</span> ret;</span><br><span class="line">    <span class="keyword">struct</span> <span class="title class_">sockaddr_in</span> addr;</span><br><span class="line">    <span class="comment">//首先检查端口的合法性</span></span><br><span class="line">    <span class="keyword">if</span>(port_ &gt; <span class="number">65535</span> || port_ &lt; <span class="number">1024</span>) &#123;</span><br><span class="line">        <span class="built_in">LOG_ERROR</span>(<span class="string">&quot;Port:%d error!&quot;</span>,  port_);</span><br><span class="line">        <span class="keyword">return</span> <span class="literal">false</span>;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    addr.sin_family = AF_INET;                 <span class="comment">//IPv4 </span></span><br><span class="line">    addr.sin_addr.s_addr = <span class="built_in">htonl</span>(INADDR_ANY); <span class="comment">//INADDR_ANY 意为可以绑定任意可用的IP地址</span></span><br><span class="line">    addr.sin_port = <span class="built_in">htons</span>(port_);</span><br><span class="line"></span><br><span class="line">    <span class="comment">//优雅关闭</span></span><br><span class="line">    <span class="keyword">struct</span> <span class="title class_">linger</span> optLinger = &#123; <span class="number">0</span> &#125;;</span><br><span class="line">    <span class="keyword">if</span>(openLinger_) &#123;</span><br><span class="line">        <span class="comment">/* 优雅关闭: 直到所剩数据发送完毕或超时 */</span></span><br><span class="line">        optLinger.l_onoff = <span class="number">1</span>;</span><br><span class="line">        optLinger.l_linger = <span class="number">1</span>;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="comment">//返回监听成员描述符</span></span><br><span class="line">    listenFd_ = <span class="built_in">socket</span>(AF_INET, SOCK_STREAM, <span class="number">0</span>);</span><br><span class="line">    <span class="keyword">if</span>(listenFd_ &lt; <span class="number">0</span>) &#123;</span><br><span class="line">        <span class="built_in">LOG_ERROR</span>(<span class="string">&quot;Create socket error!&quot;</span>, port_);</span><br><span class="line">        <span class="keyword">return</span> <span class="literal">false</span>;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="comment">//</span></span><br><span class="line">    ret = <span class="built_in">setsockopt</span>(listenFd_, SOL_SOCKET, SO_LINGER, &amp;optLinger, <span class="built_in">sizeof</span>(optLinger));</span><br><span class="line">    <span class="keyword">if</span>(ret &lt; <span class="number">0</span>) &#123;</span><br><span class="line">        <span class="built_in">close</span>(listenFd_);</span><br><span class="line">        <span class="built_in">LOG_ERROR</span>(<span class="string">&quot;Init linger error!&quot;</span>, port_);</span><br><span class="line">        <span class="keyword">return</span> <span class="literal">false</span>;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="type">int</span> optval = <span class="number">1</span>;</span><br><span class="line">    <span class="comment">/* 端口复用 */</span></span><br><span class="line">    <span class="comment">/* 只有最后一个套接字会正常接收数据。 */</span></span><br><span class="line">    ret = <span class="built_in">setsockopt</span>(listenFd_, SOL_SOCKET, SO_REUSEADDR, (<span class="type">const</span> <span class="type">void</span>*)&amp;optval, <span class="built_in">sizeof</span>(<span class="type">int</span>));</span><br><span class="line">    <span class="keyword">if</span>(ret == <span class="number">-1</span>) &#123;</span><br><span class="line">        <span class="built_in">LOG_ERROR</span>(<span class="string">&quot;set socket setsockopt error !&quot;</span>);</span><br><span class="line">        <span class="built_in">close</span>(listenFd_);</span><br><span class="line">        <span class="keyword">return</span> <span class="literal">false</span>;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="comment">//绑定</span></span><br><span class="line">    ret = <span class="built_in">bind</span>(listenFd_, (<span class="keyword">struct</span> sockaddr *)&amp;addr, <span class="built_in">sizeof</span>(addr));</span><br><span class="line">    <span class="keyword">if</span>(ret &lt; <span class="number">0</span>) &#123;</span><br><span class="line">        <span class="built_in">LOG_ERROR</span>(<span class="string">&quot;Bind Port:%d error!&quot;</span>, port_);</span><br><span class="line">        <span class="built_in">close</span>(listenFd_);</span><br><span class="line">        <span class="keyword">return</span> <span class="literal">false</span>;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="comment">//监听</span></span><br><span class="line">    ret = <span class="built_in">listen</span>(listenFd_, <span class="number">6</span>);</span><br><span class="line">    <span class="keyword">if</span>(ret &lt; <span class="number">0</span>) &#123;</span><br><span class="line">        <span class="built_in">LOG_ERROR</span>(<span class="string">&quot;Listen port:%d error!&quot;</span>, port_);</span><br><span class="line">        <span class="built_in">close</span>(listenFd_);</span><br><span class="line">        <span class="keyword">return</span> <span class="literal">false</span>;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="comment">//将监听文件描述符 与 事件 添加进Epoll</span></span><br><span class="line">    ret = epoller_-&gt;<span class="built_in">AddFd</span>(listenFd_,  listenEvent_ | EPOLLIN);</span><br><span class="line">    <span class="keyword">if</span>(ret == <span class="number">0</span>) &#123;</span><br><span class="line">        <span class="built_in">LOG_ERROR</span>(<span class="string">&quot;Add listen error!&quot;</span>);</span><br><span class="line">        <span class="built_in">close</span>(listenFd_);</span><br><span class="line">        <span class="keyword">return</span> <span class="literal">false</span>;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="comment">//设置监听文件描述符非阻塞</span></span><br><span class="line">    <span class="built_in">SetFdNonblock</span>(listenFd_);</span><br><span class="line">    <span class="built_in">LOG_INFO</span>(<span class="string">&quot;Server port:%d&quot;</span>, port_);</span><br><span class="line">    <span class="keyword">return</span> <span class="literal">true</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-          
-        
-      
-    </div>
-    
-    
-    
-
-    
-
-    
-
-    
-
-    <footer class="post-footer">
-      
-
-      
-
-      
-
-      
-      
-        <div class="post-eof"></div>
-      
-    </footer>
-  </div>
-  
-  
-  
-  </article>
-
-
-      
-    
-      
-      
-      
-        
-
-  
-
-  
-  
-  
-
-  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
-  
-  
-  
-  <div class="post-block">
-    <link itemprop="mainEntityOfPage" href="http://hanze5.github.io/2021/07/12/21-Linux%E5%86%85%E6%A0%B8%E2%80%94%E2%80%94%E5%AD%97%E7%AC%A6%E5%9E%8B%E9%A9%B1%E5%8A%A8%E5%88%B0platform%E9%A9%B1%E5%8A%A8%E7%9A%84%E5%8D%8E%E4%B8%BD%E8%BD%AC%E8%BA%AB/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="name" content="">
-      <meta itemprop="description" content="">
-      <meta itemprop="image" content="/images/my_avatar.png">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="也许不会有人进来吧">
-    </span>
-
-    
-      <header class="post-header">
-
-        
-        
-          <h1 class="post-title" itemprop="name headline">
-                
-                <a class="post-title-link" href="/2021/07/12/21-Linux%E5%86%85%E6%A0%B8%E2%80%94%E2%80%94%E5%AD%97%E7%AC%A6%E5%9E%8B%E9%A9%B1%E5%8A%A8%E5%88%B0platform%E9%A9%B1%E5%8A%A8%E7%9A%84%E5%8D%8E%E4%B8%BD%E8%BD%AC%E8%BA%AB/" itemprop="url">Linux内核——字符型驱动到platform驱动的华丽转身</a></h1>
-        
-
-        <div class="post-meta">
-          <span class="post-time">
-            
-              <span class="post-meta-item-icon">
-                <i class="fa fa-calendar-o"></i>
-              </span>
-              
-                <span class="post-meta-item-text">发表于</span>
-              
-              <time title="创建于" itemprop="dateCreated datePublished" datetime="2021-07-12T19:41:57+08:00">
-                2021-07-12
-              </time>
-            
-
-            
-
-            
-          </span>
-
-          
-            <span class="post-category" >
-            
-              <span class="post-meta-divider">|</span>
-            
-              <span class="post-meta-item-icon">
-                <i class="fa fa-folder-o"></i>
-              </span>
-              
-                <span class="post-meta-item-text">分类于</span>
-              
-              
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/%E5%AD%A6%E6%97%A0%E6%AD%A2%E5%A2%83/" itemprop="url" rel="index">
-                    <span itemprop="name">学无止境</span>
-                  </a>
-                </span>
-
-                
-                
-              
-            </span>
-          
-
-          
-            
-          
-
-          
-          
-
-          
-
-          
-
-          
-
-        </div>
-      </header>
-    
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-      
-
-      
-        
-          
-            <p>跟着简叔学的，可以B站搜索 <strong>简说linux</strong></p>
-<h2 id="platform驱动"><a href="#platform驱动" class="headerlink" title="platform驱动"></a>platform驱动</h2><p>platform驱动是一种模拟的总线驱动。将字符型驱动包装成platform驱动有两大好处。</p>
-<ul>
-<li>把设备都挂接在一个pseudo总线上，便于管理，同时也符合Linux的设备模型机制。其结果是，配套的sysfs节点、设备电源管理都成为可能;</li>
-<li>隔离设备和驱动。在BSP中定义platform设备和它使用的资源、设备的具体配置信息;而在驱动中，只需要通过通用的API去获取资源和数据，做到了BSP相关代码和驱动代码的分离，使得驱动具有更好的可扩展性和跨平台性。</li>
-</ul>
-<p>不在总线上的驱动都可一包装成platform驱动</p>
-<p>什么是BSP<a target="_blank" rel="noopener" href="https://blog.csdn.net/shangtang1/article/details/79248947">(14条消息) 嵌入式中的BSP—-BSP到底是什么？_芯片bsp_shangtang的博客-CSDN博客</a></p>
-<p>内核里分别用device和driver来表示设备和驱动，面向对象的思想，device是所有设备的基类，driver是所有驱动的基类。将我们瞎写的字符型驱动改造成platform驱动比较规范话，</p>
-<h2 id="改造"><a href="#改造" class="headerlink" title="改造"></a>改造</h2><ol>
-<li><p>首先需要添加头文件</p>
-<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;linux/platform_device.h&gt;</span></span></span><br></pre></td></tr></table></figure>
-</li>
-<li><p>hello_init函数 要改成</p>
-<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">static</span> <span class="type">int</span> <span class="title function_">hello_probe</span><span class="params">(<span class="keyword">struct</span> platform _device *pdev)</span></span><br></pre></td></tr></table></figure>
-</li>
-<li><p>卸载函数改成</p>
-<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">static</span> <span class="type">int</span> <span class="title function_">hellodev_remove</span><span class="params">(<span class="keyword">struct</span> platform_device *pdev)</span></span><br></pre></td></tr></table></figure>
-</li>
-<li><p>定义设备资源</p>
-<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#<span class="keyword">define</span> LEDBASE 0x56000010</span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> LENDLEN 0x0c</span></span><br><span class="line"><span class="type">static</span> <span class="class"><span class="keyword">struct</span> <span class="title">resource</span> <span class="title">hello_dev_resource</span>[] =</span> &#123;</span><br><span class="line">	[<span class="number">0</span>] = &#123;</span><br><span class="line">		.start = LEDBASE,</span><br><span class="line">		.end   = LEDBASE + LEDLEN - <span class="number">1</span>,</span><br><span class="line">		.flags = IORESOURCE_MEM,                        <span class="comment">//内存资源</span></span><br><span class="line">	&#125;</span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
-</li>
-<li><p>定义设备</p>
-<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">platform_device</span> <span class="title">hello_device</span> =</span> &#123;</span><br><span class="line">	.name		  = <span class="string">&quot;hello-device&quot;</span>,     <span class="comment">//设备名</span></span><br><span class="line">	.id		  = <span class="number">-1</span>,</span><br><span class="line">	.num_resources	  = ARRAY_SIZE(hello_dev_resource),  <span class="comment">//指定资源  可以是io资源 内存资源 还有ARQ资源？</span></span><br><span class="line">	.resource	  = hello_dev_resource,</span><br><span class="line">	.dev = &#123;</span><br><span class="line">		.release = hello_plat_release,</span><br><span class="line">    &#125;</span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
-</li>
-<li><p>定义驱动</p>
-<p>在这里指定驱动模块插入和删除的操作是哪个。并且给驱动起个名字。</p>
-<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">static</span> <span class="class"><span class="keyword">struct</span> <span class="title">platform_driver</span> <span class="title">hellodev_driver</span> =</span> &#123;</span><br><span class="line">	.probe		= hellodev_probe,</span><br><span class="line">	.remove		= hellodev_remove,</span><br><span class="line">	.driver		= &#123;</span><br><span class="line">		.owner	= THIS_MODULE,</span><br><span class="line">		.name	= <span class="string">&quot;hello-device&quot;</span>,</span><br><span class="line">	&#125;,</span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
-</li>
-</ol>
-<ol>
-<li><p>最后定义内核才插入和删除该设备时 的操作。 注册设备  注册驱动  删除设备  删除驱动</p>
-<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">int</span> <span class="title function_">charDrvInit</span><span class="params">(<span class="type">void</span>)</span></span><br><span class="line">&#123;</span><br><span class="line">	platform_device_register(&amp;hello_device);</span><br><span class="line">    <span class="keyword">return</span> platform_driver_register(&amp;hellodev_driver); </span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="type">void</span> __exit <span class="title function_">charDrvExit</span><span class="params">(<span class="type">void</span>)</span></span><br><span class="line">&#123;</span><br><span class="line">	platform_device_unregister(&amp;hello_device);</span><br><span class="line">    platform_driver_unregister(&amp;hellodev_driver);</span><br><span class="line">    <span class="keyword">return</span>;</span><br><span class="line">&#125;</span><br><span class="line">module_init(charDrvInit);</span><br><span class="line">module_exit(charDrvExit);</span><br><span class="line">MODULE_LICENSE(<span class="string">&quot;GPL&quot;</span>);</span><br><span class="line"></span><br></pre></td></tr></table></figure>
-</li>
-<li><p>编译安装</p>
-<p><img src="/images/21/1678101131204.png" alt="1678101131204"></p>
-</li>
-</ol>
-<h2 id="Platform驱动设备-匹配注册机制"><a href="#Platform驱动设备-匹配注册机制" class="headerlink" title="Platform驱动设备 匹配注册机制"></a>Platform驱动设备 匹配注册机制</h2><ol>
-<li><p>几个重要的结构体一看就能懂。</p>
-<p><img src="/images/21/1678101331998.png" alt="1678101331998"></p>
-<p>device是linux内核所有设备的基类  resouce就是资源。</p>
-<p><img src="/images/21/1678101429981.png" alt="1678101429981"></p>
-<p>驱动就是行为，所以大部分都是函数。插入删除关闭休眠唤醒。device_driver 就是所有驱动的基类。</p>
-<p>*id_table</p>
-<p><img src="/images/21/1678102019401.png" alt="1678102019401"></p>
-<p>一般匹配就是通过bus去匹配</p>
-</li>
-<li><p>注册函数 的实现</p>
-<p>设备初始化包括资源初始化，如果设备父设备为空那么会指定一个叫platform的虚拟设备，用来表示总线设备是虚拟的，类型是platformbus，然后使用device_add函数将设备加入内核。</p>
-<p>驱动的注册就是把那几个函数地址赋值。bus用于匹配，都是platform类型的就</p>
-<p>平台设备是一条链，平台驱动是一条链表，他们都挂在platform bus这个东西上上。那么驱动和设备的匹配就是遍历链表一个一个匹配。只有某一个设备和某一个驱动匹配上了，才会成功地插入驱动。</p>
-</li>
-</ol>
-<p><strong>其实这块可以细究</strong>一下的，但是最近没什么时间了。。。。。发现学内核很需要心境</p>
-
-          
-        
-      
-    </div>
-    
-    
-    
-
-    
-
-    
-
-    
-
-    <footer class="post-footer">
-      
-
-      
-
-      
-
-      
-      
-        <div class="post-eof"></div>
-      
-    </footer>
-  </div>
-  
-  
-  
-  </article>
-
-
-      
-    
   </section>
 
   
@@ -2139,7 +2172,7 @@
               
                 <a href="/">
               
-                  <span class="site-state-item-count">22</span>
+                  <span class="site-state-item-count">23</span>
                   <span class="site-state-item-name">日志</span>
                 </a>
               </div>
