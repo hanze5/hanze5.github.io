@@ -252,6 +252,536 @@
   
   
   <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="http://hanze5.github.io/2022/07/20/25-Linux%E5%86%85%E6%A0%B8%E2%80%94%E2%80%94%E8%BD%AF%E4%B8%AD%E6%96%AD%E7%9A%84%E7%89%B9%E7%82%B9%E4%BB%A5%E5%8F%8A%E6%B3%A8%E5%86%8C%E5%92%8C%E8%A7%A6%E5%8F%91/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/images/my_avatar.png">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="也许不会有人进来吧">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+                
+                <a class="post-title-link" href="/2022/07/20/25-Linux%E5%86%85%E6%A0%B8%E2%80%94%E2%80%94%E8%BD%AF%E4%B8%AD%E6%96%AD%E7%9A%84%E7%89%B9%E7%82%B9%E4%BB%A5%E5%8F%8A%E6%B3%A8%E5%86%8C%E5%92%8C%E8%A7%A6%E5%8F%91/" itemprop="url">Linux内核——软中断的特点以及注册和触发</a></h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2022-07-20T21:36:54+08:00">
+                2022-07-20
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E5%AD%A6%E6%97%A0%E6%AD%A2%E5%A2%83/" itemprop="url" rel="index">
+                    <span itemprop="name">学无止境</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+          
+
+          
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        
+          
+            <p>跟着简叔学的，可以B站搜索 <strong>简说linux</strong></p>
+<h2 id="1-软中断一般是哪些"><a href="#1-软中断一般是哪些" class="headerlink" title="1.软中断一般是哪些"></a>1.软中断一般是哪些</h2><p>硬件中断往往处理简单的操作，触发由外设发出。一般申请内存，保存数据一般由（底半部）来实现，在内核中有三种底半部BH，软中断、tasklet ，工作队列。工作队列是一个内核的线程，tasklet是基于软中断来实现。对于软中断来说，处理函数是可以同时运行在多个cpu之上，tasklet只能运行在唯一一个cpu上。</p>
+<p>内核中定义了几种常用的软中断 /kernel/softirq.c</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//软中断处理函数</span></span><br><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">softirq_action</span></span></span><br><span class="line"><span class="class">&#123;</span></span><br><span class="line">	<span class="type">void</span>	(*action)(<span class="keyword">struct</span> softirq_action *);</span><br><span class="line">&#125;;</span><br><span class="line"></span><br><span class="line"><span class="type">static</span> <span class="class"><span class="keyword">struct</span> <span class="title">softirq_action</span> <span class="title">softirq_vec</span>[<span class="title">NR_SOFTIRQS</span>] __<span class="title">cacheline_aligned_in_smp</span>;</span></span><br><span class="line"></span><br><span class="line">DEFINE_PER_CPU(<span class="keyword">struct</span> task_struct *, ksoftirqd);</span><br><span class="line"></span><br><span class="line"><span class="type">const</span> <span class="type">char</span> * <span class="type">const</span> softirq_to_name[NR_SOFTIRQS] = &#123;</span><br><span class="line">	<span class="string">&quot;HI&quot;</span>, <span class="string">&quot;TIMER&quot;</span>, <span class="string">&quot;NET_TX&quot;</span>, <span class="string">&quot;NET_RX&quot;</span>, <span class="string">&quot;BLOCK&quot;</span>, <span class="string">&quot;IRQ_POLL&quot;</span>,</span><br><span class="line">	<span class="string">&quot;TASKLET&quot;</span>, <span class="string">&quot;SCHED&quot;</span>, <span class="string">&quot;HRTIMER&quot;</span>, <span class="string">&quot;RCU&quot;</span></span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+<h2 id="2-软中断的使用"><a href="#2-软中断的使用" class="headerlink" title="2.软中断的使用"></a>2.软中断的使用</h2><p>软中断的使用可以分为3步，软中断的注册，触发，与执行</p>
+<h3 id="2-1软中断的注册"><a href="#2-1软中断的注册" class="headerlink" title="2.1软中断的注册"></a>2.1软中断的注册</h3><p>其实就是给第nr个软中断的操作设为 action</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">void</span> <span class="title function_">open_softirq</span><span class="params">(<span class="type">int</span> nr, <span class="type">void</span> (*action)(<span class="keyword">struct</span> softirq_action *))</span></span><br><span class="line">&#123;</span><br><span class="line">	softirq_vec[nr].action = action;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>很多地方都用到了软中断的注册。</p>
+<p><img src="/images/25/1678178880618.png" alt="1678178880618"></p>
+<p>在软中断的初始化环节，注册了两个软中断，tasklet与Hi</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">void</span> __init <span class="title function_">softirq_init</span><span class="params">(<span class="type">void</span>)</span></span><br><span class="line">&#123;</span><br><span class="line">	<span class="type">int</span> cpu;</span><br><span class="line"></span><br><span class="line">	for_each_possible_cpu(cpu) &#123;</span><br><span class="line">		per_cpu(tasklet_vec, cpu).tail =</span><br><span class="line">			&amp;per_cpu(tasklet_vec, cpu).head;</span><br><span class="line">		per_cpu(tasklet_hi_vec, cpu).tail =</span><br><span class="line">			&amp;per_cpu(tasklet_hi_vec, cpu).head;</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	open_softirq(TASKLET_SOFTIRQ, tasklet_action);</span><br><span class="line">	open_softirq(HI_SOFTIRQ, tasklet_hi_action);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">//其中tasklet_action就是tasklet的处理逻辑</span></span><br><span class="line"><span class="type">static</span> __latent_entropy <span class="type">void</span> <span class="title function_">tasklet_action</span><span class="params">(<span class="keyword">struct</span> softirq_action *a)</span></span><br><span class="line">&#123;</span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">tasklet_struct</span> *<span class="title">list</span>;</span></span><br><span class="line"></span><br><span class="line">	local_irq_disable();</span><br><span class="line">	<span class="built_in">list</span> = __this_cpu_read(tasklet_vec.head);</span><br><span class="line">	__this_cpu_write(tasklet_vec.head, <span class="literal">NULL</span>);</span><br><span class="line">	__this_cpu_write(tasklet_vec.tail, this_cpu_ptr(&amp;tasklet_vec.head));</span><br><span class="line">	local_irq_enable();</span><br><span class="line"></span><br><span class="line">	<span class="keyword">while</span> (<span class="built_in">list</span>) &#123;</span><br><span class="line">		<span class="class"><span class="keyword">struct</span> <span class="title">tasklet_struct</span> *<span class="title">t</span> =</span> <span class="built_in">list</span>;</span><br><span class="line"></span><br><span class="line">		<span class="built_in">list</span> = <span class="built_in">list</span>-&gt;next;</span><br><span class="line"></span><br><span class="line">		<span class="keyword">if</span> (tasklet_trylock(t)) &#123;</span><br><span class="line">			<span class="keyword">if</span> (!<span class="type">atomic_read</span>(&amp;t-&gt;count)) &#123;</span><br><span class="line">				<span class="keyword">if</span> (!test_and_clear_bit(TASKLET_STATE_SCHED,</span><br><span class="line">							&amp;t-&gt;state))</span><br><span class="line">					BUG();</span><br><span class="line">				t-&gt;func(t-&gt;data);</span><br><span class="line">				tasklet_unlock(t);</span><br><span class="line">				<span class="keyword">continue</span>;</span><br><span class="line">			&#125;</span><br><span class="line">			tasklet_unlock(t);</span><br><span class="line">		&#125;</span><br><span class="line"></span><br><span class="line">		local_irq_disable();</span><br><span class="line">		t-&gt;next = <span class="literal">NULL</span>;</span><br><span class="line">		*__this_cpu_read(tasklet_vec.tail) = t;</span><br><span class="line">		__this_cpu_write(tasklet_vec.tail, &amp;(t-&gt;next));</span><br><span class="line">		__raise_softirq_irqoff(TASKLET_SOFTIRQ);</span><br><span class="line">		local_irq_enable();</span><br><span class="line">	&#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h3 id="2-2软中断的触发"><a href="#2-2软中断的触发" class="headerlink" title="2.2软中断的触发"></a>2.2软中断的触发</h3><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">void</span> <span class="title function_">raise_softirq</span><span class="params">(<span class="type">unsigned</span> <span class="type">int</span> nr)</span></span><br><span class="line">&#123;</span><br><span class="line">	<span class="type">unsigned</span> <span class="type">long</span> flags;</span><br><span class="line">	<span class="comment">//首先禁止本机中断  就是所有中断</span></span><br><span class="line">	local_irq_save(flags);</span><br><span class="line">	raise_softirq_irqoff(nr);</span><br><span class="line">    </span><br><span class="line">	local_irq_restore(flags);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">//调用这个函数之前  一定是已经禁止了本机中断</span></span><br><span class="line"><span class="keyword">inline</span> <span class="type">void</span> <span class="title function_">raise_softirq_irqoff</span><span class="params">(<span class="type">unsigned</span> <span class="type">int</span> nr)</span></span><br><span class="line">&#123;</span><br><span class="line">	__raise_softirq_irqoff(nr);</span><br><span class="line"></span><br><span class="line">	<span class="comment">/*</span></span><br><span class="line"><span class="comment">	 * If we&#x27;re in an interrupt or softirq, we&#x27;re done</span></span><br><span class="line"><span class="comment">	 * (this also catches softirq-disabled code). We will</span></span><br><span class="line"><span class="comment">	 * actually run the softirq once we return from</span></span><br><span class="line"><span class="comment">	 * the irq or softirq.</span></span><br><span class="line"><span class="comment">	 *</span></span><br><span class="line"><span class="comment">	 * Otherwise we wake up ksoftirqd to make sure we</span></span><br><span class="line"><span class="comment">	 * schedule the softirq soon.</span></span><br><span class="line"><span class="comment">	 */</span></span><br><span class="line">	<span class="keyword">if</span> (!in_interrupt())</span><br><span class="line">		wakeup_softirqd();</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="type">void</span> __raise_softirq_irqoff(<span class="type">unsigned</span> <span class="type">int</span> nr)</span><br><span class="line">&#123;</span><br><span class="line">	trace_softirq_raise(nr);</span><br><span class="line">	or_softirq_pending(<span class="number">1UL</span> &lt;&lt; nr);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>层层寻找下去之后，会有一个软件中断寄存器结构的定义。每个外设都会有一个硬件中断寄存器，硬件寄存器中每一个bit都代表着某一类型的硬件设备中断。对于软件中断来讲，也会有不同类型的软件中断，那么同理。软件中断寄存器也会将某一位置一从而判断哪一个类型的软件中断类型被触发。触发软中断时，会将中断号放到触发中断的cpu的软件寄存器里边。</p>
+<h3 id="2-3软中断的执行"><a href="#2-3软中断的执行" class="headerlink" title="2.3软中断的执行"></a>2.3软中断的执行</h3><p><img src="/images/25/1678185060977.png" alt="1678185060977"></p>
+<h4 id="2-3-1执行时机"><a href="#2-3-1执行时机" class="headerlink" title="2.3.1执行时机"></a>2.3.1执行时机</h4><h5 id="2-3-1-1-ksoftirqd线程"><a href="#2-3-1-1-ksoftirqd线程" class="headerlink" title="2.3.1.1 ksoftirqd线程"></a>2.3.1.1 ksoftirqd线程</h5><p>软中断初始化时候回调用，<code>spawn_ksoftirqd</code>，创建一个线程，每个cpu都会创建这个线程。</p>
+<p><img src="/images/25/1678185992489.png" alt="1678185992489"></p>
+<p>去看看 run_ksoftirqd具体执行了什么</p>
+<p><img src="/images/25/1678186119041.png" alt="1678186119041"></p>
+<p>首先有一个中断打开的动作，执行软中断时候必须要打开中断。然后<code>local_softirq_pending()</code>可以判断软中段的发生，然后由__do_softirq()执行中断处理的逻辑。</p>
+<h5 id="2-3-1-2-硬件中断返回irq-exit"><a href="#2-3-1-2-硬件中断返回irq-exit" class="headerlink" title="2.3.1.2 硬件中断返回irq_exit()"></a>2.3.1.2 硬件中断返回irq_exit()</h5><p>kernel/softirq.c</p>
+<p><img src="/images/25/1678186601545.png" alt="1678186601545"></p>
+<p><code>ivoke_softirq</code>会处理cpu上面待处理的软中断，</p>
+<p><img src="/images/25/1678186695049.png" alt="1678186695049"></p>
+<p>最终会调用 __do_softirq. 也就是最终的</p>
+<h5 id="2-3-1-3-直接调用，例如在网络子系统等"><a href="#2-3-1-3-直接调用，例如在网络子系统等" class="headerlink" title="2.3.1.3 直接调用，例如在网络子系统等"></a>2.3.1.3 直接调用，例如在网络子系统等</h5><p>找到最后也是直接调用 _do_softirq，所以说都是调用 _do_softirq函数。</p>
+<h4 id="2-3-2执行过程"><a href="#2-3-2执行过程" class="headerlink" title="2.3.2执行过程"></a>2.3.2执行过程</h4><p>执行过程就是上文说的<code>_do_softirq</code>函数，如何保证触发软中断的cpu也去执行这个中断处理，如果实现中断优先级，</p>
+<p>kernel/softirq.c</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br></pre></td><td class="code"><pre><span class="line">asmlinkage __visible <span class="type">void</span> __softirq_entry __do_softirq(<span class="type">void</span>)</span><br><span class="line">&#123;</span><br><span class="line">	<span class="type">unsigned</span> <span class="type">long</span> end = jiffies + MAX_SOFTIRQ_TIME;</span><br><span class="line">	<span class="type">unsigned</span> <span class="type">long</span> old_flags = current-&gt;flags;</span><br><span class="line">	<span class="type">int</span> max_restart = MAX_SOFTIRQ_RESTART;</span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">softirq_action</span> *<span class="title">h</span>;</span></span><br><span class="line">	<span class="type">bool</span> in_hardirq;</span><br><span class="line">	__u32 pending;</span><br><span class="line">	<span class="type">int</span> softirq_bit;</span><br><span class="line"></span><br><span class="line">	<span class="comment">/*</span></span><br><span class="line"><span class="comment">	 * Mask out PF_MEMALLOC s current task context is borrowed for the</span></span><br><span class="line"><span class="comment">	 * softirq. A softirq handled such as network RX might set PF_MEMALLOC</span></span><br><span class="line"><span class="comment">	 * again if the socket is related to swap</span></span><br><span class="line"><span class="comment">	 */</span></span><br><span class="line">	current-&gt;flags &amp;= ~PF_MEMALLOC;</span><br><span class="line"></span><br><span class="line">	pending = local_softirq_pending(); <span class="comment">//获取未决软中断， 这个是每个cpu都有自己的寄存器实现了谁触发就谁处理。</span></span><br><span class="line">	account_irq_enter_time(current);</span><br><span class="line"></span><br><span class="line">	__local_bh_disable_ip(_RET_IP_, SOFTIRQ_OFFSET); <span class="comment">//把那个preemtycount软中断位置1</span></span><br><span class="line">	in_hardirq = lockdep_softirq_start();</span><br><span class="line"></span><br><span class="line">restart:</span><br><span class="line">	<span class="comment">/* Reset the pending bitmask before enabling irqs */</span></span><br><span class="line">	set_softirq_pending(<span class="number">0</span>);   <span class="comment">//软中断寄存器清零</span></span><br><span class="line"></span><br><span class="line">	local_irq_enable();        <span class="comment">//打开本机中断</span></span><br><span class="line"></span><br><span class="line">	h = softirq_vec;           <span class="comment">//softirq_vec 是数组 所以h是基地址</span></span><br><span class="line"></span><br><span class="line">	<span class="keyword">while</span> ((softirq_bit = ffs(pending))) &#123;   <span class="comment">//依次之执行未决软中断   位数高的先执行</span></span><br><span class="line">		<span class="type">unsigned</span> <span class="type">int</span> vec_nr;</span><br><span class="line">		<span class="type">int</span> prev_count;</span><br><span class="line"></span><br><span class="line">		h += softirq_bit - <span class="number">1</span>;             <span class="comment">//这次要处理的软中断地址</span></span><br><span class="line"></span><br><span class="line">		vec_nr = h - softirq_vec;</span><br><span class="line">		prev_count = preempt_count();</span><br><span class="line"></span><br><span class="line">		kstat_incr_softirqs_this_cpu(vec_nr);</span><br><span class="line"></span><br><span class="line">		trace_softirq_entry(vec_nr);</span><br><span class="line">		h-&gt;action(h);                     <span class="comment">//然后就可以调用action执行具体这个软中断类型的action</span></span><br><span class="line">		trace_softirq_exit(vec_nr);</span><br><span class="line">		<span class="keyword">if</span> (unlikely(prev_count != preempt_count())) &#123;</span><br><span class="line">			pr_err(<span class="string">&quot;huh, entered softirq %u %s %p with preempt_count %08x, exited with %08x?\n&quot;</span>,</span><br><span class="line">			       vec_nr, softirq_to_name[vec_nr], h-&gt;action,</span><br><span class="line">			       prev_count, preempt_count());</span><br><span class="line">			preempt_count_set(prev_count);</span><br><span class="line">		&#125;</span><br><span class="line">		h++;</span><br><span class="line">		pending &gt;&gt;= softirq_bit;</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	rcu_bh_qs();</span><br><span class="line">	local_irq_disable();   <span class="comment">//关闭中断</span></span><br><span class="line"></span><br><span class="line">    <span class="comment">//这里就是优先级实现如果当前还有没有处理的软中断 </span></span><br><span class="line">	pending = local_softirq_pending();  </span><br><span class="line">	<span class="keyword">if</span> (pending) &#123;                      <span class="comment">//并且执行的时间较少，当前没有更高优先级的进程去抢占，重启次数&lt;10次</span></span><br><span class="line">		<span class="keyword">if</span> (time_before(jiffies, end) &amp;&amp; !need_resched() &amp;&amp;</span><br><span class="line">		    --max_restart)				<span class="comment">//那么</span></span><br><span class="line">			<span class="keyword">goto</span> restart;</span><br><span class="line"></span><br><span class="line">		wakeup_softirqd();</span><br><span class="line">	&#125;</span><br><span class="line">	</span><br><span class="line">    <span class="comment">//推出软中断上下文环境</span></span><br><span class="line">	lockdep_softirq_end(in_hardirq);</span><br><span class="line">	account_irq_exit_time(current);</span><br><span class="line">	__local_bh_enable(SOFTIRQ_OFFSET);</span><br><span class="line">	WARN_ON_ONCE(in_interrupt());</span><br><span class="line">	tsk_restore_flags(current, old_flags, PF_MEMALLOC);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>那么软中断是可以被硬中断打断执行的，比如我们在软执行的时候，突然又来了硬件中断。，开始执行硬件中断。</p>
+
+          
+        
+      
+    </div>
+    
+    
+    
+
+    
+
+    
+
+    
+
+    <footer class="post-footer">
+      
+
+      
+
+      
+
+      
+      
+        <div class="post-eof"></div>
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+      
+    
+      
+      
+      
+        
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="http://hanze5.github.io/2022/07/17/24-Linux%E5%86%85%E6%A0%B8%E2%80%94%E2%80%94%E4%B8%AD%E6%96%AD%E4%B8%8A%E4%B8%8B%E6%96%87/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/images/my_avatar.png">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="也许不会有人进来吧">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+                
+                <a class="post-title-link" href="/2022/07/17/24-Linux%E5%86%85%E6%A0%B8%E2%80%94%E2%80%94%E4%B8%AD%E6%96%AD%E4%B8%8A%E4%B8%8B%E6%96%87/" itemprop="url">Linux内核——中断上下文</a></h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2022-07-17T16:17:23+08:00">
+                2022-07-17
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E5%AD%A6%E6%97%A0%E6%AD%A2%E5%A2%83/" itemprop="url" rel="index">
+                    <span itemprop="name">学无止境</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+          
+
+          
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        
+          
+            <p>跟着简叔学的，可以B站搜索 <strong>简说linux</strong></p>
+<h1 id="1-上下文"><a href="#1-上下文" class="headerlink" title="1.上下文"></a>1.上下文</h1><h3 id="1-1中断的种类如上下文判断方式"><a href="#1-1中断的种类如上下文判断方式" class="headerlink" title="1.1中断的种类如上下文判断方式"></a>1.1中断的种类如上下文判断方式</h3><p>中断可分为软件中断和硬件中断。或者BH ，这个BH是什么东西去查了查，说是软中断的实现方式，已经被弃用了。</p>
+<p>之前讲过内核中的进程描述方式struct task_struct 中有一个thread_info，他之中保留着不同架构的对于进程的描述信息。其中有一个属性是下面这个。 32bit的变量</p>
+<p><img src="/images/24/1678170873661.png" alt="1678170873661"></p>
+<p>红色部分描述当前硬中断嵌套的深度，0的话就是不是中断，不允许中断嵌套执行的话就只有0，1两种。</p>
+<p>绿色部分第8位是软中断，1的话就是软中断的处理上下文，9~15大于0也表示软中断。蓝色部分表示当前进程是否可以被抢占如果是0就是可以被抢占反之就是不能被抢占。</p>
+<p>include/linux/preempt.h</p>
+<p><img src="/images/24/1678171398820.png" alt="1678171398820"></p>
+<p>通过这些函数来确定出狱生么上下问之中，可以看到都是在用上面说的preemtycount做位运算。通过current-&gt;threadinfo得到threadinfo 然后就能得到preemtycount ，这样就能直到当前处于什么上下文</p>
+<h3 id="1-2-调用上面函数的案例"><a href="#1-2-调用上面函数的案例" class="headerlink" title="1.2 调用上面函数的案例"></a>1.2 调用上面函数的案例</h3><p> arm中 handle_irq是处理中断的总入口，arch/arm/kernel/irq.c</p>
+<p><img src="/images/24/1678172574530.png" alt="1678172574530"></p>
+<p>/kernel/irq/irqdesc.c。</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#<span class="keyword">ifdef</span> CONFIG_HANDLE_DOMAIN_IRQ</span></span><br><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment"> * __handle_domain_irq - Invoke the handler for a HW irq belonging to a domain</span></span><br><span class="line"><span class="comment"> * @domain:	The domain where to perform the lookup</span></span><br><span class="line"><span class="comment"> * @hwirq:	The HW irq number to convert to a logical one</span></span><br><span class="line"><span class="comment"> * @lookup:	Whether to perform the domain lookup or not</span></span><br><span class="line"><span class="comment"> * @regs:	Register file coming from the low-level handling code</span></span><br><span class="line"><span class="comment"> *</span></span><br><span class="line"><span class="comment"> * Returns:	0 on success, or -EINVAL if conversion has failed</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="type">int</span> __handle_domain_irq(<span class="keyword">struct</span> irq_domain *domain, <span class="type">unsigned</span> <span class="type">int</span> hwirq,</span><br><span class="line">			<span class="type">bool</span> lookup, <span class="keyword">struct</span> pt_regs *regs)</span><br><span class="line">&#123;</span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">pt_regs</span> *<span class="title">old_regs</span> =</span> set_irq_regs(regs);</span><br><span class="line">	<span class="type">unsigned</span> <span class="type">int</span> irq = hwirq;</span><br><span class="line">	<span class="type">int</span> ret = <span class="number">0</span>;</span><br><span class="line"></span><br><span class="line">	irq_enter();<span class="comment">//中断陷入</span></span><br><span class="line"></span><br><span class="line"><span class="meta">#<span class="keyword">ifdef</span> CONFIG_IRQ_DOMAIN</span></span><br><span class="line">	<span class="keyword">if</span> (lookup)</span><br><span class="line">		irq = irq_find_mapping(domain, hwirq);</span><br><span class="line"><span class="meta">#<span class="keyword">endif</span></span></span><br><span class="line"></span><br><span class="line">	<span class="comment">/*</span></span><br><span class="line"><span class="comment">	 * Some hardware gives randomly wrong interrupts.  Rather</span></span><br><span class="line"><span class="comment">	 * than crashing, do something sensible.</span></span><br><span class="line"><span class="comment">	 */</span></span><br><span class="line">	<span class="keyword">if</span> (unlikely(!irq || irq &gt;= nr_irqs)) &#123;</span><br><span class="line">		ack_bad_irq(irq);</span><br><span class="line">		ret = -EINVAL;</span><br><span class="line">	&#125; <span class="keyword">else</span> &#123;</span><br><span class="line">		generic_handle_irq(irq);</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	irq_exit();   <span class="comment">//中断退出</span></span><br><span class="line">	set_irq_regs(old_regs);</span><br><span class="line">	<span class="keyword">return</span> ret;</span><br><span class="line">&#125;</span><br><span class="line"><span class="meta">#<span class="keyword">endif</span></span></span><br></pre></td></tr></table></figure>
+<p>上面 中断陷入中断退出之间就是中断上下文。</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/*</span></span><br><span class="line"><span class="comment"> * Enter an interrupt context.</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="type">void</span> <span class="title function_">irq_enter</span><span class="params">(<span class="type">void</span>)</span></span><br><span class="line">&#123;</span><br><span class="line">	rcu_irq_enter();</span><br><span class="line">    <span class="comment">//如果当前进程是一个空闲进程并且不是在终端上上下文</span></span><br><span class="line">	<span class="keyword">if</span> (is_idle_task(current) &amp;&amp; !in_interrupt()) &#123;</span><br><span class="line">		<span class="comment">/*</span></span><br><span class="line"><span class="comment">		 * Prevent raise_softirq from needlessly waking up ksoftirqd</span></span><br><span class="line"><span class="comment">		 * here, as softirq will be serviced on return from interrupt.</span></span><br><span class="line"><span class="comment">		 */</span></span><br><span class="line">		local_bh_disable();</span><br><span class="line">		tick_irq_enter();</span><br><span class="line">		_local_bh_enable();</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	__irq_enter();</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h2 id="2-中断上下文进入时机"><a href="#2-中断上下文进入时机" class="headerlink" title="2.中断上下文进入时机"></a>2.中断上下文进入时机</h2><h3 id="2-1硬件中断进入时机"><a href="#2-1硬件中断进入时机" class="headerlink" title="2.1硬件中断进入时机"></a>2.1硬件中断进入时机</h3><p>当外设产生中断，会给cpu发送中断信号，cpu收到中断信号之后会调用（以arm为例，arch/arm/kernel/irq.c）</p>
+<p><img src="/images/24/1678175449036.png" alt="1678175449036"></p>
+<p>然后又回到上部分的代码</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/*</span></span><br><span class="line"><span class="comment"> * Enter an interrupt context.</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="type">void</span> <span class="title function_">irq_enter</span><span class="params">(<span class="type">void</span>)</span></span><br><span class="line">&#123;</span><br><span class="line">	rcu_irq_enter();</span><br><span class="line">    <span class="comment">//如果当前进程是一个空闲进程并且不是在终端上上下文</span></span><br><span class="line">	<span class="keyword">if</span> (is_idle_task(current) &amp;&amp; !in_interrupt()) &#123;</span><br><span class="line">		<span class="comment">/*</span></span><br><span class="line"><span class="comment">		 * Prevent raise_softirq from needlessly waking up ksoftirqd</span></span><br><span class="line"><span class="comment">		 * here, as softirq will be serviced on return from interrupt.</span></span><br><span class="line"><span class="comment">		 */</span></span><br><span class="line">		local_bh_disable();</span><br><span class="line">		tick_irq_enter();</span><br><span class="line">		_local_bh_enable();</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	__irq_enter();</span><br><span class="line">&#125;</span><br><span class="line"><span class="comment">/*</span></span><br><span class="line"><span class="comment"> * It is safe to do non-atomic ops on -&gt;hardirq_context,</span></span><br><span class="line"><span class="comment"> * because NMI handlers may not preempt and the ops are</span></span><br><span class="line"><span class="comment"> * always balanced, so the interrupted value of -&gt;hardirq_context</span></span><br><span class="line"><span class="comment"> * will always be restored.</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> __irq_enter()					\</span></span><br><span class="line"><span class="meta">	do &#123;						\</span></span><br><span class="line"><span class="meta">		account_irq_enter_time(current);	\</span></span><br><span class="line"><span class="meta">		preempt_count_add(HARDIRQ_OFFSET);	\</span></span><br><span class="line"><span class="meta">		trace_hardirq_enter();			\</span></span><br><span class="line"><span class="meta">	&#125; while (0)</span></span><br><span class="line"></span><br></pre></td></tr></table></figure>
+<p>可以看到<code>__irq_enter()</code>有一个操作是对<code>preempt_count</code>的操作，相当于把 <code>preempt_count</code>代表硬中断的位置为真，从此开始就进入了硬件中断的上下文。之前那些判断上下文的函数返回值就会显示是硬件中断。与irq_enter相反的操作irq_exit也是将硬件中断的位置为0；</p>
+<h3 id="2-2软件中断进入时机"><a href="#2-2软件中断进入时机" class="headerlink" title="2.2软件中断进入时机"></a>2.2软件中断进入时机</h3><p><img src="/images/24/1678176007129.png" alt="1678176007129"></p>
+<p>可以看到软中断这块有两个范围，一个是比特8，一个是比特9~15。当我们调用 BHdisable这种函数，9-15就会被置1，还有就是正常处理软中断 比特8会置为1.</p>
+<p>在/kernel/softirq.c中，</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br></pre></td><td class="code"><pre><span class="line">asmlinkage __visible <span class="type">void</span> __softirq_entry __do_softirq(<span class="type">void</span>)</span><br><span class="line">&#123;</span><br><span class="line">	<span class="type">unsigned</span> <span class="type">long</span> end = jiffies + MAX_SOFTIRQ_TIME;</span><br><span class="line">	<span class="type">unsigned</span> <span class="type">long</span> old_flags = current-&gt;flags;</span><br><span class="line">	<span class="type">int</span> max_restart = MAX_SOFTIRQ_RESTART;</span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">softirq_action</span> *<span class="title">h</span>;</span></span><br><span class="line">	<span class="type">bool</span> in_hardirq;</span><br><span class="line">	__u32 pending;</span><br><span class="line">	<span class="type">int</span> softirq_bit;</span><br><span class="line"></span><br><span class="line">	<span class="comment">/*</span></span><br><span class="line"><span class="comment">	 * Mask out PF_MEMALLOC s current task context is borrowed for the</span></span><br><span class="line"><span class="comment">	 * softirq. A softirq handled such as network RX might set PF_MEMALLOC</span></span><br><span class="line"><span class="comment">	 * again if the socket is related to swap</span></span><br><span class="line"><span class="comment">	 */</span></span><br><span class="line">	current-&gt;flags &amp;= ~PF_MEMALLOC;</span><br><span class="line"></span><br><span class="line">	pending = local_softirq_pending();</span><br><span class="line">	account_irq_enter_time(current);</span><br><span class="line"></span><br><span class="line">	__local_bh_disable_ip(_RET_IP_, SOFTIRQ_OFFSET);</span><br><span class="line">	in_hardirq = lockdep_softirq_start();</span><br><span class="line"></span><br><span class="line">restart:</span><br><span class="line">	<span class="comment">/* Reset the pending bitmask before enabling irqs */</span></span><br><span class="line">	set_softirq_pending(<span class="number">0</span>);</span><br><span class="line"></span><br><span class="line">	local_irq_enable();</span><br><span class="line"></span><br><span class="line">	h = softirq_vec;</span><br><span class="line"></span><br><span class="line">	<span class="keyword">while</span> ((softirq_bit = ffs(pending))) &#123;</span><br><span class="line">		<span class="type">unsigned</span> <span class="type">int</span> vec_nr;</span><br><span class="line">		<span class="type">int</span> prev_count;</span><br><span class="line"></span><br><span class="line">		h += softirq_bit - <span class="number">1</span>;</span><br><span class="line"></span><br><span class="line">		vec_nr = h - softirq_vec;</span><br><span class="line">		prev_count = preempt_count();</span><br><span class="line"></span><br><span class="line">		kstat_incr_softirqs_this_cpu(vec_nr);</span><br><span class="line"></span><br><span class="line">		trace_softirq_entry(vec_nr);</span><br><span class="line">		h-&gt;action(h);</span><br><span class="line">		trace_softirq_exit(vec_nr);</span><br><span class="line">		<span class="keyword">if</span> (unlikely(prev_count != preempt_count())) &#123;</span><br><span class="line">			pr_err(<span class="string">&quot;huh, entered softirq %u %s %p with preempt_count %08x, exited with %08x?\n&quot;</span>,</span><br><span class="line">			       vec_nr, softirq_to_name[vec_nr], h-&gt;action,</span><br><span class="line">			       prev_count, preempt_count());</span><br><span class="line">			preempt_count_set(prev_count);</span><br><span class="line">		&#125;</span><br><span class="line">		h++;</span><br><span class="line">		pending &gt;&gt;= softirq_bit;</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	rcu_bh_qs();</span><br><span class="line">	local_irq_disable();</span><br><span class="line"></span><br><span class="line">	pending = local_softirq_pending();</span><br><span class="line">	<span class="keyword">if</span> (pending) &#123;</span><br><span class="line">		<span class="keyword">if</span> (time_before(jiffies, end) &amp;&amp; !need_resched() &amp;&amp;</span><br><span class="line">		    --max_restart)</span><br><span class="line">			<span class="keyword">goto</span> restart;</span><br><span class="line"></span><br><span class="line">		wakeup_softirqd();</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	lockdep_softirq_end(in_hardirq);</span><br><span class="line">	account_irq_exit_time(current);</span><br><span class="line">	__local_bh_enable(SOFTIRQ_OFFSET);</span><br><span class="line">	WARN_ON_ONCE(in_interrupt());</span><br><span class="line">	tsk_restore_flags(current, old_flags, PF_MEMALLOC);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>轮询所有软中断，如果某个软中断有需要处理的数据，就会调用相应的软中断的handle。处理软中断前后会调用<code>_local_bh_disable_ip(_RET_IP_, SOFTIRQ_OFFSET);</code>和<code>__local_bh_enable(SOFTIRQ_OFFSET);</code>这两个函数的作用是会操作preemty_cnt,点进去查看会发现他操作的位是，比特8.可以说这两个函数可以对应硬中断的<code>__irq_enter()</code>    与 <code>__irq_exit()</code>。所以，在这两条函数中间，调用那些处理软函数中，是在软中断上下文环境中，这个环境中是不允许休眠和调度的。</p>
+
+          
+        
+      
+    </div>
+    
+    
+    
+
+    
+
+    
+
+    
+
+    <footer class="post-footer">
+      
+
+      
+
+      
+
+      
+      
+        <div class="post-eof"></div>
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+      
+    
+      
+      
+      
+        
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="http://hanze5.github.io/2022/07/15/23-Linux%E5%86%85%E6%A0%B8%E2%80%94%E2%80%94%E8%BF%9B%E7%A8%8B%E7%9A%84%E8%99%9A%E6%8B%9F%E5%9C%B0%E5%9D%80%E7%A9%BA%E9%97%B4/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/images/my_avatar.png">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="也许不会有人进来吧">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+                
+                <a class="post-title-link" href="/2022/07/15/23-Linux%E5%86%85%E6%A0%B8%E2%80%94%E2%80%94%E8%BF%9B%E7%A8%8B%E7%9A%84%E8%99%9A%E6%8B%9F%E5%9C%B0%E5%9D%80%E7%A9%BA%E9%97%B4/" itemprop="url">Linux内核——进程的虚拟地址空间</a></h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2022-07-15T09:58:12+08:00">
+                2022-07-15
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E5%AD%A6%E6%97%A0%E6%AD%A2%E5%A2%83/" itemprop="url" rel="index">
+                    <span itemprop="name">学无止境</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+          
+
+          
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        
+          
+            <p>跟着简叔学的，可以B站搜索 <strong>简说linux</strong></p>
+<h2 id="进程虚拟地址空间的管理机制"><a href="#进程虚拟地址空间的管理机制" class="headerlink" title="进程虚拟地址空间的管理机制"></a>进程虚拟地址空间的管理机制</h2><h3 id="什么是虚拟地址空间"><a href="#什么是虚拟地址空间" class="headerlink" title="什么是虚拟地址空间"></a>什么是虚拟地址空间</h3><p>内存的页表映射机制实现虚拟地址到物理地址的转换。内核只需维护一个页目录表，而多个进程共享用户空间是不安全的，需要做管理,不然用户空间太大，若每个进程也只维护一个页目录表的话，查找管理不便。那么虚拟地址空间的管理机制是什么样的呢。</p>
+<p><img src="/images/23/1678148132831.png" alt="1678148132831"></p>
+<p>在linux中，proc是一个虚拟文件系统，也是一个控制中心，里面储存是当前内核运行状态的一系列特殊文件；该系统只存在内存当中，以文件系统的方式为访问系统内核数据的操作提供接口，可以通过更改其中的某些文件来改变内核运行状态。</p>
+<p>写一个最简单的c语言程序并运行</p>
+<p>!<img src="/images/23/1678148938760.png" alt="1678148938760"></p>
+<p>使用top命令查看进程的ID,</p>
+<p><img src="/images/23/1678148993319.png" alt="1678148993319"></p>
+<p>使用cat /proc/232759/maps可以查看进程的虚拟地址空间的信息</p>
+<p><img src="/images/23/1678149193044.png" alt="1678149193044"></p>
+<p>含义：</p>
+<p><img src="/images/23/1678149419801.png" alt="1678149419801"></p>
+<h3 id="虚拟地址空间的管理"><a href="#虚拟地址空间的管理" class="headerlink" title="虚拟地址空间的管理"></a>虚拟地址空间的管理</h3><p>内核使用下面的数据结构来描述一个进程的的虚拟地址空间，文件路径<code>/include/linux/mm_types.h</code>，其中第一个成员 <code>vm_area_struct</code>被用来描述一个虚拟内存区域（VMA），一个地址空间由多个虚拟内存区域，可以看到是一个链表的形式。<code>pgd_t * pgd</code> 指向页目录表，地址映射必备，如果两个进程有同一个页目录表，那这两个进程甚至可以当成线程使用。</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br><span class="line">102</span><br><span class="line">103</span><br><span class="line">104</span><br><span class="line">105</span><br><span class="line">106</span><br><span class="line">107</span><br><span class="line">108</span><br><span class="line">109</span><br><span class="line">110</span><br><span class="line">111</span><br><span class="line">112</span><br><span class="line">113</span><br><span class="line">114</span><br><span class="line">115</span><br><span class="line">116</span><br><span class="line">117</span><br><span class="line">118</span><br><span class="line">119</span><br><span class="line">120</span><br><span class="line">121</span><br><span class="line">122</span><br><span class="line">123</span><br><span class="line">124</span><br><span class="line">125</span><br><span class="line">126</span><br><span class="line">127</span><br><span class="line">128</span><br><span class="line">129</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">mm_struct</span> &#123;</span></span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">vm_area_struct</span> *<span class="title">mmap</span>;</span>		<span class="comment">/* list of VMAs */</span></span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">rb_root</span> <span class="title">mm_rb</span>;</span></span><br><span class="line">	u64 vmacache_seqnum;                   <span class="comment">/* per-thread vmacache */</span></span><br><span class="line"><span class="meta">#<span class="keyword">ifdef</span> CONFIG_MMU</span></span><br><span class="line">	<span class="type">unsigned</span> <span class="title function_">long</span> <span class="params">(*get_unmapped_area)</span> <span class="params">(<span class="keyword">struct</span> file *filp,</span></span><br><span class="line"><span class="params">				<span class="type">unsigned</span> <span class="type">long</span> addr, <span class="type">unsigned</span> <span class="type">long</span> len,</span></span><br><span class="line"><span class="params">				<span class="type">unsigned</span> <span class="type">long</span> pgoff, <span class="type">unsigned</span> <span class="type">long</span> flags)</span>;</span><br><span class="line"><span class="meta">#<span class="keyword">endif</span></span></span><br><span class="line">	<span class="type">unsigned</span> <span class="type">long</span> mmap_base;		<span class="comment">/* base of mmap area */</span></span><br><span class="line">	<span class="type">unsigned</span> <span class="type">long</span> mmap_legacy_base; <span class="comment">/* base of mmap area in bottom-up allocations */</span></span><br><span class="line">	<span class="type">unsigned</span> <span class="type">long</span> task_size;		<span class="comment">/* size of task vm space */</span></span><br><span class="line">	<span class="type">unsigned</span> <span class="type">long</span> highest_vm_end;   <span class="comment">/* highest vma end address */</span></span><br><span class="line">	<span class="type">pgd_t</span> * pgd;                    <span class="comment">//页目录表的地址</span></span><br><span class="line">	<span class="type">atomic_t</span> mm_users;	<span class="comment">/* How many users with user space? */</span></span><br><span class="line">	<span class="type">atomic_t</span> mm_count;  <span class="comment">/* How many references to &quot;struct mm_struct&quot; (users count as 1) */</span></span><br><span class="line">	<span class="type">atomic_long_t</span> nr_ptes;			<span class="comment">/* PTE page table pages */</span></span><br><span class="line"><span class="meta">#<span class="keyword">if</span> CONFIG_PGTABLE_LEVELS &gt; 2</span></span><br><span class="line">	<span class="type">atomic_long_t</span> nr_pmds;			<span class="comment">/* PMD page table pages */</span></span><br><span class="line"><span class="meta">#<span class="keyword">endif</span></span></span><br><span class="line">	<span class="type">int</span> map_count;				    <span class="comment">/* number of VMAs */</span></span><br><span class="line"></span><br><span class="line">	<span class="type">spinlock_t</span> page_table_lock;		<span class="comment">/* Protects page tables and some counters */</span></span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">rw_semaphore</span> <span class="title">mmap_sem</span>;</span></span><br><span class="line"></span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">list_head</span> <span class="title">mmlist</span>;</span>		<span class="comment">/* List of maybe swapped mm&#x27;s.	These are globally strung</span></span><br><span class="line"><span class="comment">						 * together off init_mm.mmlist, and are protected</span></span><br><span class="line"><span class="comment">						 * by mmlist_lock</span></span><br><span class="line"><span class="comment">						 */</span></span><br><span class="line"></span><br><span class="line"></span><br><span class="line">	<span class="type">unsigned</span> <span class="type">long</span> hiwater_rss;	<span class="comment">/* High-watermark of RSS usage */</span></span><br><span class="line">	<span class="type">unsigned</span> <span class="type">long</span> hiwater_vm;	<span class="comment">/* High-water virtual memory usage */</span></span><br><span class="line"></span><br><span class="line">	<span class="type">unsigned</span> <span class="type">long</span> total_vm;		<span class="comment">/* Total pages mapped */</span></span><br><span class="line">	<span class="type">unsigned</span> <span class="type">long</span> locked_vm;	<span class="comment">/* Pages that have PG_mlocked set */</span></span><br><span class="line">	<span class="type">unsigned</span> <span class="type">long</span> pinned_vm;	<span class="comment">/* Refcount permanently increased */</span></span><br><span class="line">	<span class="type">unsigned</span> <span class="type">long</span> data_vm;		<span class="comment">/* VM_WRITE &amp; ~VM_SHARED &amp; ~VM_STACK */</span></span><br><span class="line">	<span class="type">unsigned</span> <span class="type">long</span> exec_vm;		<span class="comment">/* VM_EXEC &amp; ~VM_WRITE &amp; ~VM_STACK */</span></span><br><span class="line">	<span class="type">unsigned</span> <span class="type">long</span> stack_vm;		<span class="comment">/* VM_STACK */</span></span><br><span class="line">	<span class="type">unsigned</span> <span class="type">long</span> def_flags;</span><br><span class="line">	<span class="type">unsigned</span> <span class="type">long</span> start_code, end_code, start_data, end_data;</span><br><span class="line">	<span class="type">unsigned</span> <span class="type">long</span> start_brk, brk, start_stack;</span><br><span class="line">	<span class="type">unsigned</span> <span class="type">long</span> arg_start, arg_end, env_start, env_end;</span><br><span class="line"></span><br><span class="line">	<span class="type">unsigned</span> <span class="type">long</span> saved_auxv[AT_VECTOR_SIZE]; <span class="comment">/* for /proc/PID/auxv */</span></span><br><span class="line"></span><br><span class="line">	<span class="comment">/*</span></span><br><span class="line"><span class="comment">	 * Special counters, in some configurations protected by the</span></span><br><span class="line"><span class="comment">	 * page_table_lock, in other configurations by being atomic.</span></span><br><span class="line"><span class="comment">	 */</span></span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">mm_rss_stat</span> <span class="title">rss_stat</span>;</span></span><br><span class="line"></span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">linux_binfmt</span> *<span class="title">binfmt</span>;</span></span><br><span class="line"></span><br><span class="line">	<span class="type">cpumask_var_t</span> cpu_vm_mask_var;</span><br><span class="line"></span><br><span class="line">	<span class="comment">/* Architecture-specific MM context */</span></span><br><span class="line">	<span class="type">mm_context_t</span> context;</span><br><span class="line"></span><br><span class="line">	<span class="type">unsigned</span> <span class="type">long</span> flags; <span class="comment">/* Must use atomic bitops to access the bits */</span></span><br><span class="line"></span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">core_state</span> *<span class="title">core_state</span>;</span> <span class="comment">/* coredumping support */</span></span><br><span class="line"><span class="meta">#<span class="keyword">ifdef</span> CONFIG_AIO</span></span><br><span class="line">	<span class="type">spinlock_t</span>			ioctx_lock;</span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">kioctx_table</span> __<span class="title">rcu</span>	*<span class="title">ioctx_table</span>;</span></span><br><span class="line"><span class="meta">#<span class="keyword">endif</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">ifdef</span> CONFIG_MEMCG</span></span><br><span class="line">	<span class="comment">/*</span></span><br><span class="line"><span class="comment">	 * &quot;owner&quot; points to a task that is regarded as the canonical</span></span><br><span class="line"><span class="comment">	 * user/owner of this mm. All of the following must be true in</span></span><br><span class="line"><span class="comment">	 * order for it to be changed:</span></span><br><span class="line"><span class="comment">	 *</span></span><br><span class="line"><span class="comment">	 * current == mm-&gt;owner</span></span><br><span class="line"><span class="comment">	 * current-&gt;mm != mm</span></span><br><span class="line"><span class="comment">	 * new_owner-&gt;mm == mm</span></span><br><span class="line"><span class="comment">	 * new_owner-&gt;alloc_lock is held</span></span><br><span class="line"><span class="comment">	 */</span></span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">task_struct</span> __<span class="title">rcu</span> *<span class="title">owner</span>;</span></span><br><span class="line"><span class="meta">#<span class="keyword">endif</span></span></span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">user_namespace</span> *<span class="title">user_ns</span>;</span></span><br><span class="line"></span><br><span class="line">	<span class="comment">/* store ref to file /proc/&lt;pid&gt;/exe symlink points to */</span></span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">file</span> __<span class="title">rcu</span> *<span class="title">exe_file</span>;</span></span><br><span class="line"><span class="meta">#<span class="keyword">ifdef</span> CONFIG_MMU_NOTIFIER</span></span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">mmu_notifier_mm</span> *<span class="title">mmu_notifier_mm</span>;</span></span><br><span class="line"><span class="meta">#<span class="keyword">endif</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">if</span> defined(CONFIG_TRANSPARENT_HUGEPAGE) &amp;&amp; !USE_SPLIT_PMD_PTLOCKS</span></span><br><span class="line">	<span class="type">pgtable_t</span> pmd_huge_pte; <span class="comment">/* protected by page_table_lock */</span></span><br><span class="line"><span class="meta">#<span class="keyword">endif</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">ifdef</span> CONFIG_CPUMASK_OFFSTACK</span></span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">cpumask</span> <span class="title">cpumask_allocation</span>;</span></span><br><span class="line"><span class="meta">#<span class="keyword">endif</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">ifdef</span> CONFIG_NUMA_BALANCING</span></span><br><span class="line">	<span class="comment">/*</span></span><br><span class="line"><span class="comment">	 * numa_next_scan is the next time that the PTEs will be marked</span></span><br><span class="line"><span class="comment">	 * pte_numa. NUMA hinting faults will gather statistics and migrate</span></span><br><span class="line"><span class="comment">	 * pages to new nodes if necessary.</span></span><br><span class="line"><span class="comment">	 */</span></span><br><span class="line">	<span class="type">unsigned</span> <span class="type">long</span> numa_next_scan;</span><br><span class="line"></span><br><span class="line">	<span class="comment">/* Restart point for scanning and setting pte_numa */</span></span><br><span class="line">	<span class="type">unsigned</span> <span class="type">long</span> numa_scan_offset;</span><br><span class="line"></span><br><span class="line">	<span class="comment">/* numa_scan_seq prevents two threads setting pte_numa */</span></span><br><span class="line">	<span class="type">int</span> numa_scan_seq;</span><br><span class="line"><span class="meta">#<span class="keyword">endif</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">if</span> defined(CONFIG_NUMA_BALANCING) || defined(CONFIG_COMPACTION)</span></span><br><span class="line">	<span class="comment">/*</span></span><br><span class="line"><span class="comment">	 * An operation with batched TLB flushing is going on. Anything that</span></span><br><span class="line"><span class="comment">	 * can move process memory needs to flush the TLB when moving a</span></span><br><span class="line"><span class="comment">	 * PROT_NONE or PROT_NUMA mapped page.</span></span><br><span class="line"><span class="comment">	 */</span></span><br><span class="line">	<span class="type">bool</span> tlb_flush_pending;</span><br><span class="line"><span class="meta">#<span class="keyword">endif</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">ifdef</span> CONFIG_ARCH_WANT_BATCHED_UNMAP_TLB_FLUSH</span></span><br><span class="line">	<span class="comment">/* See flush_tlb_batched_pending() */</span></span><br><span class="line">	<span class="type">bool</span> tlb_flush_batched;</span><br><span class="line"><span class="meta">#<span class="keyword">endif</span></span></span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">uprobes_state</span> <span class="title">uprobes_state</span>;</span></span><br><span class="line"><span class="meta">#<span class="keyword">ifdef</span> CONFIG_X86_INTEL_MPX</span></span><br><span class="line">	<span class="comment">/* address of the bounds directory */</span></span><br><span class="line">	<span class="type">void</span> __user *bd_addr;</span><br><span class="line"><span class="meta">#<span class="keyword">endif</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">ifdef</span> CONFIG_HUGETLB_PAGE</span></span><br><span class="line">	<span class="type">atomic_long_t</span> hugetlb_usage;</span><br><span class="line"><span class="meta">#<span class="keyword">endif</span></span></span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">work_struct</span> <span class="title">async_put_work</span>;</span></span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+<p>那我们再来看看虚拟内存区域的（VMA）这个结构，内核将每个内存区域当作一个单独的内存对象管理，因此我们程序的代码段、数据段、未初始化全局变量、堆栈这种都有自己的 <code>vm_area_struct</code>然后再由虚拟地址空间把这些 <code>vm_area_struct</code>给串起来。</p>
+<p>这里面 有一个mm_struct指针 而mm_struct又与tast_struct有一一的对应关系，因此就可以知道这块虚拟内存区域属于的哪一个进程。</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/*</span></span><br><span class="line"><span class="comment"> * This struct defines a memory VMM memory area. There is one of these</span></span><br><span class="line"><span class="comment"> * per VM-area/task.  A VM area is any part of the process virtual memory</span></span><br><span class="line"><span class="comment"> * space that has a special rule for the page-fault handlers (ie a shared</span></span><br><span class="line"><span class="comment"> * library, the executable area etc).</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">vm_area_struct</span> &#123;</span></span><br><span class="line">	<span class="comment">/* The first cache line has the info for VMA tree walking. */</span></span><br><span class="line"></span><br><span class="line">	<span class="type">unsigned</span> <span class="type">long</span> vm_start;		<span class="comment">/* Our start address within vm_mm. */</span></span><br><span class="line">	<span class="type">unsigned</span> <span class="type">long</span> vm_end;		<span class="comment">/* The first byte after our end address</span></span><br><span class="line"><span class="comment">					   within vm_mm. */</span></span><br><span class="line"></span><br><span class="line">	<span class="comment">/* linked list of VM areas per task, sorted by address */</span></span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">vm_area_struct</span> *<span class="title">vm_next</span>, *<span class="title">vm_prev</span>;</span></span><br><span class="line"></span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">rb_node</span> <span class="title">vm_rb</span>;</span></span><br><span class="line"></span><br><span class="line">	<span class="comment">/*</span></span><br><span class="line"><span class="comment">	 * Largest free memory gap in bytes to the left of this VMA.</span></span><br><span class="line"><span class="comment">	 * Either between this VMA and vma-&gt;vm_prev, or between one of the</span></span><br><span class="line"><span class="comment">	 * VMAs below us in the VMA rbtree and its -&gt;vm_prev. This helps</span></span><br><span class="line"><span class="comment">	 * get_unmapped_area find a free area of the right size.</span></span><br><span class="line"><span class="comment">	 */</span></span><br><span class="line">	<span class="type">unsigned</span> <span class="type">long</span> rb_subtree_gap;</span><br><span class="line"></span><br><span class="line">	<span class="comment">/* Second cache line starts here. */</span></span><br><span class="line"></span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">mm_struct</span> *<span class="title">vm_mm</span>;</span>	<span class="comment">/* The address space we belong to. */</span></span><br><span class="line">	<span class="type">pgprot_t</span> vm_page_prot;		<span class="comment">/* Access permissions of this VMA. */</span></span><br><span class="line">	<span class="type">unsigned</span> <span class="type">long</span> vm_flags;		<span class="comment">/* Flags, see mm.h. 就是权限 可读可写还是什么的  */</span></span><br><span class="line"></span><br><span class="line">	<span class="comment">/*</span></span><br><span class="line"><span class="comment">	 * For areas with an address space and backing store,</span></span><br><span class="line"><span class="comment">	 * linkage into the address_space-&gt;i_mmap interval tree.</span></span><br><span class="line"><span class="comment">	 */</span></span><br><span class="line">	<span class="class"><span class="keyword">struct</span> &#123;</span></span><br><span class="line">		<span class="class"><span class="keyword">struct</span> <span class="title">rb_node</span> <span class="title">rb</span>;</span></span><br><span class="line">		<span class="type">unsigned</span> <span class="type">long</span> rb_subtree_last;</span><br><span class="line">	&#125; shared;</span><br><span class="line"></span><br><span class="line">	<span class="comment">/*</span></span><br><span class="line"><span class="comment">	 * A file&#x27;s MAP_PRIVATE vma can be in both i_mmap tree and anon_vma</span></span><br><span class="line"><span class="comment">	 * list, after a COW of one of the file pages.	A MAP_SHARED vma</span></span><br><span class="line"><span class="comment">	 * can only be in the i_mmap tree.  An anonymous MAP_PRIVATE, stack</span></span><br><span class="line"><span class="comment">	 * or brk vma (with NULL file) can only be in an anon_vma list.</span></span><br><span class="line"><span class="comment">	 */</span></span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">list_head</span> <span class="title">anon_vma_chain</span>;</span> <span class="comment">/* Serialized by mmap_sem &amp;</span></span><br><span class="line"><span class="comment">					  * page_table_lock */</span></span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">anon_vma</span> *<span class="title">anon_vma</span>;</span>	<span class="comment">/* Serialized by page_table_lock */</span></span><br><span class="line"></span><br><span class="line">	<span class="comment">/* Function pointers to deal with this struct. */</span></span><br><span class="line">	<span class="type">const</span> <span class="class"><span class="keyword">struct</span> <span class="title">vm_operations_struct</span> *<span class="title">vm_ops</span>;</span></span><br><span class="line"></span><br><span class="line">	<span class="comment">/* Information about our backing store: */</span></span><br><span class="line">	<span class="type">unsigned</span> <span class="type">long</span> vm_pgoff;		<span class="comment">/* Offset (within vm_file) in PAGE_SIZE</span></span><br><span class="line"><span class="comment">					   units */</span></span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">file</span> * <span class="title">vm_file</span>;</span>		<span class="comment">/* File we map to (can be NULL). */</span></span><br><span class="line">	<span class="type">void</span> * vm_private_data;		<span class="comment">/* was vm_pte (shared mem) */</span></span><br><span class="line"></span><br><span class="line"><span class="meta">#<span class="keyword">ifndef</span> CONFIG_MMU</span></span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">vm_region</span> *<span class="title">vm_region</span>;</span>	<span class="comment">/* NOMMU mapping region */</span></span><br><span class="line"><span class="meta">#<span class="keyword">endif</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">ifdef</span> CONFIG_NUMA</span></span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">mempolicy</span> *<span class="title">vm_policy</span>;</span>	<span class="comment">/* NUMA policy for the VMA */</span></span><br><span class="line"><span class="meta">#<span class="keyword">endif</span></span></span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">vm_userfaultfd_ctx</span> <span class="title">vm_userfaultfd_ctx</span>;</span></span><br><span class="line">&#125;;</span><br><span class="line"></span><br></pre></td></tr></table></figure>
+<p>下面这个图太牛了</p>
+<p><img src="/images/23/1678151170442.png" alt="1678151170442"></p>
+<p>使用以下函数可以把文件映射到进程的地址空间里，具体就是再给这个进程分配一个VMA并把这个东西加到<code>mm_struct</code>里边</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;sys/mman.h&gt;</span></span></span><br><span class="line"><span class="type">void</span> *<span class="title function_">mmap</span><span class="params">(<span class="type">void</span> *addr， <span class="type">size_t</span> length, <span class="type">int</span> prot, <span class="type">int</span> flags,<span class="type">int</span> fd, <span class="type">off_t</span> offset)</span>;</span><br><span class="line"><span class="type">int</span> <span class="title function_">munmap</span><span class="params">(<span class="type">void</span> *addr, <span class="type">size_t</span> length)</span> ;</span><br></pre></td></tr></table></figure>
+<p>在linux中，如果clone()时设置CLONE_VM标志，我们把这样的进程称作为线程。线程之间共享同样的虚拟内存空间。fork()函数利用copy_mm()函数复制父进程的mm_struct,也就是current-&gt;mm域给其子进程。(/kernel/fork.c) 参数中的<code>struct task_struct *tsk</code>是子进程的task struct</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;kernel/fork.c&gt;</span></span></span><br><span class="line"><span class="type">static</span> <span class="type">int</span> <span class="title function_">copy_mm</span> <span class="params">(<span class="type">unsigned</span> <span class="type">long</span> clone_flags,<span class="keyword">struct</span> task_struct *tsk)</span>&#123;&#125;</span><br><span class="line"></span><br><span class="line"><span class="type">static</span> <span class="type">int</span> <span class="title function_">copy_mm</span><span class="params">(<span class="type">unsigned</span> <span class="type">long</span> clone_flags, <span class="keyword">struct</span> task_struct *tsk)</span></span><br><span class="line">&#123;</span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">mm_struct</span> *<span class="title">mm</span>, *<span class="title">oldmm</span>;</span></span><br><span class="line">	<span class="type">int</span> retval;</span><br><span class="line"></span><br><span class="line">	tsk-&gt;min_flt = tsk-&gt;maj_flt = <span class="number">0</span>;</span><br><span class="line">	tsk-&gt;nvcsw = tsk-&gt;nivcsw = <span class="number">0</span>;</span><br><span class="line"><span class="meta">#<span class="keyword">ifdef</span> CONFIG_DETECT_HUNG_TASK</span></span><br><span class="line">	tsk-&gt;last_switch_count = tsk-&gt;nvcsw + tsk-&gt;nivcsw;</span><br><span class="line"><span class="meta">#<span class="keyword">endif</span></span></span><br><span class="line"></span><br><span class="line">	tsk-&gt;mm = <span class="literal">NULL</span>;</span><br><span class="line">	tsk-&gt;active_mm = <span class="literal">NULL</span>;</span><br><span class="line"></span><br><span class="line">	<span class="comment">/*</span></span><br><span class="line"><span class="comment">	 * Are we cloning a kernel thread?</span></span><br><span class="line"><span class="comment">	 *</span></span><br><span class="line"><span class="comment">	 * We need to steal a active VM for that..</span></span><br><span class="line"><span class="comment">	 */</span></span><br><span class="line">    <span class="comment">//取当前进程的mm</span></span><br><span class="line">	oldmm = current-&gt;mm;</span><br><span class="line">	<span class="keyword">if</span> (!oldmm)</span><br><span class="line">		<span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line"></span><br><span class="line">	<span class="comment">/* initialize the new vmacache entries */</span></span><br><span class="line">	vmacache_flush(tsk);</span><br><span class="line"></span><br><span class="line">	<span class="keyword">if</span> (clone_flags &amp; CLONE_VM) &#123;</span><br><span class="line">		<span class="type">atomic_inc</span>(&amp;oldmm-&gt;mm_users);</span><br><span class="line">		mm = oldmm;</span><br><span class="line">		<span class="keyword">goto</span> good_mm;</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	retval = -ENOMEM;</span><br><span class="line">	mm = dup_mm(tsk);</span><br><span class="line">	<span class="keyword">if</span> (!mm)</span><br><span class="line">		<span class="keyword">goto</span> fail_nomem;</span><br><span class="line"></span><br><span class="line"><span class="comment">//把mm赋给子进程的mm</span></span><br><span class="line"></span><br><span class="line">good_mm:</span><br><span class="line">	tsk-&gt;mm = mm;</span><br><span class="line">	tsk-&gt;active_mm = mm;</span><br><span class="line">	<span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line"></span><br><span class="line">fail_nomem:</span><br><span class="line">	<span class="keyword">return</span> retval;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h2 id="用户空间的mmap函数在内核中的实现"><a href="#用户空间的mmap函数在内核中的实现" class="headerlink" title="用户空间的mmap函数在内核中的实现"></a>用户空间的mmap函数在内核中的实现</h2><p>用户空间使用mmap函数可以将一个文件或者设备映射到进程的地址空间去，上面说的，创建一个VMA加进去，到底是不是这样呢？映射的作用是，这样读写文件会快，如果不这么做的话，还会有用户空间和内核空间的数据拷贝过程，数据多的时候会极大影响性能。</p>
+<p>用户空间的mmap()会通过系统调用调用到内核的do_mmap()函数。<br>do_mmap()函数会:<br>1.首先创建一个新的VMA并初始化，然后加入进程的虚拟地址空间里。<br>2.然后调用底层的mmap函数建立VMA和实际物理地址的联系（建立页表) 底层的mmap会根据文件类型不同有差异化。</p>
+<h3 id="驱动的mmap实现"><a href="#驱动的mmap实现" class="headerlink" title="驱动的mmap实现"></a>驱动的mmap实现</h3><p>设备驱动的mmap实现主要是将这个物理设备的可操作区域映射到一个进程的虚拟地址空间。这样用户空间就可以直接采用指针的方式访问设备的可操作区域。在驱动中的mmap实现主要是完成一件事，就是建立设备的可操作区域到进程虚拟空间地址的映射过程。同时也需要保证这段映射的虚拟存储器区域不会被进程当做一般的空间使用，因此需要添加一系列的保护方式。</p>
+<h4 id="驱动的mmap建立虚拟地址和物理地址的映射"><a href="#驱动的mmap建立虚拟地址和物理地址的映射" class="headerlink" title="驱动的mmap建立虚拟地址和物理地址的映射"></a>驱动的mmap建立虚拟地址和物理地址的映射</h4><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//建立vma和物理地址的映射的工作由remap_pfn_range来完成，原型如下:</span></span><br><span class="line"><span class="type">int</span>  <span class="title function_">remap_pfn_range</span><span class="params">(<span class="keyword">struct</span> vm_area_struct *vma，, <span class="type">unsigned</span> <span class="type">long</span></span></span><br><span class="line"><span class="params">virt_addr，<span class="type">unsigned</span> <span class="type">long</span> pfn，<span class="type">unsigned</span> <span class="type">long</span> size，<span class="type">pgprot_t</span> prot)</span></span><br><span class="line"><span class="comment">/*</span></span><br><span class="line"><span class="comment">vma            需要建立映射的VMA</span></span><br><span class="line"><span class="comment">virt_addr      需要建立映射的VMA的起始地址</span></span><br><span class="line"><span class="comment">pfn            页帧号，对应虚拟地址应当被映射的物理地址．这个页帧号简单地是物理地址右移 PAGE_SHIFT位 一般是12位</span></span><br><span class="line"><span class="comment">size           需要建立映射的VMA的大小，以字节.</span></span><br><span class="line"><span class="comment">prot           使用在vma-&gt;vm_page _prot中找到的值.</span></span><br><span class="line"><span class="comment">*/</span></span><br></pre></td></tr></table></figure>
+<p>我们可以重新回去看看file_operation这个结构体，这个就代表这驱动提供的能力，也就是要让驱动有mmap的能力，就需要实现 int(*mmap)函数，建立file 与 VMA的映射。就是用上面 的函数</p>
+<p><img src="/images/23/1678153727517.png" alt="1678153727517"></p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">int</span> (*mmap) (<span class="keyword">struct</span> file *, <span class="keyword">struct</span> vm_area_struct *);</span><br></pre></td></tr></table></figure>
+<p>因此mmap是一种零拷贝技术。</p>
+<h3 id="进程的用户栈和内核栈"><a href="#进程的用户栈和内核栈" class="headerlink" title="进程的用户栈和内核栈"></a>进程的用户栈和内核栈</h3><ul>
+<li>用户栈:<br>基于进程的虚拟地址空间的管理机制实现;以VMA的形式实现;</li>
+<li>内核栈:<br>每个进程都有属于自己的独自的内核栈;<br>大小根据不同的体系结构而不同，一般为1个page，也就是4K;</li>
+</ul>
+<h3 id="linux内核中进程的描述方式"><a href="#linux内核中进程的描述方式" class="headerlink" title="linux内核中进程的描述方式"></a>linux内核中进程的描述方式</h3><p>/include/linux/sched.h 有点长 不忘往这里放了吧  一个struct 四五百行，，，描述了linux进程的通用部分。然后它里面有一个成员结构体是，thread_info 描述了特定体系结构的汇编代码段需要访问的那部分数据。</p>
+<p><img src="/images/23/1678169995715.png" alt="1678169995715"></p>
+<h3 id="内核栈定义如下："><a href="#内核栈定义如下：" class="headerlink" title="内核栈定义如下："></a>内核栈定义如下：</h3><p><img src="/images/23/1678170171116.png" alt="1678170171116"></p>
+<p><code>thread_info</code>包含了 自身体系架构的一些属性，不同体系有差异所以要单独实现，比如下面是arm的。</p>
+<p>arch/arm/include/asm/thread_info.h</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">thread_info</span> &#123;</span></span><br><span class="line">	<span class="type">unsigned</span> <span class="type">long</span>		flags;		<span class="comment">/* low level flags */</span></span><br><span class="line">	<span class="type">int</span>			preempt_count;	<span class="comment">/* 0 =&gt; preemptable, &lt;0 =&gt; bug */</span></span><br><span class="line">	<span class="type">mm_segment_t</span>		addr_limit;	<span class="comment">/* address limit */</span></span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">task_struct</span>	*<span class="title">task</span>;</span>		<span class="comment">/* main task structure */</span></span><br><span class="line">	__u32			cpu;		<span class="comment">/* cpu */</span></span><br><span class="line">	__u32			cpu_domain;	<span class="comment">/* cpu domain */</span></span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">cpu_context_save</span>	<span class="title">cpu_context</span>;</span>	<span class="comment">/* cpu context */</span></span><br><span class="line">	__u32			syscall;	<span class="comment">/* syscall number */</span></span><br><span class="line">	__u8			used_cp[<span class="number">16</span>];	<span class="comment">/* thread used copro */</span></span><br><span class="line">	<span class="type">unsigned</span> <span class="type">long</span>		tp_value[<span class="number">2</span>];	<span class="comment">/* TLS registers */</span></span><br><span class="line"><span class="meta">#<span class="keyword">ifdef</span> CONFIG_CRUNCH</span></span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">crunch_state</span>	<span class="title">crunchstate</span>;</span></span><br><span class="line"><span class="meta">#<span class="keyword">endif</span></span></span><br><span class="line">	<span class="class"><span class="keyword">union</span> <span class="title">fp_state</span>		<span class="title">fpstate</span> __<span class="title">attribute__</span>((<span class="title">aligned</span>(8)));</span></span><br><span class="line">	<span class="class"><span class="keyword">union</span> <span class="title">vfp_state</span>		<span class="title">vfpstate</span>;</span></span><br><span class="line"><span class="meta">#<span class="keyword">ifdef</span> CONFIG_ARM_THUMBEE</span></span><br><span class="line">	<span class="type">unsigned</span> <span class="type">long</span>		thumbee_state;	<span class="comment">/* ThumbEE Handler Base register */</span></span><br><span class="line"><span class="meta">#<span class="keyword">endif</span></span></span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+
+          
+        
+      
+    </div>
+    
+    
+    
+
+    
+
+    
+
+    
+
+    <footer class="post-footer">
+      
+
+      
+
+      
+
+      
+      
+        <div class="post-eof"></div>
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+      
+    
+      
+      
+      
+        
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
     <link itemprop="mainEntityOfPage" href="http://hanze5.github.io/2022/07/13/22-Linux%E5%86%85%E6%A0%B8%E2%80%94%E2%80%94%E5%86%85%E6%A0%B8%E7%A9%BA%E9%97%B4%E7%9A%84%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86%E4%B8%8E%E5%88%86%E9%85%8D/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
@@ -1494,575 +2024,6 @@
 
       
     
-      
-      
-      
-        
-
-  
-
-  
-  
-  
-
-  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
-  
-  
-  
-  <div class="post-block">
-    <link itemprop="mainEntityOfPage" href="http://hanze5.github.io/2021/06/12/19-Linux%E5%86%85%E6%A0%B8%E2%80%94%E2%80%94%E5%8E%9F%E5%AD%90%E6%93%8D%E4%BD%9C/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="name" content="">
-      <meta itemprop="description" content="">
-      <meta itemprop="image" content="/images/my_avatar.png">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="也许不会有人进来吧">
-    </span>
-
-    
-      <header class="post-header">
-
-        
-        
-          <h1 class="post-title" itemprop="name headline">
-                
-                <a class="post-title-link" href="/2021/06/12/19-Linux%E5%86%85%E6%A0%B8%E2%80%94%E2%80%94%E5%8E%9F%E5%AD%90%E6%93%8D%E4%BD%9C/" itemprop="url">Linux内核——原子操作</a></h1>
-        
-
-        <div class="post-meta">
-          <span class="post-time">
-            
-              <span class="post-meta-item-icon">
-                <i class="fa fa-calendar-o"></i>
-              </span>
-              
-                <span class="post-meta-item-text">发表于</span>
-              
-              <time title="创建于" itemprop="dateCreated datePublished" datetime="2021-06-12T15:52:23+08:00">
-                2021-06-12
-              </time>
-            
-
-            
-
-            
-          </span>
-
-          
-            <span class="post-category" >
-            
-              <span class="post-meta-divider">|</span>
-            
-              <span class="post-meta-item-icon">
-                <i class="fa fa-folder-o"></i>
-              </span>
-              
-                <span class="post-meta-item-text">分类于</span>
-              
-              
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/%E5%AD%A6%E6%97%A0%E6%AD%A2%E5%A2%83/" itemprop="url" rel="index">
-                    <span itemprop="name">学无止境</span>
-                  </a>
-                </span>
-
-                
-                
-              
-            </span>
-          
-
-          
-            
-          
-
-          
-          
-
-          
-
-          
-
-          
-
-        </div>
-      </header>
-    
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-      
-
-      
-        
-          
-            <p>跟着简叔学的，可以B站搜索 <strong>简说linux</strong></p>
-<h2 id="原子变量"><a href="#原子变量" class="headerlink" title="原子变量"></a>原子变量</h2><p>对原子变量的访问是源自的，linux内核自带的源子变量结构体定义如下（/include/linux/types.h）：</p>
-<p><img src="/images/19/1678087835689.png" alt="1678087835689"></p>
-<p>竟然就是一个整型么!</p>
-<p>对于原子变量的初始化<code>ATOMIC_INIT</code>不同体系架构都不一样。</p>
-<h2 id="原子变量的应用"><a href="#原子变量的应用" class="headerlink" title="原子变量的应用"></a>原子变量的应用</h2><p>同样，继续修改helloDev.c。</p>
-<ol>
-<li><p>定义原子变量并初始化为1，之前的信号量和opencount不要了，</p>
-<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// struct semaphore sema;</span></span><br><span class="line"> <span class="comment">// int open_count=0;</span></span><br><span class="line"> <span class="type">static</span> <span class="type">atomic_t</span> can_open = ATOMIC_INIT(<span class="number">1</span>);</span><br><span class="line"></span><br></pre></td></tr></table></figure>
-</li>
-<li><p>open操作改为</p>
-<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">int</span> <span class="title function_">hello_open</span><span class="params">(<span class="keyword">struct</span> inode *p, <span class="keyword">struct</span> file *f)</span></span><br><span class="line">&#123;</span><br><span class="line">    <span class="keyword">if</span>(!atomic_dec_and_test(&amp;can_open))</span><br><span class="line">    &#123;</span><br><span class="line">        printk(KERN_EMERG<span class="string">&quot;device is busy,helloopen fall!!\r\n&quot;</span>);</span><br><span class="line">        automic_inc(&amp;can_open);</span><br><span class="line">        <span class="keyword">return</span> -EBUSY; </span><br><span class="line">    &#125;</span><br><span class="line">    printk(KERN_EMERG<span class="string">&quot;hello_open ok~~~\r\n&quot;</span>);</span><br><span class="line">    <span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-<p><code>atomic_dec_and_test</code> 和 <code>automic_inc</code> 这两个里面的操作不同的体系架构有着不一样的实现。以arm架构为例：全是汇编。。。。。 </p>
-<p><img src="/images/19/1678088566696.png" alt="1678088566696"></p>
-<p>用宏定义去实现，嵌入汇编指令的操作。之前写过mips的汇编。现在忘的有点多。</p>
-<p>反正就是汇编语言实现了对原子变量的加减操作。如果是单核的话可以使用开关中断来保证原子操作</p>
-</li>
-<li><p>close操作</p>
-<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">int</span> <span class="title function_">hello_close</span><span class="params">(<span class="keyword">struct</span> inode *inode ,<span class="keyword">struct</span> file *filp)</span></span><br><span class="line">&#123;</span><br><span class="line">    automic_inc(&amp;can_open);</span><br><span class="line">    printk(KERN_INFO<span class="string">&quot;hello_close ok&quot;</span>);</span><br><span class="line">    <span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-</li>
-</ol>
-<p>本篇的收获仅仅是原子变量的使用吧，初始化，然后加减操作。。至于怎么实现，也就大概那么回事。。。。。</p>
-
-          
-        
-      
-    </div>
-    
-    
-    
-
-    
-
-    
-
-    
-
-    <footer class="post-footer">
-      
-
-      
-
-      
-
-      
-      
-        <div class="post-eof"></div>
-      
-    </footer>
-  </div>
-  
-  
-  
-  </article>
-
-
-      
-    
-      
-      
-      
-        
-
-  
-
-  
-  
-  
-
-  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
-  
-  
-  
-  <div class="post-block">
-    <link itemprop="mainEntityOfPage" href="http://hanze5.github.io/2021/06/06/18-Linux%E5%86%85%E6%A0%B8%E2%80%94%E2%80%94%E4%BF%A1%E5%8F%B7%E9%87%8F/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="name" content="">
-      <meta itemprop="description" content="">
-      <meta itemprop="image" content="/images/my_avatar.png">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="也许不会有人进来吧">
-    </span>
-
-    
-      <header class="post-header">
-
-        
-        
-          <h1 class="post-title" itemprop="name headline">
-                
-                <a class="post-title-link" href="/2021/06/06/18-Linux%E5%86%85%E6%A0%B8%E2%80%94%E2%80%94%E4%BF%A1%E5%8F%B7%E9%87%8F/" itemprop="url">Linux内核——信号量semaphore</a></h1>
-        
-
-        <div class="post-meta">
-          <span class="post-time">
-            
-              <span class="post-meta-item-icon">
-                <i class="fa fa-calendar-o"></i>
-              </span>
-              
-                <span class="post-meta-item-text">发表于</span>
-              
-              <time title="创建于" itemprop="dateCreated datePublished" datetime="2021-06-06T15:15:49+08:00">
-                2021-06-06
-              </time>
-            
-
-            
-
-            
-          </span>
-
-          
-            <span class="post-category" >
-            
-              <span class="post-meta-divider">|</span>
-            
-              <span class="post-meta-item-icon">
-                <i class="fa fa-folder-o"></i>
-              </span>
-              
-                <span class="post-meta-item-text">分类于</span>
-              
-              
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/%E5%AD%A6%E6%97%A0%E6%AD%A2%E5%A2%83/" itemprop="url" rel="index">
-                    <span itemprop="name">学无止境</span>
-                  </a>
-                </span>
-
-                
-                
-              
-            </span>
-          
-
-          
-            
-          
-
-          
-          
-
-          
-
-          
-
-          
-
-        </div>
-      </header>
-    
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-      
-
-      
-        
-          
-            <p>跟着简叔学的，可以B站搜索 <strong>简说linux</strong></p>
-<h2 id="多进程访问驱动设备带来的问题"><a href="#多进程访问驱动设备带来的问题" class="headerlink" title="多进程访问驱动设备带来的问题"></a>多进程访问驱动设备带来的问题</h2><p>在驱动程序中，有些设备只允许打开一次。那么可以在驱动中定义一个全局变量，判断当前使用数目。比如在某驱动程序的<strong>open函数</strong>中这样定义。当count==0说明没有使用，可以打开。理想状态下是左边的情况，但是cpu对进程的调度是随机的，所以不可避免的发生右边的情况。就会打开多次。</p>
-<!-- ![1678081076781](/images/18/1678081076781.png) | ![1678081150110](/images/18/1678081150110.png)
-
- -->
-<div class="table-container">
-<table>
-<thead>
-<tr>
-<th><img src="/images/18/1678081076781.png" alt="1678081076781"></th>
-<th><img src="/images/18/1678081150110.png" alt="1678081150110"></th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td></td>
-</tr>
-</tbody>
-</table>
-</div>
-<p>为什么没有count—的操作？因为这是驱动的open函数。—肯定是在close函数里边。</p>
-<p>老生常谈，并发执行的单元（这里不说进程是因为还有线程，但是他们的问题是一样的）对共享资源（例子里面是count）的访问会引发竞争。访问共享资源的代码区叫做<code>临界区</code>，临界区需要某种内核同步方法来保护。</p>
-<h2 id="内核同步机制——信号量源码"><a href="#内核同步机制——信号量源码" class="headerlink" title="内核同步机制——信号量源码"></a>内核同步机制——信号量源码</h2><ol>
-<li><p>struct semaphore 结构体定义</p>
-<p>内核中信号量通过这样一的结构体<code>struct semaphore</code>来定义，定位到内核源码<code>/include/linux/semaphone.h</code>文件。可以查看到<code>struct semaphore</code>的定义</p>
-<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/* Please don&#x27;t access any members of this structure directly */</span></span><br><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">semaphore</span> &#123;</span></span><br><span class="line">	<span class="type">raw_spinlock_t</span>		lock;      <span class="comment">//说明是以另一种同步机制自旋锁来实现的</span></span><br><span class="line">	<span class="type">unsigned</span> <span class="type">int</span>		count;     <span class="comment">//用以表示资源数量</span></span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">list_head</span>	<span class="title">wait_list</span>;</span>  <span class="comment">//双向链表</span></span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
-<p><img src="/images/18/1678084503728.png" alt="1678084503728"></p>
-</li>
-<li><p>初始化函数定义</p>
-<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#<span class="keyword">define</span> __SEMAPHORE_INITIALIZER(name, n)				\</span></span><br><span class="line"><span class="meta">&#123;									\</span></span><br><span class="line"><span class="meta">	.lock		= __RAW_SPIN_LOCK_UNLOCKED((name).lock),	\</span></span><br><span class="line"><span class="meta">	.count		= n,						\</span></span><br><span class="line"><span class="meta">	.wait_list	= LIST_HEAD_INIT((name).wait_list),		\</span></span><br><span class="line"><span class="meta">&#125;</span></span><br><span class="line"></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> DEFINE_SEMAPHORE(name)	\</span></span><br><span class="line"><span class="meta">	struct semaphore name = __SEMAPHORE_INITIALIZER(name, 1)</span></span><br><span class="line"></span><br><span class="line"><span class="type">static</span> <span class="keyword">inline</span> <span class="type">void</span> <span class="title function_">sema_init</span><span class="params">(<span class="keyword">struct</span> semaphore *sem, <span class="type">int</span> val)</span></span><br><span class="line">&#123;</span><br><span class="line">	<span class="type">static</span> <span class="class"><span class="keyword">struct</span> <span class="title">lock_class_key</span> __<span class="title">key</span>;</span></span><br><span class="line">	*sem = (<span class="keyword">struct</span> semaphore) __SEMAPHORE_INITIALIZER(*sem, val);</span><br><span class="line">	lockdep_init_map(&amp;sem-&gt;lock.dep_map, <span class="string">&quot;semaphore-&gt;lock&quot;</span>, &amp;__key, <span class="number">0</span>);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-<p><img src="/images/18/1678084786042.png" alt="1678084786042"></p>
-</li>
-<li><p>down操作，就是使用这个信号量资源。定义在内核源码根目录下的/kernel/locking/semaphore.c</p>
-<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment"> * down - acquire the semaphore</span></span><br><span class="line"><span class="comment"> * @sem: the semaphore to be acquired</span></span><br><span class="line"><span class="comment"> *</span></span><br><span class="line"><span class="comment"> * Acquires the semaphore.  If no more tasks are allowed to acquire the</span></span><br><span class="line"><span class="comment"> * semaphore, calling this function will put the task to sleep until the</span></span><br><span class="line"><span class="comment"> * semaphore is released.</span></span><br><span class="line"><span class="comment"> *</span></span><br><span class="line"><span class="comment"> * Use of this function is deprecated, please use down_interruptible() or</span></span><br><span class="line"><span class="comment"> * down_killable() instead.</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="type">void</span> <span class="title function_">down</span><span class="params">(<span class="keyword">struct</span> semaphore *sem)</span></span><br><span class="line">&#123;</span><br><span class="line">	<span class="type">unsigned</span> <span class="type">long</span> flags;</span><br><span class="line"></span><br><span class="line">	raw_spin_lock_irqsave(&amp;sem-&gt;lock, flags);</span><br><span class="line">	<span class="keyword">if</span> (likely(sem-&gt;count &gt; <span class="number">0</span>))</span><br><span class="line">		sem-&gt;count--;</span><br><span class="line">	<span class="keyword">else</span></span><br><span class="line">		__down(sem);</span><br><span class="line">	raw_spin_unlock_irqrestore(&amp;sem-&gt;lock, flags);</span><br><span class="line">&#125;</span><br><span class="line">EXPORT_SYMBOL(down);</span><br></pre></td></tr></table></figure>
-<p><img src="/images/18/1678085608439.png" alt="1678085608439"></p>
-<p>相当于又用自旋锁，保护了自身的count这个资源是互斥访问的。但是这里代码简单说明具体的实现不在这里</p>
-<p>那么一步步ctrl+左键，找到了</p>
-</li>
-</ol>
-<p>   <img src="/images/18/1678085781987.png" alt="1678085781987"></p>
-<p>   系统中每个进程都会有一个task结构体，就像有一个pid一样与之相对应。当有进程使用了down之后，该进程的task就会被加入到信号量的wait_list里面。然后就会将自己设为睡眠状态，让cpu去执行其他进程。自旋锁是非常耗费cpu资源的，所以他保护的临界区资源不能睡眠。所以可以看到timeuot那句没有被保护。与cpu调度相关的，后面说。</p>
-<p>   当自己醒了之后再次查看自己申请的资源是不是可以访问了，不行就继续睡，行了就返回，跳出down。</p>
-<ol>
-<li><p>up操作，对临界资源访问结束，释放信号量和down长得差不多，直接找核心的。<img src="/images/18/1678086270368.png" alt="1678086270368"></p>
-<p>很好理解  如果信号量资源够了，那么就唤醒进程。</p>
-</li>
-</ol>
-<h2 id="信号量的使用"><a href="#信号量的使用" class="headerlink" title="信号量的使用"></a>信号量的使用</h2><p>​    在之前的hellodev驱动中，我们做这样的修改。</p>
-<ol>
-<li><p>首先定义全局变量，信号量和一个整型用于计数。整型这里就是共享资源。</p>
-<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">semaphore</span> <span class="title">sema</span>；</span></span><br><span class="line"><span class="class"><span class="title">int</span> <span class="title">open_count</span>=</span><span class="number">0</span>;</span><br></pre></td></tr></table></figure>
-</li>
-<li><p>驱动的初始代码中对信号量进行初始化</p>
-<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//信号量的初始化  初始化为1 表明共享资源只有一个</span></span><br><span class="line">sema_init(&amp;sema,<span class="number">1</span>);</span><br></pre></td></tr></table></figure>
-</li>
-<li><p>是临界区代码，开始时down获取信号量，结束时up释放信号量。第一个进程获取到所之后，第二个进程再次访问就会被阻塞，因为他发现这个信号量的值不再是1，而是0；能保证临界代码的访问是原子的。</p>
-<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">int</span> <span class="title function_">hello_open</span><span class="params">(<span class="keyword">struct</span> inode *p, <span class="keyword">struct</span> file *f)</span></span><br><span class="line">&#123;</span><br><span class="line">    down(&amp;sema);</span><br><span class="line">    <span class="keyword">if</span>(open_count&gt;=<span class="number">1</span>)</span><br><span class="line">    &#123;</span><br><span class="line">        up(&amp;sema);</span><br><span class="line">        printk(KERN_EMERG<span class="string">&quot;device is busy,helloopen fall!!\r\n&quot;</span>);</span><br><span class="line">        <span class="keyword">return</span> -EBUSY; </span><br><span class="line">    &#125;</span><br><span class="line">    open_count++;</span><br><span class="line">    up(&amp;sema);</span><br><span class="line">    printk(KERN_EMERG<span class="string">&quot;hello_open ok~~~\r\n&quot;</span>);</span><br><span class="line">    <span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-<p>通过这种方式可以保证，这部分区域的访问是原子的。如果说临界区的资源不是很复杂，那么建议还是使用原子变量，而不是使用信号量。下次说</p>
-</li>
-<li><p>相应的，在推出对驱动的访问时</p>
-<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">int</span> <span class="title function_">hello_close</span><span class="params">(<span class="keyword">struct</span> inode *inode ,<span class="keyword">struct</span> file *filp)</span></span><br><span class="line">&#123;</span><br><span class="line">    <span class="keyword">if</span>(open_count!=<span class="number">1</span>)</span><br><span class="line">    &#123;</span><br><span class="line">        printk(KERN_INFO<span class="string">&quot;something wrong,hello_close fail&quot;</span>);</span><br><span class="line">        <span class="keyword">return</span> -EFAULT;</span><br><span class="line">    &#125;</span><br><span class="line">    open_count--;</span><br><span class="line">    printk(KERN_INFO<span class="string">&quot;hello_close ok&quot;</span>);</span><br><span class="line">    <span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-<p>之前我们是没定义这个函数的，所以要在init的时候</p>
-<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">gFile-&gt;release = hello_close;</span><br></pre></td></tr></table></figure>
-</li>
-</ol>
-<h2 id="测试"><a href="#测试" class="headerlink" title="测试"></a>测试</h2><ol>
-<li><p>测试程序中加入sleep() 使其打开驱动程序的时间长一点。</p>
-</li>
-<li><p>首先打开执行第一个进程<img src="/images/18/1678084102081.png" alt="1678084102081"></p>
-<p>可以看到写入成功并没有直接推出，与此同时我们新建一个终端在运行一次，<img src="/images/18/1678084174458.png" alt="1678084174458"></p>
-<p>Nice！！！！！！！</p>
-</li>
-</ol>
-<h2 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h2><ol>
-<li>信号量用于线程和进程之间的同步</li>
-<li>允许多个进程进入临界区代码执行</li>
-<li>进程获取不到信号量锁会陷入休眠，具体的进程相关姐都体task（代表当前。）会加入到信号量结构体维护的一个链表，并且进入休眠（cpu调度）。</li>
-<li>被信号量保护的临界区允许睡眠，但是信号量的实现中 自旋锁维护的临界区是不允许休眠的。</li>
-<li>基于进程调度器实现，UP和SMP无差异</li>
-<li><strong>不支持进程和中断之间的同步</strong>  需要用到自旋锁。</li>
-</ol>
-<h2 id="helloDev驱动已经更新了多次，再次附目前为止的完整代码"><a href="#helloDev驱动已经更新了多次，再次附目前为止的完整代码" class="headerlink" title="helloDev驱动已经更新了多次，再次附目前为止的完整代码"></a>helloDev驱动已经更新了多次，再次附目前为止的完整代码</h2><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br><span class="line">102</span><br><span class="line">103</span><br><span class="line">104</span><br><span class="line">105</span><br><span class="line">106</span><br><span class="line">107</span><br><span class="line">108</span><br><span class="line">109</span><br><span class="line">110</span><br><span class="line">111</span><br><span class="line">112</span><br><span class="line">113</span><br><span class="line">114</span><br><span class="line">115</span><br><span class="line">116</span><br><span class="line">117</span><br><span class="line">118</span><br><span class="line">119</span><br><span class="line">120</span><br><span class="line">121</span><br><span class="line">122</span><br><span class="line">123</span><br><span class="line">124</span><br><span class="line">125</span><br><span class="line">126</span><br><span class="line">127</span><br><span class="line">128</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//helloDev.c</span></span><br><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;linux/module.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;linux/moduleparam.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;linux/cdev.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;linux/fs.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;linux/wait.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;linux/poll.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;linux/sched.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;linux/slab.h&gt;</span></span></span><br><span class="line"></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> BUFFER_MAX    (64)</span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> OK            (0)</span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> ERROR         (-1)</span></span><br><span class="line"></span><br><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">cdev</span> *<span class="title">gDev</span>;</span></span><br><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">file_operations</span> *<span class="title">gFile</span>;</span></span><br><span class="line"><span class="type">dev_t</span>  devNum;</span><br><span class="line"><span class="type">unsigned</span> <span class="type">int</span> subDevNum = <span class="number">1</span>;</span><br><span class="line"><span class="type">int</span> reg_major  =  <span class="number">232</span>;    </span><br><span class="line"><span class="type">int</span> reg_minor =   <span class="number">0</span>;</span><br><span class="line"><span class="type">int</span> flag = <span class="number">0</span>;</span><br><span class="line"><span class="type">char</span> buffer[BUFFER_MAX];</span><br><span class="line"></span><br><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">semaphore</span> <span class="title">sema</span>;</span></span><br><span class="line"><span class="type">int</span> open_count=<span class="number">0</span>;</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="type">int</span> <span class="title function_">hello_open</span><span class="params">(<span class="keyword">struct</span> inode *p, <span class="keyword">struct</span> file *f)</span></span><br><span class="line">&#123;</span><br><span class="line">    down(&amp;sema);</span><br><span class="line">    <span class="keyword">if</span>(open_count&gt;=<span class="number">1</span>)</span><br><span class="line">    &#123;</span><br><span class="line">        up(&amp;sema);</span><br><span class="line">        printk(KERN_EMERG<span class="string">&quot;device is busy,helloopen fall!!\r\n&quot;</span>);</span><br><span class="line">        <span class="keyword">return</span> -EBUSY; </span><br><span class="line">    &#125;</span><br><span class="line">    open_count++;</span><br><span class="line">    up(&amp;sema);</span><br><span class="line">    printk(KERN_EMERG<span class="string">&quot;hello_open ok~~~\r\n&quot;</span>);</span><br><span class="line">    <span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="type">int</span> <span class="title function_">hello_close</span><span class="params">(<span class="keyword">struct</span> inode *inode ,<span class="keyword">struct</span> file *filp)</span></span><br><span class="line">&#123;</span><br><span class="line">    <span class="keyword">if</span>(open_count!=<span class="number">1</span>)</span><br><span class="line">    &#123;</span><br><span class="line">        printk(KERN_INFO<span class="string">&quot;something wrong,hello_close fail&quot;</span>);</span><br><span class="line">        <span class="keyword">return</span> -EFAULT;</span><br><span class="line">    &#125;</span><br><span class="line">    open_count--;</span><br><span class="line">    printk(KERN_INFO<span class="string">&quot;hello_close ok&quot;</span>);</span><br><span class="line">    <span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="type">ssize_t</span> <span class="title function_">hello_write</span><span class="params">(<span class="keyword">struct</span> file *f, <span class="type">const</span> <span class="type">char</span> __user *u, <span class="type">size_t</span> s, <span class="type">loff_t</span> *l)</span></span><br><span class="line">&#123;</span><br><span class="line">    printk(KERN_EMERG<span class="string">&quot;hello_write\r\n&quot;</span>);</span><br><span class="line">    <span class="type">int</span> writenlen = <span class="number">0</span>;</span><br><span class="line">    writenlen = BUFFER_MAX&gt;s?s:BUFFER_MAX;</span><br><span class="line">    <span class="keyword">if</span>(copy_from_user(buffer,u,writenlen))</span><br><span class="line">    &#123;</span><br><span class="line">        <span class="keyword">return</span> -EFAULT;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">return</span> writenlen;</span><br><span class="line">&#125;</span><br><span class="line"><span class="type">ssize_t</span> <span class="title function_">hello_read</span><span class="params">(<span class="keyword">struct</span> file *f, <span class="type">char</span> __user *u, <span class="type">size_t</span> s, <span class="type">loff_t</span> *l)</span></span><br><span class="line">&#123;</span><br><span class="line">    printk(KERN_EMERG<span class="string">&quot;hello_read\r\n&quot;</span>);    </span><br><span class="line">    <span class="type">int</span> readlen;</span><br><span class="line">    readlen = BUFFER_MAX&gt;s?s:BUFFER_MAX;</span><br><span class="line">    <span class="keyword">if</span>(copy_to_user(u,buffer,readlen))</span><br><span class="line">    &#123;</span><br><span class="line">        <span class="keyword">return</span> -EFAULT;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">return</span> readlen;</span><br><span class="line">&#125;</span><br><span class="line"><span class="type">int</span> <span class="title function_">hello_init</span><span class="params">(<span class="type">void</span>)</span></span><br><span class="line">&#123;</span><br><span class="line">    <span class="comment">//根据主次设备号生成一个devnum 主次设备号可以唯一标识</span></span><br><span class="line">    devNum = MKDEV(reg_major, reg_minor);</span><br><span class="line">    <span class="comment">//将设备号注册到内核 </span></span><br><span class="line">    <span class="keyword">if</span>(OK == register_chrdev_region(devNum, subDevNum, <span class="string">&quot;helloworld&quot;</span>))&#123;</span><br><span class="line">        printk(KERN_EMERG<span class="string">&quot;register_chrdev_region ok \n&quot;</span>); </span><br><span class="line">    &#125;<span class="keyword">else</span> &#123;</span><br><span class="line">    printk(KERN_EMERG<span class="string">&quot;register_chrdev_region error n&quot;</span>);</span><br><span class="line">        <span class="keyword">return</span> ERROR;</span><br><span class="line">    &#125;</span><br><span class="line">    printk(KERN_EMERG<span class="string">&quot; hello driver init \n&quot;</span>);</span><br><span class="line">    <span class="comment">// struct cdev 是内核中的字符设备</span></span><br><span class="line">    gDev = kzalloc(<span class="keyword">sizeof</span>(<span class="keyword">struct</span> cdev), GFP_KERNEL);</span><br><span class="line">    <span class="comment">//初始化一个file结构体 代表设备</span></span><br><span class="line">    gFile = kzalloc(<span class="keyword">sizeof</span>(<span class="keyword">struct</span> file_operations), GFP_KERNEL);</span><br><span class="line"></span><br><span class="line">    <span class="comment">//给file结构体中的函数操作赋值   右侧是函数指针 指明操作</span></span><br><span class="line">    gFile-&gt;open = hello_open;</span><br><span class="line">    gFile-&gt;read = hello_read;</span><br><span class="line">    gFile-&gt;write = hello_write;</span><br><span class="line"></span><br><span class="line">    gFile-&gt;owner = THIS_MODULE;</span><br><span class="line"></span><br><span class="line">    gFile-&gt;release = hello_close;</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"></span><br><span class="line">    <span class="comment">//内核中找到设备号 就能找到cdev 与 file_operations</span></span><br><span class="line">    <span class="comment">//建立gDev 与 gFile之间的联系 里边没看但是肯定有两个之间的互动就是了</span></span><br><span class="line">    cdev_init(gDev, gFile);</span><br><span class="line">    <span class="comment">//又建立了gDev 与 设备号的联系</span></span><br><span class="line">    cdev_add(gDev, devNum, <span class="number">3</span>);</span><br><span class="line"></span><br><span class="line">    <span class="comment">//信号量的初始化  初始化为1 表明共享资源只有一个</span></span><br><span class="line">    sema_init(&amp;sema,<span class="number">1</span>);</span><br><span class="line">    <span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">//驱动的卸载</span></span><br><span class="line"><span class="type">void</span> __exit <span class="title function_">hello_exit</span><span class="params">(<span class="type">void</span>)</span></span><br><span class="line">&#123;</span><br><span class="line">    cdev_del(gDev);</span><br><span class="line">    unregister_chrdev_region(devNum, subDevNum);</span><br><span class="line">    <span class="keyword">return</span>;</span><br><span class="line">&#125;</span><br><span class="line">module_init(hello_init);</span><br><span class="line">module_exit(hello_exit);</span><br><span class="line">MODULE_LICENSE(<span class="string">&quot;GPL&quot;</span>);</span><br><span class="line"></span><br></pre></td></tr></table></figure>
-<figure class="highlight makefile"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">#Makefile</span></span><br><span class="line"><span class="keyword">ifneq</span> (<span class="variable">$(KERNELRELEASE)</span>,)</span><br><span class="line">	obj-m := helloDev.o                        </span><br><span class="line"><span class="keyword">else</span></span><br><span class="line">	PWD := <span class="variable">$(<span class="built_in">shell</span> pwd)</span></span><br><span class="line">	<span class="comment"># KDIR:= /lib/modules/4.4.0-31-generic/build</span></span><br><span class="line">	<span class="comment"># KDIR:=/home/dawnlake/Downloads/linux-4.9.229</span></span><br><span class="line">KDIR := /lib/modules/`uname -r`/build</span><br><span class="line"><span class="section">all:</span></span><br><span class="line">	make -C <span class="variable">$(KDIR)</span> M=<span class="variable">$(PWD)</span></span><br><span class="line">	gcc -g read_test.c -o read_test</span><br><span class="line">	gcc -g write_test.c -o write_test</span><br><span class="line">	rmmod helloDev</span><br><span class="line">	insmod helloDev.ko</span><br><span class="line"><span class="section">clean:	</span></span><br><span class="line">	rm -rf *.o *.ko *.mod.c *.symvers *.c~ *~</span><br><span class="line"><span class="keyword">endif</span></span><br></pre></td></tr></table></figure>
-<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//write_test.c</span></span><br><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;fcntl.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;stdio.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;string.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;sys/select.h&gt;</span></span></span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> DATA_NUM    (32)</span></span><br><span class="line"><span class="type">int</span> <span class="title function_">main</span><span class="params">(<span class="type">int</span> argc, <span class="type">char</span> *argv[])</span></span><br><span class="line">&#123;</span><br><span class="line">    <span class="type">int</span> fd, i;</span><br><span class="line">    <span class="type">int</span>  w_len;</span><br><span class="line">    fd_set fdset;</span><br><span class="line">    <span class="type">char</span> buf[DATA_NUM]=<span class="string">&quot;hello world&quot;</span>;</span><br><span class="line">    <span class="comment">// memset(buf,0,DATA_NUM);</span></span><br><span class="line">    fd = open(<span class="string">&quot;/dev/hello&quot;</span>, O_RDWR);</span><br><span class="line">	<span class="built_in">printf</span>(<span class="string">&quot;%d\r\n&quot;</span>,fd);</span><br><span class="line">    <span class="keyword">if</span>(<span class="number">-1</span> == fd) &#123;</span><br><span class="line">      	perror(<span class="string">&quot;open file error\r\n&quot;</span>);</span><br><span class="line">		<span class="keyword">return</span> <span class="number">-1</span>;</span><br><span class="line">    &#125;	</span><br><span class="line">	<span class="keyword">else</span> &#123;</span><br><span class="line">		<span class="built_in">printf</span>(<span class="string">&quot;open successe\r\n&quot;</span>);</span><br><span class="line">	&#125;</span><br><span class="line">    </span><br><span class="line">    w_len = write(fd,buf, DATA_NUM);</span><br><span class="line">    <span class="comment">// r_len = read(fd, buf, DATA_NUM);</span></span><br><span class="line">    <span class="keyword">if</span>(w_len==<span class="number">-1</span>)</span><br><span class="line">    &#123;</span><br><span class="line">        perror(<span class="string">&quot;write error\r\n&quot;</span>);</span><br><span class="line">        <span class="keyword">return</span> <span class="number">-1</span>;</span><br><span class="line">    &#125;</span><br><span class="line">    sleep(<span class="number">10</span>);</span><br><span class="line">    <span class="built_in">printf</span>(<span class="string">&quot;w_len = %d \r\n&quot;</span>, w_len);</span><br><span class="line">    close(fd);</span><br><span class="line"></span><br><span class="line">    <span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//read_test.c</span></span><br><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;fcntl.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;stdio.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;string.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;sys/select.h&gt;</span></span></span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> DATA_NUM    (64)</span></span><br><span class="line"><span class="type">int</span> <span class="title function_">main</span><span class="params">(<span class="type">int</span> argc, <span class="type">char</span> *argv[])</span></span><br><span class="line">&#123;</span><br><span class="line">    <span class="type">int</span> fd, i;</span><br><span class="line">    <span class="type">int</span> r_len;</span><br><span class="line">    fd_set fdset;</span><br><span class="line">    <span class="type">char</span> rbuf[DATA_NUM];</span><br><span class="line">    <span class="built_in">memset</span>(rbuf,<span class="number">0</span>,DATA_NUM);</span><br><span class="line">    fd = open(<span class="string">&quot;/dev/hello&quot;</span>, O_RDWR);</span><br><span class="line">	<span class="built_in">printf</span>(<span class="string">&quot;%d\r\n&quot;</span>,fd);</span><br><span class="line">    <span class="keyword">if</span>(<span class="number">-1</span> == fd) &#123;</span><br><span class="line">      	perror(<span class="string">&quot;open file error\r\n&quot;</span>);</span><br><span class="line">		<span class="keyword">return</span> <span class="number">-1</span>;</span><br><span class="line">    &#125;	</span><br><span class="line">	<span class="keyword">else</span> &#123;</span><br><span class="line">		<span class="built_in">printf</span>(<span class="string">&quot;open successe\r\n&quot;</span>);</span><br><span class="line">	&#125;</span><br><span class="line">    </span><br><span class="line">    <span class="comment">// w_len = write(fd,buf, DATA_NUM);</span></span><br><span class="line">    r_len = read(fd, rbuf, DATA_NUM);</span><br><span class="line">    <span class="keyword">if</span>(r_len==<span class="number">-1</span>)</span><br><span class="line">    &#123;</span><br><span class="line">        perror(<span class="string">&quot;read error\r\n&quot;</span>);</span><br><span class="line">        <span class="keyword">return</span> <span class="number">-1</span>;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="built_in">printf</span>(<span class="string">&quot;readlen = %d \r\n&quot;</span>,  r_len);</span><br><span class="line">    <span class="built_in">printf</span>(<span class="string">&quot;%s\n&quot;</span>,rbuf);</span><br><span class="line">    close(fd);</span><br><span class="line"></span><br><span class="line">    <span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-          
-        
-      
-    </div>
-    
-    
-    
-
-    
-
-    
-
-    
-
-    <footer class="post-footer">
-      
-
-      
-
-      
-
-      
-      
-        <div class="post-eof"></div>
-      
-    </footer>
-  </div>
-  
-  
-  
-  </article>
-
-
-      
-    
-      
-      
-      
-        
-
-  
-
-  
-  
-  
-
-  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
-  
-  
-  
-  <div class="post-block">
-    <link itemprop="mainEntityOfPage" href="http://hanze5.github.io/2021/06/03/17-Linux%E5%86%85%E6%A0%B8%E2%80%94%E2%80%94%E5%86%85%E6%A0%B8%E7%A9%BA%E9%97%B4%E4%B8%8E%E7%94%A8%E6%88%B7%E7%A9%BA%E9%97%B4%E7%9A%84%E6%95%B0%E6%8D%AE%E6%8B%B7%E8%B4%9D/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="name" content="">
-      <meta itemprop="description" content="">
-      <meta itemprop="image" content="/images/my_avatar.png">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="也许不会有人进来吧">
-    </span>
-
-    
-      <header class="post-header">
-
-        
-        
-          <h1 class="post-title" itemprop="name headline">
-                
-                <a class="post-title-link" href="/2021/06/03/17-Linux%E5%86%85%E6%A0%B8%E2%80%94%E2%80%94%E5%86%85%E6%A0%B8%E7%A9%BA%E9%97%B4%E4%B8%8E%E7%94%A8%E6%88%B7%E7%A9%BA%E9%97%B4%E7%9A%84%E6%95%B0%E6%8D%AE%E6%8B%B7%E8%B4%9D/" itemprop="url">Linux内核——内核空间与用户空间的数据拷贝</a></h1>
-        
-
-        <div class="post-meta">
-          <span class="post-time">
-            
-              <span class="post-meta-item-icon">
-                <i class="fa fa-calendar-o"></i>
-              </span>
-              
-                <span class="post-meta-item-text">发表于</span>
-              
-              <time title="创建于" itemprop="dateCreated datePublished" datetime="2021-06-03T13:22:25+08:00">
-                2021-06-03
-              </time>
-            
-
-            
-
-            
-          </span>
-
-          
-            <span class="post-category" >
-            
-              <span class="post-meta-divider">|</span>
-            
-              <span class="post-meta-item-icon">
-                <i class="fa fa-folder-o"></i>
-              </span>
-              
-                <span class="post-meta-item-text">分类于</span>
-              
-              
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/%E5%AD%A6%E6%97%A0%E6%AD%A2%E5%A2%83/" itemprop="url" rel="index">
-                    <span itemprop="name">学无止境</span>
-                  </a>
-                </span>
-
-                
-                
-              
-            </span>
-          
-
-          
-            
-          
-
-          
-          
-
-          
-
-          
-
-          
-
-        </div>
-      </header>
-    
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-      
-
-      
-        
-          
-            <p>跟着简叔学的，可以B站搜索简说linux</p>
-<h2 id="1-32位系统内核空间和用户空间的默认大小"><a href="#1-32位系统内核空间和用户空间的默认大小" class="headerlink" title="1.32位系统内核空间和用户空间的默认大小"></a>1.32位系统内核空间和用户空间的默认大小</h2><p><img src="/images/17/1678066147846.png" alt="1678066147846"></p>
-<p>内核空间运行在高地址空间，用户空间在低地址空间。之所以要做这样的划分。出于安全考量，内核需要更高的权限，已屏蔽用户区的不安全操作。从软件设计思想来开，内核代码偏重于系统管理；用户空间的代码偏重于业务逻辑代码的实现。  注意这只是逻辑地址，并不是物理地址。这中间有一个映射的过程。</p>
-<p>陷入内核态一般有三种情况：</p>
-<p>​    <strong>系统调用，定时器中断，外设中断</strong>  处理完中断再返回用户空间的应用程序</p>
-<h2 id="2-x86段页式内存管理荷叶表映射机制"><a href="#2-x86段页式内存管理荷叶表映射机制" class="headerlink" title="2.x86段页式内存管理荷叶表映射机制"></a>2.x86段页式内存管理荷叶表映射机制</h2><p><a target="_blank" rel="noopener" href="https://www.bilibili.com/read/cv8129309?spm_id_from=333.999.0.0">linux内核页表映射机制：线性地址如何转为物理地址？ - 哔哩哔哩 (bilibili.com)</a></p>
-<p>两步走，逻辑地址转化成线性地址，再转化成物理地址。部分架构逻辑地址就是线性地址，基址+offset 找到线性地址空间，通过把基址设为0来实现。那么从线性地址转化成逻辑地址就是我们说的页表映射。。</p>
-<p><img src="/images/17/1678079204392.png" alt="1678079204392"></p>
-<p>不同进程有不同的页目录表，所以他们可以不冲突的访问相同的逻辑地址（在他们各自的视角里），因为他们的页目录表不一样。  线性地址 总共32位（页表目录索引找到页表10位，页表索引找到物理地址基址10位，偏移12位）</p>
-<h2 id="3-对之前写的hello驱动的读写函数进行简单修改"><a href="#3-对之前写的hello驱动的读写函数进行简单修改" class="headerlink" title="3.对之前写的hello驱动的读写函数进行简单修改"></a>3.对之前写的hello驱动的读写函数进行简单修改</h2><ol>
-<li><p>代码改动如下</p>
-<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//</span></span><br><span class="line"><span class="type">ssize_t</span> <span class="title function_">hello_write</span><span class="params">(<span class="keyword">struct</span> file *f, <span class="type">const</span> <span class="type">char</span> __user *u, <span class="type">size_t</span> s, <span class="type">loff_t</span> *l)</span></span><br><span class="line">&#123;</span><br><span class="line">    printk(KERN_EMERG<span class="string">&quot;hello_write\r\n&quot;</span>);</span><br><span class="line">    <span class="type">int</span> writenlen = <span class="number">0</span>;</span><br><span class="line">    writenlen = BUFFER_MAX&gt;s?s:BUFFER_MAX;</span><br><span class="line">    <span class="keyword">if</span>(copy_from_user(buffer,u,writenlen))</span><br><span class="line">    &#123;</span><br><span class="line">        <span class="keyword">return</span> -EFAULT;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">return</span> writelen;</span><br><span class="line">&#125;</span><br><span class="line"><span class="type">ssize_t</span> <span class="title function_">hello_read</span><span class="params">(<span class="keyword">struct</span> file *f, <span class="type">char</span> __user *u, <span class="type">size_t</span> s, <span class="type">loff_t</span> *l)</span></span><br><span class="line">&#123;</span><br><span class="line">    printk(KERN_EMERG<span class="string">&quot;hello_read\r\n&quot;</span>);    </span><br><span class="line">    <span class="type">int</span> readlen;</span><br><span class="line">    readlen = BUFFER_MAX&gt;s?s:BUFFER_MAX;</span><br><span class="line">    <span class="keyword">if</span>(copy_to_user(u,buffer,readlen))</span><br><span class="line">    &#123;</span><br><span class="line">        <span class="keyword">return</span> -EFAULT;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">return</span> readlen;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-<p>其中，<code>copy_from_user</code>与<code>copy_to_user</code>实现了用户空间和内核空间的数据拷贝。驱动程序肯定是在内核空间 <code>const char __user *u</code>则是用户空间的地址。所以看起来可能是反的，因为以前我们的视角是用户程序在用户空间。而且要注意，<code>copy_from_user</code>与<code>copy_to_user</code>他们的参数顺序哦。</p>
-<p>重新对驱动代码进行编译，插入。然后编译测试代码，进行测试，产生了段错误。</p>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">3</span><br><span class="line">open successe</span><br><span class="line">Segmentation fault</span><br></pre></td></tr></table></figure>
-<p>写入操作发生段错误,经过检查发现，原来驱动代码中，定义了内核空间的buffer指针，却没有开辟空间。</p>
-<p>将</p>
-<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">char</span> * buffer；</span><br></pre></td></tr></table></figure>
-<p>替换为</p>
-<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">char</span> buffer[BUFFER_MAX];</span><br></pre></td></tr></table></figure>
-<p>重新测试。</p>
-<p><img src="/images/17/1678070706739.png" alt="1678070706739"></p>
-<p>发现success拼写错了，无伤大雅无伤大雅。。。。。</p>
-<p>代码表示两个用户程序，读写内核空间数据。</p>
-</li>
-</ol>
-<p><img src="/images/17/1678070706739.png" alt="1678070706739">|<img src="/images/17/1678070706739.png" alt="1678070706739"><br>—- | —-</p>
-
-          
-        
-      
-    </div>
-    
-    
-    
-
-    
-
-    
-
-    
-
-    <footer class="post-footer">
-      
-
-      
-
-      
-
-      
-      
-        <div class="post-eof"></div>
-      
-    </footer>
-  </div>
-  
-  
-  
-  </article>
-
-
-      
-    
   </section>
 
   
@@ -2117,7 +2078,7 @@
               
                 <a href="/">
               
-                  <span class="site-state-item-count">25</span>
+                  <span class="site-state-item-count">28</span>
                   <span class="site-state-item-name">日志</span>
                 </a>
               </div>
