@@ -68,7 +68,7 @@
 
 
 
-  <meta name="keywords" content="Hexo, NexT" />
+  <meta name="keywords" content="DPDK," />
 
 
 
@@ -87,8 +87,9 @@
 <meta property="og:description" content="DPDK——cpu亲和性线程池0.为什么要有cpu亲和性在多核运行的机器上，每个CPU本身自己会有缓存，在缓存中存着进程使用的数据，而没有绑定CPU的话，进程可能会被操作系统调度到其他CPU上，如此CPU cache（高速缓冲存储器）命中率就低了，也就是说调到的CPU缓存区中原来没有这类数据，要先把内存或硬盘的数据载入缓存。而当缓存区绑定CPU后，程序就会一直在指定的CPU执行，不会被操作系统调度">
 <meta property="og:locale">
 <meta property="article:published_time" content="2022-10-17T12:53:53.000Z">
-<meta property="article:modified_time" content="2023-03-17T12:54:19.854Z">
+<meta property="article:modified_time" content="2023-03-17T12:56:10.657Z">
 <meta property="article:author" content="Dawnlake">
+<meta property="article:tag" content="DPDK">
 <meta name="twitter:card" content="summary">
 
 
@@ -292,6 +293,28 @@
           </span>
 
           
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E5%AD%A6%E6%97%A0%E6%AD%A2%E5%A2%83/" itemprop="url" rel="index">
+                    <span itemprop="name">学无止境</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
 
           
             
@@ -432,6 +455,12 @@
 
     <footer class="post-footer">
       
+        <div class="post-tags">
+          
+            <a href="/tags/DPDK/" rel="tag"># DPDK</a>
+          
+        </div>
+      
 
       
       
@@ -556,7 +585,7 @@
               
               <div class="site-state-item site-state-tags">
                 <a href="/tags/index.html">
-                  <span class="site-state-item-count">6</span>
+                  <span class="site-state-item-count">7</span>
                   <span class="site-state-item-name">标签</span>
                 </a>
               </div>
@@ -797,6 +826,26 @@
   
 
   
+  
+    <script type="text/x-mathjax-config">
+      MathJax.Hub.Config({
+        tex2jax: {
+          inlineMath: [ ['$','$'], ["\\(","\\)"]  ],
+          processEscapes: true,
+          skipTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']
+        }
+      });
+    </script>
+
+    <script type="text/x-mathjax-config">
+      MathJax.Hub.Queue(function() {
+        var all = MathJax.Hub.getAllJax(), i;
+        for (i=0; i < all.length; i += 1) {
+          all[i].SourceElement().parentNode.className += ' has-jax';
+        }
+      });
+    </script>
+    <script type="text/javascript" src="//cdn.bootcss.com/mathjax/2.7.1/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
   
 
 
