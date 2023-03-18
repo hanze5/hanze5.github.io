@@ -875,6 +875,216 @@
   
   
   <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="http://hanze5.github.io/2022/10/18/29-DPDK%E2%80%94%E2%80%94%E5%A6%82%E4%BD%95%E8%8E%B7%E5%8F%96%E6%95%B0%E6%8D%AE%E5%8C%85-UIO-PMD/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/images/my_avatar.png">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="也许不会有人进来吧">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+                
+                <a class="post-title-link" href="/2022/10/18/29-DPDK%E2%80%94%E2%80%94%E5%A6%82%E4%BD%95%E8%8E%B7%E5%8F%96%E6%95%B0%E6%8D%AE%E5%8C%85-UIO-PMD/" itemprop="url">DPDK——如何获取数据包 UIO+PMD</a></h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2022-10-18T19:34:15+08:00">
+                2022-10-18
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E5%AD%A6%E6%97%A0%E6%AD%A2%E5%A2%83/" itemprop="url" rel="index">
+                    <span itemprop="name">学无止境</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+          
+
+          
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        
+          
+            <p><strong>（绕蒙圈了已经）可直接跳到后面看结论.目前已经不影响项目进展，中间部分当作素材，留着以后看看能不能整理出来吧。</strong></p>
+<p>这里主要是想搞清楚具体的，从网卡拿到数据包的流程是什么样的。正常来说，数据包进入网卡队列，由网卡驱动将数据包拷贝到内核缓冲区，然后进行封装，封装成sk_buffer然后就上交内核协议栈了。那么在我们的程序中，我们想要直接拿到网卡队列中的原始数据包。</p>
+<h2 id="0-DPDK为我们提供的接口"><a href="#0-DPDK为我们提供的接口" class="headerlink" title="0.DPDK为我们提供的接口"></a>0.DPDK为我们提供的接口</h2><p>想要达到这样的目的很简单，因为dpdk已经为我们提供了这样的接口：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">static</span> <span class="keyword">inline</span> <span class="type">uint16_t</span></span><br><span class="line"><span class="title function_">rte_eth_rx_burst</span><span class="params">(<span class="type">uint16_t</span> port_id, <span class="type">uint16_t</span> queue_id,</span></span><br><span class="line"><span class="params">		 <span class="keyword">struct</span> rte_mbuf **rx_pkts, <span class="type">const</span> <span class="type">uint16_t</span> nb_pkts)</span>；</span><br></pre></td></tr></table></figure>
+<p>其中，第一个参数代表我们想要从哪个网卡端口获取数据包，第二个参数代表我们想要从哪个队列获取数据包，第三个参数是存放数据包数组指针，这个结构体用于存放原始数据包，第四个参数用于限制依次读取数据包的大小。</p>
+<h2 id="1-接口中重要的两步"><a href="#1-接口中重要的两步" class="headerlink" title="1.接口中重要的两步"></a>1.接口中重要的两步</h2><p>在上一部分提到的接口函数的定义中找到两句比较重要的。</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">rte_eth_dev</span> *<span class="title">dev</span> =</span> &amp;rte_eth_devices[port_id];</span><br><span class="line">nb_rx = (*dev-&gt;rx_pkt_burst)(dev-&gt;data-&gt;rx_queues[queue_id],</span><br><span class="line">				     rx_pkts, nb_pkts);</span><br></pre></td></tr></table></figure>
+<p>通过<code>port_id</code>拿到我们具体想要在哪个网卡端口获取数据包。代表网卡端口设备的结构体定义</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">rte_eth_dev</span> &#123;</span></span><br><span class="line">	<span class="type">eth_rx_burst_t</span> rx_pkt_burst; <span class="comment">/**&lt; Pointer to PMD receive function. */</span></span><br><span class="line">	<span class="type">eth_tx_burst_t</span> tx_pkt_burst; <span class="comment">/**&lt; Pointer to PMD transmit function. */</span></span><br><span class="line">	<span class="type">eth_tx_prep_t</span> tx_pkt_prepare; <span class="comment">/**&lt; Pointer to PMD transmit prepare function. */</span></span><br><span class="line"></span><br><span class="line">	<span class="type">eth_rx_queue_count_t</span>       rx_queue_count; <span class="comment">/**&lt; Get the number of used RX descriptors. */</span></span><br><span class="line">	<span class="type">eth_rx_descriptor_done_t</span>   rx_descriptor_done;   <span class="comment">/**&lt; Check rxd DD bit. */</span></span><br><span class="line">	<span class="type">eth_rx_descriptor_status_t</span> rx_descriptor_status; <span class="comment">/**&lt; Check the status of a Rx descriptor. */</span></span><br><span class="line">	<span class="type">eth_tx_descriptor_status_t</span> tx_descriptor_status; <span class="comment">/**&lt; Check the status of a Tx descriptor. */</span></span><br><span class="line"></span><br><span class="line">	<span class="comment">/**</span></span><br><span class="line"><span class="comment">	 * Next two fields are per-device data but *data is shared between</span></span><br><span class="line"><span class="comment">	 * primary and secondary processes and *process_private is per-process</span></span><br><span class="line"><span class="comment">	 * private. The second one is managed by PMDs if necessary.</span></span><br><span class="line"><span class="comment">	 */</span></span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">rte_eth_dev_data</span> *<span class="title">data</span>;</span>  <span class="comment">/**&lt; Pointer to device data. */</span></span><br><span class="line">	<span class="type">void</span> *process_private; <span class="comment">/**&lt; Pointer to per-process device data. */</span></span><br><span class="line">	<span class="type">const</span> <span class="class"><span class="keyword">struct</span> <span class="title">eth_dev_ops</span> *<span class="title">dev_ops</span>;</span> <span class="comment">/**&lt; Functions exported by PMD */</span></span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">rte_device</span> *<span class="title">device</span>;</span> <span class="comment">/**&lt; Backing device */</span></span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">rte_intr_handle</span> *<span class="title">intr_handle</span>;</span> <span class="comment">/**&lt; Device interrupt handle */</span></span><br><span class="line">	<span class="comment">/** User application callbacks for NIC interrupts */</span></span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">rte_eth_dev_cb_list</span> <span class="title">link_intr_cbs</span>;</span></span><br><span class="line">	<span class="comment">/**</span></span><br><span class="line"><span class="comment">	 * User-supplied functions called from rx_burst to post-process</span></span><br><span class="line"><span class="comment">	 * received packets before passing them to the user</span></span><br><span class="line"><span class="comment">	 */</span></span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">rte_eth_rxtx_callback</span> *<span class="title">post_rx_burst_cbs</span>[<span class="title">RTE_MAX_QUEUES_PER_PORT</span>];</span></span><br><span class="line">	<span class="comment">/**</span></span><br><span class="line"><span class="comment">	 * User-supplied functions called from tx_burst to pre-process</span></span><br><span class="line"><span class="comment">	 * received packets before passing them to the driver for transmission.</span></span><br><span class="line"><span class="comment">	 */</span></span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">rte_eth_rxtx_callback</span> *<span class="title">pre_tx_burst_cbs</span>[<span class="title">RTE_MAX_QUEUES_PER_PORT</span>];</span></span><br><span class="line">	<span class="class"><span class="keyword">enum</span> <span class="title">rte_eth_dev_state</span> <span class="title">state</span>;</span> <span class="comment">/**&lt; Flag indicating the port state */</span></span><br><span class="line">	<span class="type">void</span> *security_ctx; <span class="comment">/**&lt; Context for security ops */</span></span><br><span class="line"></span><br><span class="line">	<span class="type">uint64_t</span> reserved_64s[<span class="number">4</span>]; <span class="comment">/**&lt; Reserved for future fields */</span></span><br><span class="line">	<span class="type">void</span> *reserved_ptrs[<span class="number">4</span>];   <span class="comment">/**&lt; Reserved for future fields */</span></span><br><span class="line">&#125; __rte_cache_aligned;</span><br><span class="line"></span><br></pre></td></tr></table></figure>
+<p>这个结构体与每一个以太网设备关联。可以这样理解，这就是网卡的用户态驱动程序。可以看到其中就定义了我们接收数据包所需要的<code>rx_pkt_burst</code>。也就是说，根据我们实际使用的网卡型号，我们在初始化网络设备的时候，会对这个数据结构进行相应的赋值。以实现对应网卡的对应功能。这个在运行dpdk程序之前需要我们去绑定用户态驱动。这个不用多说，绑定之后由dpdk去为我们检测。比如在程序中我们调用</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">int</span> <span class="title function_">rte_eth_dev_count_avail</span><span class="params">()</span> <span class="comment">//就可以查看当前绑定了用户态驱动的网卡设备数量。</span></span><br><span class="line"><span class="title function_">rte_eth_macaddr_get</span><span class="params">((<span class="type">uint8_t</span>) m_Id, &amp;etherAddr)</span>; <span class="comment">//获取mac地址</span></span><br><span class="line">rte_eth_dev_get_mtu((<span class="type">uint8_t</span>) m_Id, &amp;m_DeviceMtu);<span class="comment">//获取最大帧长</span></span><br></pre></td></tr></table></figure>
+<p>等等等等。这些信息都源自下面这个结构体，通过下面的结构体存放这绑定了用户态驱动的网卡端口任何信息，</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">rte_eth_dev_info</span> &#123;</span></span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">rte_device</span> *<span class="title">device</span>;</span> <span class="comment">/** Generic device information */</span></span><br><span class="line">	<span class="type">const</span> <span class="type">char</span> *driver_name; <span class="comment">/**&lt; Device Driver name. */</span></span><br><span class="line">	<span class="type">unsigned</span> <span class="type">int</span> if_index; <span class="comment">/**&lt; Index to bound host interface, or 0 if none.</span></span><br><span class="line"><span class="comment">		Use if_indextoname() to translate into an interface name. */</span></span><br><span class="line">	<span class="type">uint16_t</span> min_mtu;	<span class="comment">/**&lt; Minimum MTU allowed */</span></span><br><span class="line">	<span class="type">uint16_t</span> max_mtu;	<span class="comment">/**&lt; Maximum MTU allowed */</span></span><br><span class="line">	<span class="type">const</span> <span class="type">uint32_t</span> *dev_flags; <span class="comment">/**&lt; Device flags */</span></span><br><span class="line">	<span class="type">uint32_t</span> min_rx_bufsize; <span class="comment">/**&lt; Minimum size of RX buffer. */</span></span><br><span class="line">	<span class="type">uint32_t</span> max_rx_pktlen; <span class="comment">/**&lt; Maximum configurable length of RX pkt. */</span></span><br><span class="line">	<span class="comment">/** Maximum configurable size of LRO aggregated packet. */</span></span><br><span class="line">	<span class="type">uint32_t</span> max_lro_pkt_size;</span><br><span class="line">	<span class="type">uint16_t</span> max_rx_queues; <span class="comment">/**&lt; Maximum number of RX queues. */</span></span><br><span class="line">	<span class="type">uint16_t</span> max_tx_queues; <span class="comment">/**&lt; Maximum number of TX queues. */</span></span><br><span class="line">	<span class="type">uint32_t</span> max_mac_addrs; <span class="comment">/**&lt; Maximum number of MAC addresses. */</span></span><br><span class="line">	<span class="type">uint32_t</span> max_hash_mac_addrs;</span><br><span class="line">	<span class="comment">/** Maximum number of hash MAC addresses for MTA and UTA. */</span></span><br><span class="line">	<span class="type">uint16_t</span> max_vfs; <span class="comment">/**&lt; Maximum number of VFs. */</span></span><br><span class="line">	<span class="type">uint16_t</span> max_vmdq_pools; <span class="comment">/**&lt; Maximum number of VMDq pools. */</span></span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">rte_eth_rxseg_capa</span> <span class="title">rx_seg_capa</span>;</span> <span class="comment">/**&lt; Segmentation capability.*/</span></span><br><span class="line">	<span class="type">uint64_t</span> rx_offload_capa;</span><br><span class="line">	<span class="comment">/**&lt; All RX offload capabilities including all per-queue ones */</span></span><br><span class="line">	<span class="type">uint64_t</span> tx_offload_capa;</span><br><span class="line">	<span class="comment">/**&lt; All TX offload capabilities including all per-queue ones */</span></span><br><span class="line">	<span class="type">uint64_t</span> rx_queue_offload_capa;</span><br><span class="line">	<span class="comment">/**&lt; Device per-queue RX offload capabilities. */</span></span><br><span class="line">	<span class="type">uint64_t</span> tx_queue_offload_capa;</span><br><span class="line">	<span class="comment">/**&lt; Device per-queue TX offload capabilities. */</span></span><br><span class="line">	<span class="type">uint16_t</span> reta_size;</span><br><span class="line">	<span class="comment">/**&lt; Device redirection table size, the total number of entries. */</span></span><br><span class="line">	<span class="type">uint8_t</span> hash_key_size; <span class="comment">/**&lt; Hash key size in bytes */</span></span><br><span class="line">	<span class="comment">/** Bit mask of RSS offloads, the bit offset also means flow type */</span></span><br><span class="line">	<span class="type">uint64_t</span> flow_type_rss_offloads;</span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">rte_eth_rxconf</span> <span class="title">default_rxconf</span>;</span> <span class="comment">/**&lt; Default RX configuration */</span></span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">rte_eth_txconf</span> <span class="title">default_txconf</span>;</span> <span class="comment">/**&lt; Default TX configuration */</span></span><br><span class="line">	<span class="type">uint16_t</span> vmdq_queue_base; <span class="comment">/**&lt; First queue ID for VMDQ pools. */</span></span><br><span class="line">	<span class="type">uint16_t</span> vmdq_queue_num;  <span class="comment">/**&lt; Queue number for VMDQ pools. */</span></span><br><span class="line">	<span class="type">uint16_t</span> vmdq_pool_base;  <span class="comment">/**&lt; First ID of VMDQ pools. */</span></span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">rte_eth_desc_lim</span> <span class="title">rx_desc_lim</span>;</span>  <span class="comment">/**&lt; RX descriptors limits */</span></span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">rte_eth_desc_lim</span> <span class="title">tx_desc_lim</span>;</span>  <span class="comment">/**&lt; TX descriptors limits */</span></span><br><span class="line">	<span class="type">uint32_t</span> speed_capa;  <span class="comment">/**&lt; Supported speeds bitmap (ETH_LINK_SPEED_). */</span></span><br><span class="line">	<span class="comment">/** Configured number of rx/tx queues */</span></span><br><span class="line">	<span class="type">uint16_t</span> nb_rx_queues; <span class="comment">/**&lt; Number of RX queues. */</span></span><br><span class="line">	<span class="type">uint16_t</span> nb_tx_queues; <span class="comment">/**&lt; Number of TX queues. */</span></span><br><span class="line">	<span class="comment">/** Rx parameter recommendations */</span></span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">rte_eth_dev_portconf</span> <span class="title">default_rxportconf</span>;</span></span><br><span class="line">	<span class="comment">/** Tx parameter recommendations */</span></span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">rte_eth_dev_portconf</span> <span class="title">default_txportconf</span>;</span></span><br><span class="line">	<span class="comment">/** Generic device capabilities (RTE_ETH_DEV_CAPA_). */</span></span><br><span class="line">	<span class="type">uint64_t</span> dev_capa;</span><br><span class="line">	<span class="comment">/**</span></span><br><span class="line"><span class="comment">	 * Switching information for ports on a device with a</span></span><br><span class="line"><span class="comment">	 * embedded managed interconnect/switch.</span></span><br><span class="line"><span class="comment">	 */</span></span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">rte_eth_switch_info</span> <span class="title">switch_info</span>;</span></span><br><span class="line"></span><br><span class="line">	<span class="type">uint64_t</span> reserved_64s[<span class="number">2</span>]; <span class="comment">/**&lt; Reserved for future fields */</span></span><br><span class="line">	<span class="type">void</span> *reserved_ptrs[<span class="number">2</span>];   <span class="comment">/**&lt; Reserved for future fields */</span></span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+<p>应用程序中往往执行下面的两行代码就可以拿到，</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">rte_eth_dev_info portInfo;</span><br><span class="line">rte_eth_dev_info_get(Id, &amp;portInfo);</span><br></pre></td></tr></table></figure>
+<p>id一般从0开始，如果系统中有两个网卡绑定了用户态驱动，那么通过0，1就可以获取这两张网卡设备的信息。</p>
+<p>查了一下自己用的<code>igb_uio</code>驱动的源码，比较重要的映射功能实现主要是下面的probe函数</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br><span class="line">102</span><br><span class="line">103</span><br><span class="line">104</span><br><span class="line">105</span><br><span class="line">106</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">static</span> <span class="type">int</span></span><br><span class="line"><span class="meta">#<span class="keyword">endif</span></span></span><br><span class="line">igbuio_pci_probe(<span class="keyword">struct</span> pci_dev *dev, <span class="type">const</span> <span class="keyword">struct</span> pci_device_id *id)</span><br><span class="line">&#123;</span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">rte_uio_pci_dev</span> *<span class="title">udev</span>;</span></span><br><span class="line">	<span class="type">dma_addr_t</span> map_dma_addr;</span><br><span class="line">	<span class="type">void</span> *map_addr;</span><br><span class="line">	<span class="type">int</span> err;</span><br><span class="line"></span><br><span class="line"><span class="meta">#<span class="keyword">ifdef</span> HAVE_PCI_IS_BRIDGE_API</span></span><br><span class="line">	<span class="keyword">if</span> (pci_is_bridge(dev)) &#123;</span><br><span class="line">		dev_warn(&amp;dev-&gt;dev, <span class="string">&quot;Ignoring PCI bridge device\n&quot;</span>);</span><br><span class="line">		<span class="keyword">return</span> -ENODEV;</span><br><span class="line">	&#125;</span><br><span class="line"><span class="meta">#<span class="keyword">endif</span></span></span><br><span class="line"></span><br><span class="line">	udev = kzalloc(<span class="keyword">sizeof</span>(<span class="keyword">struct</span> rte_uio_pci_dev), GFP_KERNEL);</span><br><span class="line">	<span class="keyword">if</span> (!udev)</span><br><span class="line">		<span class="keyword">return</span> -ENOMEM;</span><br><span class="line"></span><br><span class="line">	<span class="comment">/*</span></span><br><span class="line"><span class="comment">	 * enable device: ask low-level code to enable I/O and</span></span><br><span class="line"><span class="comment">	 * memory</span></span><br><span class="line"><span class="comment">	 */</span></span><br><span class="line">	err = pci_enable_device(dev);</span><br><span class="line">	<span class="keyword">if</span> (err != <span class="number">0</span>) &#123;</span><br><span class="line">		dev_err(&amp;dev-&gt;dev, <span class="string">&quot;Cannot enable PCI device\n&quot;</span>);</span><br><span class="line">		<span class="keyword">goto</span> fail_free;</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	<span class="comment">/* enable bus mastering on the device */</span></span><br><span class="line">	pci_set_master(dev);</span><br><span class="line"></span><br><span class="line">	<span class="comment">/* remap IO memory */</span></span><br><span class="line">	err = igbuio_setup_bars(dev, &amp;udev-&gt;info);</span><br><span class="line">	<span class="keyword">if</span> (err != <span class="number">0</span>)</span><br><span class="line">		<span class="keyword">goto</span> fail_release_iomem;</span><br><span class="line"></span><br><span class="line">	<span class="comment">/* set 64-bit DMA mask */</span></span><br><span class="line">	err = pci_set_dma_mask(dev,  DMA_BIT_MASK(<span class="number">64</span>));</span><br><span class="line">	<span class="keyword">if</span> (err != <span class="number">0</span>) &#123;</span><br><span class="line">		dev_err(&amp;dev-&gt;dev, <span class="string">&quot;Cannot set DMA mask\n&quot;</span>);</span><br><span class="line">		<span class="keyword">goto</span> fail_release_iomem;</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	err = pci_set_consistent_dma_mask(dev, DMA_BIT_MASK(<span class="number">64</span>));</span><br><span class="line">	<span class="keyword">if</span> (err != <span class="number">0</span>) &#123;</span><br><span class="line">		dev_err(&amp;dev-&gt;dev, <span class="string">&quot;Cannot set consistent DMA mask\n&quot;</span>);</span><br><span class="line">		<span class="keyword">goto</span> fail_release_iomem;</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	<span class="comment">/* fill uio infos */</span></span><br><span class="line">	udev-&gt;info.name = <span class="string">&quot;igb_uio&quot;</span>;</span><br><span class="line">	udev-&gt;info.version = <span class="string">&quot;0.1&quot;</span>;</span><br><span class="line">	udev-&gt;info.irqcontrol = igbuio_pci_irqcontrol;</span><br><span class="line">	udev-&gt;info.open = igbuio_pci_open;</span><br><span class="line">	udev-&gt;info.release = igbuio_pci_release;</span><br><span class="line">	udev-&gt;info.priv = udev;</span><br><span class="line">	udev-&gt;pdev = dev;</span><br><span class="line">	<span class="type">atomic_set</span>(&amp;udev-&gt;refcnt, <span class="number">0</span>);</span><br><span class="line"></span><br><span class="line">	err = sysfs_create_group(&amp;dev-&gt;dev.kobj, &amp;dev_attr_grp);</span><br><span class="line">	<span class="keyword">if</span> (err != <span class="number">0</span>)</span><br><span class="line">		<span class="keyword">goto</span> fail_release_iomem;</span><br><span class="line"></span><br><span class="line">	<span class="comment">/* register uio driver */</span></span><br><span class="line">	err = uio_register_device(&amp;dev-&gt;dev, &amp;udev-&gt;info);</span><br><span class="line">	<span class="keyword">if</span> (err != <span class="number">0</span>)</span><br><span class="line">		<span class="keyword">goto</span> fail_remove_group;</span><br><span class="line"></span><br><span class="line">	pci_set_drvdata(dev, udev);</span><br><span class="line"></span><br><span class="line">	<span class="comment">/*</span></span><br><span class="line"><span class="comment">	 * Doing a harmless dma mapping for attaching the device to</span></span><br><span class="line"><span class="comment">	 * the iommu identity mapping if kernel boots with iommu=pt.</span></span><br><span class="line"><span class="comment">	 * Note this is not a problem if no IOMMU at all.</span></span><br><span class="line"><span class="comment">	 */</span></span><br><span class="line">	map_addr = dma_alloc_coherent(&amp;dev-&gt;dev, <span class="number">1024</span>, &amp;map_dma_addr,</span><br><span class="line">			GFP_KERNEL);</span><br><span class="line">	<span class="keyword">if</span> (map_addr)</span><br><span class="line">		<span class="built_in">memset</span>(map_addr, <span class="number">0</span>, <span class="number">1024</span>);</span><br><span class="line"></span><br><span class="line">	<span class="keyword">if</span> (!map_addr)</span><br><span class="line">		dev_info(&amp;dev-&gt;dev, <span class="string">&quot;dma mapping failed\n&quot;</span>);</span><br><span class="line">	<span class="keyword">else</span> &#123;</span><br><span class="line">		dev_info(&amp;dev-&gt;dev, <span class="string">&quot;mapping 1K dma=%#llx host=%p\n&quot;</span>,</span><br><span class="line">			 (<span class="type">unsigned</span> <span class="type">long</span> <span class="type">long</span>)map_dma_addr, map_addr);</span><br><span class="line"></span><br><span class="line">		dma_free_coherent(&amp;dev-&gt;dev, <span class="number">1024</span>, map_addr, map_dma_addr);</span><br><span class="line">		dev_info(&amp;dev-&gt;dev, <span class="string">&quot;unmapping 1K dma=%#llx host=%p\n&quot;</span>,</span><br><span class="line">			 (<span class="type">unsigned</span> <span class="type">long</span> <span class="type">long</span>)map_dma_addr, map_addr);</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	<span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line"></span><br><span class="line">fail_remove_group:</span><br><span class="line">	sysfs_remove_group(&amp;dev-&gt;dev.kobj, &amp;dev_attr_grp);</span><br><span class="line">fail_release_iomem:</span><br><span class="line">	igbuio_pci_release_iomem(&amp;udev-&gt;info);</span><br><span class="line">	pci_disable_device(dev);</span><br><span class="line">fail_free:</span><br><span class="line">	kfree(udev);</span><br><span class="line"></span><br><span class="line">	<span class="keyword">return</span> err;</span><br><span class="line">&#125;</span><br><span class="line"></span><br></pre></td></tr></table></figure>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">err = igbuio_setup_bars(dev, &amp;udev-&gt;info);</span><br></pre></td></tr></table></figure>
+<p>函数的作用是读取当前设备的所有<code>PCI BAR</code>的信息，并存储到uio_info结构体中。<code>PCI BAR</code>是一种存储基地址的寄存器，它可以指示设备内部的内存或<code>I/O</code>端口的位置和大小。这些信息在后续注册<code>UIO</code>设备时需要使用，以便用户程序可以通过<code>mmap</code>函数映射<code>/dev/uioX</code>文件到用户空间的虚拟地址，并根据偏移量访问不同的<code>PCI BAR</code>区域。</p>
+<p>看到下面这两个指针的定义就觉得不简单</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">dma_addr_t</span> map_dma_addr;</span><br><span class="line"><span class="type">void</span> *map_addr;</span><br><span class="line">...</span><br><span class="line">    </span><br><span class="line"><span class="comment">//之后</span></span><br><span class="line">map_addr = dma_alloc_coherent(&amp;dev-&gt;dev, <span class="number">1024</span>, &amp;map_dma_addr,GFP_KERNEL);</span><br></pre></td></tr></table></figure>
+<p><code>dma_alloc_coherent</code>是一个用于分配一致性<code>DMA</code>内存的函数。一致性<code>DMA</code>内存是指可以被设备和<code>CPU</code>同时访问而不需要考虑缓存效应的内存。</p>
+<p><code>dma_alloc_coherent</code>函数接受四个参数：第一个参数<code>dev</code>是一个<code>struct device</code>指针，用于指定要执行<code>DMA</code>的设备；第二个参数<code>size</code>是要分配的内存大小；第三个参数是一个<code>dma_addr_t</code>指针，用于返回分配的内存的<code>DMA</code>地址；<code>flag</code>是一个<code>gfp_t</code>类型，用于指定分配内存时的标志位，如<code>GFP_KERNEL</code>等。</p>
+<p><code>dma_alloc_coherent</code>函数返回两个值：用于CPU访问的虚拟地址<code>cpu_addr</code>和用于设备访问的<code>DMA</code>地址<code>dma_addr_t</code>。这两个地址可能不相同，因为可能存在物理地址和总线地址之间的转换。因此，在CPU端要使用<code>cpu_addr</code>来操作分配的内存，在设备端要使用<code>dma_addr_t</code>来作为<code>DMA</code>源或目标地址</p>
+<p>经历这步之后，打印信息</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">dev_info(&amp;dev-&gt;dev, <span class="string">&quot;mapping 1K dma=%#llx host=%p\n&quot;</span>,</span><br><span class="line">			 (<span class="type">unsigned</span> <span class="type">long</span> <span class="type">long</span>)map_dma_addr, map_addr);</span><br><span class="line"></span><br></pre></td></tr></table></figure>
+<p>合理推测（不一定对哈），到时候数据包从网卡队列里头拿出来应该就是拿到这里面。</p>
+<p>可以将PCI设备的内存空间映射到用户空间，并提供中断处理功能。而PMD驱动程序由具体的网卡驱动程序支持。</p>
+<p>那直接总结好了：</p>
+<p>首先运行dpdk程序会要求我们将网卡绑定UIO驱动。我绑定的是<code>igb_uio</code></p>
+<p>UIO驱动是一种用户空间驱动，它可以让用户空间的程序直接访问和控制某些类型的设备，而不需要编写复杂的内核模块。UIO驱动的优点是简化了驱动程序的开发和维护，降低了内核崩溃的风险，提高了驱动程序的更新效率。UIO驱动适用于那些具有可映射的内存空间，可以通过内存写入来控制，通常会产生中断，并且不属于标准内核子系统范畴的设备。</p>
+<p>UIO驱动的工作原理是通过一个字符设备文件和一些sysfs属性文件来访问和管理设备。字符设备文件通常命名为/dev/uio0, /dev/uio1等等。用户空间的程序可以通过mmap()函数将设备文件映射到自己的地址空间，并通过读写该地址空间来访问和控制设备的寄存器或RAM位置。用户空间的程序还可以通过read()或select()函数来等待和处理设备产生的中断。sysfs属性文件则提供了一些关于设备名称、版本、映射大小、中断号等信息。</p>
+<p>（Poll Mode Drivers）网卡驱动。该驱动由用户态的 API 以及 PMD Driver 构成，内核态的 UIO Driver 屏蔽了网卡发出的中断信号，然后由用户态的 PMD Driver 采用主动轮询的方式。除了链路状态通知仍必须采用中断方式以外，均使用无中断方式直接操作网卡设备的接收和发送队列。</p>
+<p>PMD Driver 从网卡上接收到数据包后，会直接通过 DMA 方式传输到预分配的内存中，同时更新无锁环形队列中的数据包指针，不断轮询的应用程序很快就能感知收到数据包，并在预分配的内存地址上直接处理数据包，这个过程非常简洁。</p>
+<p>PMD 极大提升了网卡 I/O 性能。此外，PMD 还同时支持物理和虚拟两种网络接口，支持 Intel、Cisco、Broadcom、Mellanox、Chelsio 等整个行业生态系统的网卡设备，以及支持基于 KVM、VMware、 Xen 等虚拟化网络接口。PMD 实现了 Intel 1GbE、10GbE 和 40GbE 网卡下基于轮询收发包。</p>
+<p>UIO+PMD，前者零拷贝，后者主动轮询避免了硬中断，DPDK 从而可以在用户态进行收发包的处理。带来了零拷贝（Zero Copy）、无系统调用（System call）的优化。同时，还避免了软中断的异步处理，也减少了上下文切换带来的 Cache Miss。</p>
+<p>igb_uio是一种PCI驱动，它可以将网卡设备绑定到用户态，并绕开内核的网络栈。它的主要工作流程如下：</p>
+<ul>
+<li>igb_uio模块初始化时，向内核注册一个pci_driver结构体，但不指定任何设备id。</li>
+<li>用户通过dpdk-devbind.py脚本将某个网卡设备绑定到igb_uio驱动，触发probe回调函数。</li>
+<li>probe回调函数中，首先使能当前设备，并设置DMA模式。</li>
+<li>然后调用igbuio_setup_bars函数，读取当前设备的所有PCI BAR的信息，并存储到uio_info结构体中。PCI BAR是一种存储基地址的寄存器，它可以指示设备内部的内存或I/O端口的位置和大小。</li>
+<li>接着初始化UIO设备的文件操作函数，如open、release、irqcontrol等。</li>
+<li>最后调用uio_register_device函数，将当前设备注册为UIO设备，并在sysfs文件系统下创建/dev/uioX文件接口。</li>
+<li>用户程序可以通过mmap函数，映射/dev/uioX文件到用户空间的虚拟地址，并根据偏移量访问不同的PCI BAR区域。这样就可以直接与网卡设备进行通信了。</li>
+</ul>
+<p>DPDK是一种数据平面开发工具包，它可以实现绕过内核的功能，提高网络I/O性能。DPDK的主要方法是：</p>
+<ul>
+<li>使用UIO或VFIO等机制，将网卡设备从内核驱动转移到用户态驱动，这样可以避免中断和系统调用的开销，直接访问网卡寄存器和描述符<a target="_blank" rel="noopener" href="https://www.dpdk.org/blog/2020/12/10/dpdk-welcomes-microsoft/">1</a><a target="_blank" rel="noopener" href="https://github.com/demikernel/demikernel">2</a><a target="_blank" rel="noopener" href="https://www.cnblogs.com/jungle1996/p/12398915.html">3</a>。</li>
+<li>使用大页内存和物理连续的内存池，分配和管理数据包缓冲区，这样可以减少TLB的开销，提高缓存命中率，降低延迟<a target="_blank" rel="noopener" href="https://pcapplusplus.github.io/docs/dpdk">4</a><a target="_blank" rel="noopener" href="https://github.com/gamemann/The-DPDK-Examples">5</a>。</li>
+<li>使用轮询模式的驱动，不依赖于中断，而是主动检查网卡的状态，并处理数据包<a target="_blank" rel="noopener" href="https://www.dpdk.org/blog/2020/12/10/dpdk-welcomes-microsoft/">3</a><a target="_blank" rel="noopener" href="https://github.com/demikernel/demikernel"></a><a target="_blank" rel="noopener" href="https://www.cnblogs.com/jungle1996/p/12398915.html"></a>。</li>
+</ul>
+<p>通过这些方法，DPDK可以实现不在内核的高性能网络I/O。</p>
+<p><strong>结论！！！！</strong></p>
+<p>网卡设备绑定igb_uio之后会将自己的硬件内部的内存空间 保存在sysfs的目录下，用户可以将这部分空间映射到用户空间。</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">static</span> <span class="keyword">inline</span> <span class="type">uint16_t</span></span><br><span class="line"><span class="title function_">rte_eth_rx_burst</span><span class="params">(<span class="type">uint16_t</span> port_id, <span class="type">uint16_t</span> queue_id,</span></span><br><span class="line"><span class="params">		 <span class="keyword">struct</span> rte_mbuf **rx_pkts, <span class="type">const</span> <span class="type">uint16_t</span> nb_pkts)</span>；</span><br></pre></td></tr></table></figure>
+<p>所以说这个接口底层逻辑就是通过<code>PMD</code>直接从网卡的硬件获取数据包保存在<code>rte_mbuf</code>中</p>
+<p>至于PMD的好处！</p>
+<p>PMD可以直接把网卡上的数据包存放到用户空间，是因为它使用了一些特殊的机制，如：</p>
+<ul>
+<li>UIO或VFIO等机制，可以将网卡设备从内核驱动转移到用户态驱动，这样可以避免中断和系统调用的开销，直接访问网卡寄存器和描述符<a target="_blank" rel="noopener" href="https://www.pmd.com/"></a></li>
+<li>大页内存和物理连续的内存池，可以分配和管理数据包缓冲区，这样可以减少TLB的开销，提高缓存命中率，降低延迟。</li>
+</ul>
+<p>通过这些机制，PMD可以实现不经过内核的高效数据传输。</p>
+
+          
+        
+      
+    </div>
+    
+    
+    
+
+    
+
+    
+
+    
+
+    <footer class="post-footer">
+      
+
+      
+
+      
+
+      
+      
+        <div class="post-eof"></div>
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+      
+    
+      
+      
+      
+        
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
     <link itemprop="mainEntityOfPage" href="http://hanze5.github.io/2022/10/17/28-DPDK%E2%80%94%E2%80%94cpu%E4%BA%B2%E5%92%8C%E6%80%A7%E7%BA%BF%E7%A8%8B%E6%B1%A0/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
@@ -1961,164 +2171,6 @@
 
       
     
-      
-      
-      
-        
-
-  
-
-  
-  
-  
-
-  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
-  
-  
-  
-  <div class="post-block">
-    <link itemprop="mainEntityOfPage" href="http://hanze5.github.io/2022/07/23/26-Linux%E5%86%85%E6%A0%B8%E2%80%94%E2%80%94loopback%E8%AE%BE%E5%A4%87/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="name" content="">
-      <meta itemprop="description" content="">
-      <meta itemprop="image" content="/images/my_avatar.png">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="也许不会有人进来吧">
-    </span>
-
-    
-      <header class="post-header">
-
-        
-        
-          <h1 class="post-title" itemprop="name headline">
-                
-                <a class="post-title-link" href="/2022/07/23/26-Linux%E5%86%85%E6%A0%B8%E2%80%94%E2%80%94loopback%E8%AE%BE%E5%A4%87/" itemprop="url">Linux内核——loopback驱动</a></h1>
-        
-
-        <div class="post-meta">
-          <span class="post-time">
-            
-              <span class="post-meta-item-icon">
-                <i class="fa fa-calendar-o"></i>
-              </span>
-              
-                <span class="post-meta-item-text">发表于</span>
-              
-              <time title="创建于" itemprop="dateCreated datePublished" datetime="2022-07-23T15:07:51+08:00">
-                2022-07-23
-              </time>
-            
-
-            
-
-            
-          </span>
-
-          
-            <span class="post-category" >
-            
-              <span class="post-meta-divider">|</span>
-            
-              <span class="post-meta-item-icon">
-                <i class="fa fa-folder-o"></i>
-              </span>
-              
-                <span class="post-meta-item-text">分类于</span>
-              
-              
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/%E5%AD%A6%E6%97%A0%E6%AD%A2%E5%A2%83/" itemprop="url" rel="index">
-                    <span itemprop="name">学无止境</span>
-                  </a>
-                </span>
-
-                
-                
-              
-            </span>
-          
-
-          
-            
-          
-
-          
-          
-
-          
-
-          
-
-          
-
-        </div>
-      </header>
-    
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-      
-
-      
-        
-          
-            <p>跟着简叔学的，可以B站搜索 <strong>简说linux</strong></p>
-<h2 id="loopback设备网卡设备"><a href="#loopback设备网卡设备" class="headerlink" title="loopback设备网卡设备"></a>loopback设备网卡设备</h2><p>本地环回接口(或地址)，亦称回送地址(loopback address)。真实的网卡设备工作在数据链路层，负责不同网卡设备之间的信号传输和转化。如果ifconfig查看，ens代表着真实的网卡设备，lo代表loopback网卡设备。该网卡设备并不是真实存在的，它存在的意义是什么呢。</p>
-<p><img src="/images/26/1678235466381.png" alt="1678235466381"></p>
-<p>lo网卡设将发送队列和接收队列接在了一起，因此上层应用给lo发送了什么，它就给你返回什么。通过这种特殊结构可测试协议栈是否正常工作，当使用命令,数据从应用层转到协议栈最后到lo设备，如果说协议栈功能是ok的，那么数据包从lo发出去后就应该收到正确的回应。</p>
-<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">ping 127.0.0.1 -c l</span><br></pre></td></tr></table></figure>
-<p><img src="/images/26/1678235993619.png" alt="1678235993619"></p>
-<p>那么基于lo这种机制，还可以实现不同进程之间的通信，这是一种网络通信。通过不同端口号就可以进行不同进程的通信，就和正常的socket通信一样。</p>
-<h2 id="loopback驱动源码"><a href="#loopback驱动源码" class="headerlink" title="loopback驱动源码"></a>loopback驱动源码</h2><p>文件路径：/drivers/net/loopback.c</p>
-<h3 id="1-入口函数"><a href="#1-入口函数" class="headerlink" title="1.入口函数"></a>1.入口函数</h3><p>总的来看，也还是初始化一个device，把自定义的函数挂载到device的函数指针上。然后把这个device拿去注册。</p>
-<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br></pre></td><td class="code"><pre><span class="line"></span><br><span class="line"><span class="comment">/* Setup and register the loopback device. */</span></span><br><span class="line"><span class="type">static</span> __net_init <span class="type">int</span> <span class="title function_">loopback_net_init</span><span class="params">(<span class="keyword">struct</span> net *net)</span></span><br><span class="line">&#123;</span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">net_device</span> *<span class="title">dev</span>;</span>                <span class="comment">//定义一个指针变量 指向网络设备结构体struct net_device</span></span><br><span class="line">	<span class="type">int</span> err;</span><br><span class="line"></span><br><span class="line">	err = -ENOMEM;</span><br><span class="line">    <span class="comment">//初始化 net_device </span></span><br><span class="line">    <span class="comment">/*</span></span><br><span class="line"><span class="comment">    	alloc_netdev 同样在net/core/dev.c中定义 在这里面申请net_device的空间 并且进行一系列初始化</span></span><br><span class="line"><span class="comment">    	第四个参数是一个函数指针，具体放在下面，也是相当于对dev做进一步的初始化 </span></span><br><span class="line"><span class="comment">    	因此这个函数结束时候呢相当于给函数指针挂在了我们自定义的实现</span></span><br><span class="line"><span class="comment">    */</span></span><br><span class="line">	dev = alloc_netdev(<span class="number">0</span>, <span class="string">&quot;lo&quot;</span>, NET_NAME_UNKNOWN, loopback_setup);</span><br><span class="line">	<span class="keyword">if</span> (!dev)</span><br><span class="line">		<span class="keyword">goto</span> out;</span><br><span class="line"></span><br><span class="line">	dev_net_set(dev, net);                      <span class="comment">//注册net dev</span></span><br><span class="line">	err = register_netdev(dev);</span><br><span class="line">	<span class="keyword">if</span> (err)</span><br><span class="line">		<span class="keyword">goto</span> out_free_netdev;</span><br><span class="line"></span><br><span class="line">	BUG_ON(dev-&gt;ifindex != LOOPBACK_IFINDEX);</span><br><span class="line">	net-&gt;loopback_dev = dev;</span><br><span class="line">	<span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">out_free_netdev:</span><br><span class="line">	free_netdev(dev);</span><br><span class="line">out:</span><br><span class="line">	<span class="keyword">if</span> (net_eq(net, &amp;init_net))</span><br><span class="line">		panic(<span class="string">&quot;loopback: Failed to register netdevice: %d\n&quot;</span>, err);</span><br><span class="line">	<span class="keyword">return</span> err;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">/* Registered in net/core/dev.c */</span></span><br><span class="line"><span class="comment">//定义一个结构体，该结构体是在 net/core/dev.c 里面去注册的</span></span><br><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">pernet_operations</span> __<span class="title">net_initdata</span> <span class="title">loopback_net_ops</span> =</span> &#123;</span><br><span class="line">       .init = loopback_net_init,</span><br><span class="line">&#125;;</span><br><span class="line"></span><br><span class="line"><span class="comment">/*</span></span><br><span class="line"><span class="comment"> * The loopback device is special. There is only one instance</span></span><br><span class="line"><span class="comment"> * per network namespace.</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="type">static</span> <span class="type">void</span> <span class="title function_">loopback_setup</span><span class="params">(<span class="keyword">struct</span> net_device *dev)</span></span><br><span class="line">&#123;</span><br><span class="line">	dev-&gt;mtu		= <span class="number">64</span> * <span class="number">1024</span>;        <span class="comment">//最大数据包长度 64K 但是一般真实网络设备受限于底层设备的传输能力，但是lo没有这种显示</span></span><br><span class="line">	dev-&gt;hard_header_len	= ETH_HLEN;	<span class="comment">/* 14 数据链路层头部长度	*/</span></span><br><span class="line">	dev-&gt;min_header_len	= ETH_HLEN;	<span class="comment">/* 14	*/</span></span><br><span class="line">	dev-&gt;addr_len		= ETH_ALEN;	<span class="comment">/* 以太网地址 6个字节	*/</span></span><br><span class="line">	dev-&gt;type		= ARPHRD_LOOPBACK;	<span class="comment">/* 0x0001*/</span></span><br><span class="line">	dev-&gt;flags		= IFF_LOOPBACK;</span><br><span class="line">	dev-&gt;priv_flags		|= IFF_LIVE_ADDR_CHANGE | IFF_NO_QUEUE;</span><br><span class="line">	netif_keep_dst(dev);</span><br><span class="line">	dev-&gt;hw_features	= NETIF_F_GSO_SOFTWARE;</span><br><span class="line">	dev-&gt;features 		= NETIF_F_SG | NETIF_F_FRAGLIST</span><br><span class="line">		| NETIF_F_GSO_SOFTWARE</span><br><span class="line">		| NETIF_F_HW_CSUM</span><br><span class="line">		| NETIF_F_RXCSUM</span><br><span class="line">		| NETIF_F_SCTP_CRC</span><br><span class="line">		| NETIF_F_HIGHDMA</span><br><span class="line">		| NETIF_F_LLTX</span><br><span class="line">		| NETIF_F_NETNS_LOCAL</span><br><span class="line">		| NETIF_F_VLAN_CHALLENGED</span><br><span class="line">		| NETIF_F_LOOPBACK;					</span><br><span class="line">    <span class="comment">//针对操作进行一些赋值</span></span><br><span class="line">	dev-&gt;ethtool_ops	= &amp;loopback_ethtool_ops; <span class="comment">//用来支持ethtool的 ethtool可以查询和配置一些网卡信息 </span></span><br><span class="line">	dev-&gt;header_ops		= &amp;eth_header_ops;</span><br><span class="line">	dev-&gt;netdev_ops		= &amp;loopback_ops;</span><br><span class="line">	dev-&gt;destructor		= loopback_dev_free;     <span class="comment">//析构 </span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-<p>针对上面的：<code>dev-&gt;netdev_ops    = &amp;loopback_ops;</code>，就是网络设备固定的一些操作，net_device_ops包含的操作实际上非常多，这里面就实现了4个。如果没有这一步的话，就会使用系统提供的默认的实现，</p>
-<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">static</span> <span class="type">const</span> <span class="class"><span class="keyword">struct</span> <span class="title">net_device_ops</span> <span class="title">loopback_ops</span> =</span> &#123;</span><br><span class="line">	.ndo_init      = loopback_dev_init,                <span class="comment">//初始化</span></span><br><span class="line">	.ndo_start_xmit= loopback_xmit,</span><br><span class="line">	.ndo_get_stats64 = loopback_get_stats64,</span><br><span class="line">	.ndo_set_mac_address = eth_mac_addr,                  <span class="comment">//设置mac地址</span></span><br><span class="line">&#125;;</span><br><span class="line"></span><br><span class="line"><span class="comment">//像是统计信息的初始化 dev-&gt;lstats是统计cpu发送接收的统计</span></span><br><span class="line"><span class="type">static</span> <span class="type">int</span> <span class="title function_">loopback_dev_init</span><span class="params">(<span class="keyword">struct</span> net_device *dev)</span></span><br><span class="line">&#123;</span><br><span class="line">	dev-&gt;lstats = netdev_alloc_pcpu_stats(<span class="keyword">struct</span> pcpu_lstats);</span><br><span class="line">	<span class="keyword">if</span> (!dev-&gt;lstats)</span><br><span class="line">		<span class="keyword">return</span> -ENOMEM;</span><br><span class="line">	<span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">&#125;</span><br><span class="line"><span class="comment">// 这个最后是被网络层发送 软中断来调用的  协议栈调用发送函数会调用这个发送数据</span></span><br><span class="line"><span class="comment">//第一个参数就包含了应用层所有发送的数据</span></span><br><span class="line"><span class="type">static</span> <span class="type">netdev_tx_t</span> <span class="title function_">loopback_xmit</span><span class="params">(<span class="keyword">struct</span> sk_buff *skb,</span></span><br><span class="line"><span class="params">				 <span class="keyword">struct</span> net_device *dev)</span></span><br><span class="line">&#123;</span><br><span class="line">    </span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">pcpu_lstats</span> *<span class="title">lb_stats</span>;</span></span><br><span class="line">	<span class="type">int</span> len;</span><br><span class="line"></span><br><span class="line">	skb_orphan(skb);</span><br><span class="line"></span><br><span class="line">	<span class="comment">/* Before queueing this packet to netif_rx(),</span></span><br><span class="line"><span class="comment">	 * make sure dst is refcounted.</span></span><br><span class="line"><span class="comment">	 */</span></span><br><span class="line">	skb_dst_force(skb);</span><br><span class="line"></span><br><span class="line">    <span class="comment">//指定协议</span></span><br><span class="line">	skb-&gt;protocol = eth_type_trans(skb, dev);</span><br><span class="line"></span><br><span class="line">	<span class="comment">/* it&#x27;s OK to use per_cpu_ptr() because BHs are off */</span></span><br><span class="line">	lb_stats = this_cpu_ptr(dev-&gt;lstats);</span><br><span class="line"></span><br><span class="line">    <span class="comment">//netif_rx()是协议栈提供的函数 网卡驱动可以通过这个函数把数据分包提交给协议栈</span></span><br><span class="line">    <span class="comment">//loopback的发送与接收倒是在一个函数实现 没接收到一个报就又转交给协议栈了 </span></span><br><span class="line">    <span class="comment">//所以判断语句内 是直接加了状态统计信息</span></span><br><span class="line">	len = skb-&gt;len;</span><br><span class="line">	<span class="keyword">if</span> (likely(netif_rx(skb) == NET_RX_SUCCESS)) &#123;</span><br><span class="line">		u64_stats_update_begin(&amp;lb_stats-&gt;syncp);</span><br><span class="line">		lb_stats-&gt;bytes += len;</span><br><span class="line">		lb_stats-&gt;packets++;</span><br><span class="line">		u64_stats_update_end(&amp;lb_stats-&gt;syncp);</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	<span class="keyword">return</span> NETDEV_TX_OK;</span><br><span class="line">&#125;</span><br><span class="line"><span class="comment">//返回统计信息</span></span><br><span class="line"><span class="type">static</span> <span class="keyword">struct</span> rtnl_link_stats64 *<span class="title function_">loopback_get_stats64</span><span class="params">(<span class="keyword">struct</span> net_device *dev,</span></span><br><span class="line"><span class="params">						      <span class="keyword">struct</span> rtnl_link_stats64 *stats)</span></span><br><span class="line">&#123;</span><br><span class="line">	u64 bytes = <span class="number">0</span>;</span><br><span class="line">	u64 packets = <span class="number">0</span>;</span><br><span class="line">	<span class="type">int</span> i;</span><br><span class="line">	<span class="comment">//统计所有cpu的首发数据的统计信息</span></span><br><span class="line">	for_each_possible_cpu(i) &#123;</span><br><span class="line">		<span class="type">const</span> <span class="class"><span class="keyword">struct</span> <span class="title">pcpu_lstats</span> *<span class="title">lb_stats</span>;</span></span><br><span class="line">		u64 tbytes, tpackets;</span><br><span class="line">		<span class="type">unsigned</span> <span class="type">int</span> start;</span><br><span class="line"></span><br><span class="line">		lb_stats = per_cpu_ptr(dev-&gt;lstats, i);</span><br><span class="line">		<span class="keyword">do</span> &#123;</span><br><span class="line">			start = u64_stats_fetch_begin_irq(&amp;lb_stats-&gt;syncp);</span><br><span class="line">			tbytes = lb_stats-&gt;bytes;</span><br><span class="line">			tpackets = lb_stats-&gt;packets;</span><br><span class="line">		&#125; <span class="keyword">while</span> (u64_stats_fetch_retry_irq(&amp;lb_stats-&gt;syncp, start));</span><br><span class="line">		bytes   += tbytes;</span><br><span class="line">		packets += tpackets;</span><br><span class="line">	&#125;</span><br><span class="line">    <span class="comment">//status保存的所有cpu的</span></span><br><span class="line">	stats-&gt;rx_packets = packets;</span><br><span class="line">	stats-&gt;tx_packets = packets;</span><br><span class="line">	stats-&gt;rx_bytes   = bytes;</span><br><span class="line">	stats-&gt;tx_bytes   = bytes;</span><br><span class="line">	<span class="keyword">return</span> stats;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-<p>主要就是定义了几个<code>callback</code>会在调用<code>alloc_netdev</code>时候注册进来。当上层的应用程序发包的时候协议栈里面的tx_softirq会去处理这些信息，然后调用<code>ndo_start_xmit= loopback_xmit</code>进行数据分包。另外还有统计功能。</p>
-
-          
-        
-      
-    </div>
-    
-    
-    
-
-    
-
-    
-
-    
-
-    <footer class="post-footer">
-      
-
-      
-
-      
-
-      
-      
-        <div class="post-eof"></div>
-      
-    </footer>
-  </div>
-  
-  
-  
-  </article>
-
-
-      
-    
   </section>
 
   
@@ -2173,7 +2225,7 @@
               
                 <a href="/">
               
-                  <span class="site-state-item-count">28</span>
+                  <span class="site-state-item-count">29</span>
                   <span class="site-state-item-name">日志</span>
                 </a>
               </div>

@@ -252,6 +252,164 @@
   
   
   <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="http://hanze5.github.io/2022/07/23/26-Linux%E5%86%85%E6%A0%B8%E2%80%94%E2%80%94loopback%E8%AE%BE%E5%A4%87/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/images/my_avatar.png">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="也许不会有人进来吧">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+                
+                <a class="post-title-link" href="/2022/07/23/26-Linux%E5%86%85%E6%A0%B8%E2%80%94%E2%80%94loopback%E8%AE%BE%E5%A4%87/" itemprop="url">Linux内核——loopback驱动</a></h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2022-07-23T15:07:51+08:00">
+                2022-07-23
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E5%AD%A6%E6%97%A0%E6%AD%A2%E5%A2%83/" itemprop="url" rel="index">
+                    <span itemprop="name">学无止境</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+          
+
+          
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        
+          
+            <p>跟着简叔学的，可以B站搜索 <strong>简说linux</strong></p>
+<h2 id="loopback设备网卡设备"><a href="#loopback设备网卡设备" class="headerlink" title="loopback设备网卡设备"></a>loopback设备网卡设备</h2><p>本地环回接口(或地址)，亦称回送地址(loopback address)。真实的网卡设备工作在数据链路层，负责不同网卡设备之间的信号传输和转化。如果ifconfig查看，ens代表着真实的网卡设备，lo代表loopback网卡设备。该网卡设备并不是真实存在的，它存在的意义是什么呢。</p>
+<p><img src="/images/26/1678235466381.png" alt="1678235466381"></p>
+<p>lo网卡设将发送队列和接收队列接在了一起，因此上层应用给lo发送了什么，它就给你返回什么。通过这种特殊结构可测试协议栈是否正常工作，当使用命令,数据从应用层转到协议栈最后到lo设备，如果说协议栈功能是ok的，那么数据包从lo发出去后就应该收到正确的回应。</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">ping 127.0.0.1 -c l</span><br></pre></td></tr></table></figure>
+<p><img src="/images/26/1678235993619.png" alt="1678235993619"></p>
+<p>那么基于lo这种机制，还可以实现不同进程之间的通信，这是一种网络通信。通过不同端口号就可以进行不同进程的通信，就和正常的socket通信一样。</p>
+<h2 id="loopback驱动源码"><a href="#loopback驱动源码" class="headerlink" title="loopback驱动源码"></a>loopback驱动源码</h2><p>文件路径：/drivers/net/loopback.c</p>
+<h3 id="1-入口函数"><a href="#1-入口函数" class="headerlink" title="1.入口函数"></a>1.入口函数</h3><p>总的来看，也还是初始化一个device，把自定义的函数挂载到device的函数指针上。然后把这个device拿去注册。</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br></pre></td><td class="code"><pre><span class="line"></span><br><span class="line"><span class="comment">/* Setup and register the loopback device. */</span></span><br><span class="line"><span class="type">static</span> __net_init <span class="type">int</span> <span class="title function_">loopback_net_init</span><span class="params">(<span class="keyword">struct</span> net *net)</span></span><br><span class="line">&#123;</span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">net_device</span> *<span class="title">dev</span>;</span>                <span class="comment">//定义一个指针变量 指向网络设备结构体struct net_device</span></span><br><span class="line">	<span class="type">int</span> err;</span><br><span class="line"></span><br><span class="line">	err = -ENOMEM;</span><br><span class="line">    <span class="comment">//初始化 net_device </span></span><br><span class="line">    <span class="comment">/*</span></span><br><span class="line"><span class="comment">    	alloc_netdev 同样在net/core/dev.c中定义 在这里面申请net_device的空间 并且进行一系列初始化</span></span><br><span class="line"><span class="comment">    	第四个参数是一个函数指针，具体放在下面，也是相当于对dev做进一步的初始化 </span></span><br><span class="line"><span class="comment">    	因此这个函数结束时候呢相当于给函数指针挂在了我们自定义的实现</span></span><br><span class="line"><span class="comment">    */</span></span><br><span class="line">	dev = alloc_netdev(<span class="number">0</span>, <span class="string">&quot;lo&quot;</span>, NET_NAME_UNKNOWN, loopback_setup);</span><br><span class="line">	<span class="keyword">if</span> (!dev)</span><br><span class="line">		<span class="keyword">goto</span> out;</span><br><span class="line"></span><br><span class="line">	dev_net_set(dev, net);                      <span class="comment">//注册net dev</span></span><br><span class="line">	err = register_netdev(dev);</span><br><span class="line">	<span class="keyword">if</span> (err)</span><br><span class="line">		<span class="keyword">goto</span> out_free_netdev;</span><br><span class="line"></span><br><span class="line">	BUG_ON(dev-&gt;ifindex != LOOPBACK_IFINDEX);</span><br><span class="line">	net-&gt;loopback_dev = dev;</span><br><span class="line">	<span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">out_free_netdev:</span><br><span class="line">	free_netdev(dev);</span><br><span class="line">out:</span><br><span class="line">	<span class="keyword">if</span> (net_eq(net, &amp;init_net))</span><br><span class="line">		panic(<span class="string">&quot;loopback: Failed to register netdevice: %d\n&quot;</span>, err);</span><br><span class="line">	<span class="keyword">return</span> err;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">/* Registered in net/core/dev.c */</span></span><br><span class="line"><span class="comment">//定义一个结构体，该结构体是在 net/core/dev.c 里面去注册的</span></span><br><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">pernet_operations</span> __<span class="title">net_initdata</span> <span class="title">loopback_net_ops</span> =</span> &#123;</span><br><span class="line">       .init = loopback_net_init,</span><br><span class="line">&#125;;</span><br><span class="line"></span><br><span class="line"><span class="comment">/*</span></span><br><span class="line"><span class="comment"> * The loopback device is special. There is only one instance</span></span><br><span class="line"><span class="comment"> * per network namespace.</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="type">static</span> <span class="type">void</span> <span class="title function_">loopback_setup</span><span class="params">(<span class="keyword">struct</span> net_device *dev)</span></span><br><span class="line">&#123;</span><br><span class="line">	dev-&gt;mtu		= <span class="number">64</span> * <span class="number">1024</span>;        <span class="comment">//最大数据包长度 64K 但是一般真实网络设备受限于底层设备的传输能力，但是lo没有这种显示</span></span><br><span class="line">	dev-&gt;hard_header_len	= ETH_HLEN;	<span class="comment">/* 14 数据链路层头部长度	*/</span></span><br><span class="line">	dev-&gt;min_header_len	= ETH_HLEN;	<span class="comment">/* 14	*/</span></span><br><span class="line">	dev-&gt;addr_len		= ETH_ALEN;	<span class="comment">/* 以太网地址 6个字节	*/</span></span><br><span class="line">	dev-&gt;type		= ARPHRD_LOOPBACK;	<span class="comment">/* 0x0001*/</span></span><br><span class="line">	dev-&gt;flags		= IFF_LOOPBACK;</span><br><span class="line">	dev-&gt;priv_flags		|= IFF_LIVE_ADDR_CHANGE | IFF_NO_QUEUE;</span><br><span class="line">	netif_keep_dst(dev);</span><br><span class="line">	dev-&gt;hw_features	= NETIF_F_GSO_SOFTWARE;</span><br><span class="line">	dev-&gt;features 		= NETIF_F_SG | NETIF_F_FRAGLIST</span><br><span class="line">		| NETIF_F_GSO_SOFTWARE</span><br><span class="line">		| NETIF_F_HW_CSUM</span><br><span class="line">		| NETIF_F_RXCSUM</span><br><span class="line">		| NETIF_F_SCTP_CRC</span><br><span class="line">		| NETIF_F_HIGHDMA</span><br><span class="line">		| NETIF_F_LLTX</span><br><span class="line">		| NETIF_F_NETNS_LOCAL</span><br><span class="line">		| NETIF_F_VLAN_CHALLENGED</span><br><span class="line">		| NETIF_F_LOOPBACK;					</span><br><span class="line">    <span class="comment">//针对操作进行一些赋值</span></span><br><span class="line">	dev-&gt;ethtool_ops	= &amp;loopback_ethtool_ops; <span class="comment">//用来支持ethtool的 ethtool可以查询和配置一些网卡信息 </span></span><br><span class="line">	dev-&gt;header_ops		= &amp;eth_header_ops;</span><br><span class="line">	dev-&gt;netdev_ops		= &amp;loopback_ops;</span><br><span class="line">	dev-&gt;destructor		= loopback_dev_free;     <span class="comment">//析构 </span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>针对上面的：<code>dev-&gt;netdev_ops    = &amp;loopback_ops;</code>，就是网络设备固定的一些操作，net_device_ops包含的操作实际上非常多，这里面就实现了4个。如果没有这一步的话，就会使用系统提供的默认的实现，</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">static</span> <span class="type">const</span> <span class="class"><span class="keyword">struct</span> <span class="title">net_device_ops</span> <span class="title">loopback_ops</span> =</span> &#123;</span><br><span class="line">	.ndo_init      = loopback_dev_init,                <span class="comment">//初始化</span></span><br><span class="line">	.ndo_start_xmit= loopback_xmit,</span><br><span class="line">	.ndo_get_stats64 = loopback_get_stats64,</span><br><span class="line">	.ndo_set_mac_address = eth_mac_addr,                  <span class="comment">//设置mac地址</span></span><br><span class="line">&#125;;</span><br><span class="line"></span><br><span class="line"><span class="comment">//像是统计信息的初始化 dev-&gt;lstats是统计cpu发送接收的统计</span></span><br><span class="line"><span class="type">static</span> <span class="type">int</span> <span class="title function_">loopback_dev_init</span><span class="params">(<span class="keyword">struct</span> net_device *dev)</span></span><br><span class="line">&#123;</span><br><span class="line">	dev-&gt;lstats = netdev_alloc_pcpu_stats(<span class="keyword">struct</span> pcpu_lstats);</span><br><span class="line">	<span class="keyword">if</span> (!dev-&gt;lstats)</span><br><span class="line">		<span class="keyword">return</span> -ENOMEM;</span><br><span class="line">	<span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">&#125;</span><br><span class="line"><span class="comment">// 这个最后是被网络层发送 软中断来调用的  协议栈调用发送函数会调用这个发送数据</span></span><br><span class="line"><span class="comment">//第一个参数就包含了应用层所有发送的数据</span></span><br><span class="line"><span class="type">static</span> <span class="type">netdev_tx_t</span> <span class="title function_">loopback_xmit</span><span class="params">(<span class="keyword">struct</span> sk_buff *skb,</span></span><br><span class="line"><span class="params">				 <span class="keyword">struct</span> net_device *dev)</span></span><br><span class="line">&#123;</span><br><span class="line">    </span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">pcpu_lstats</span> *<span class="title">lb_stats</span>;</span></span><br><span class="line">	<span class="type">int</span> len;</span><br><span class="line"></span><br><span class="line">	skb_orphan(skb);</span><br><span class="line"></span><br><span class="line">	<span class="comment">/* Before queueing this packet to netif_rx(),</span></span><br><span class="line"><span class="comment">	 * make sure dst is refcounted.</span></span><br><span class="line"><span class="comment">	 */</span></span><br><span class="line">	skb_dst_force(skb);</span><br><span class="line"></span><br><span class="line">    <span class="comment">//指定协议</span></span><br><span class="line">	skb-&gt;protocol = eth_type_trans(skb, dev);</span><br><span class="line"></span><br><span class="line">	<span class="comment">/* it&#x27;s OK to use per_cpu_ptr() because BHs are off */</span></span><br><span class="line">	lb_stats = this_cpu_ptr(dev-&gt;lstats);</span><br><span class="line"></span><br><span class="line">    <span class="comment">//netif_rx()是协议栈提供的函数 网卡驱动可以通过这个函数把数据分包提交给协议栈</span></span><br><span class="line">    <span class="comment">//loopback的发送与接收倒是在一个函数实现 没接收到一个报就又转交给协议栈了 </span></span><br><span class="line">    <span class="comment">//所以判断语句内 是直接加了状态统计信息</span></span><br><span class="line">	len = skb-&gt;len;</span><br><span class="line">	<span class="keyword">if</span> (likely(netif_rx(skb) == NET_RX_SUCCESS)) &#123;</span><br><span class="line">		u64_stats_update_begin(&amp;lb_stats-&gt;syncp);</span><br><span class="line">		lb_stats-&gt;bytes += len;</span><br><span class="line">		lb_stats-&gt;packets++;</span><br><span class="line">		u64_stats_update_end(&amp;lb_stats-&gt;syncp);</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	<span class="keyword">return</span> NETDEV_TX_OK;</span><br><span class="line">&#125;</span><br><span class="line"><span class="comment">//返回统计信息</span></span><br><span class="line"><span class="type">static</span> <span class="keyword">struct</span> rtnl_link_stats64 *<span class="title function_">loopback_get_stats64</span><span class="params">(<span class="keyword">struct</span> net_device *dev,</span></span><br><span class="line"><span class="params">						      <span class="keyword">struct</span> rtnl_link_stats64 *stats)</span></span><br><span class="line">&#123;</span><br><span class="line">	u64 bytes = <span class="number">0</span>;</span><br><span class="line">	u64 packets = <span class="number">0</span>;</span><br><span class="line">	<span class="type">int</span> i;</span><br><span class="line">	<span class="comment">//统计所有cpu的首发数据的统计信息</span></span><br><span class="line">	for_each_possible_cpu(i) &#123;</span><br><span class="line">		<span class="type">const</span> <span class="class"><span class="keyword">struct</span> <span class="title">pcpu_lstats</span> *<span class="title">lb_stats</span>;</span></span><br><span class="line">		u64 tbytes, tpackets;</span><br><span class="line">		<span class="type">unsigned</span> <span class="type">int</span> start;</span><br><span class="line"></span><br><span class="line">		lb_stats = per_cpu_ptr(dev-&gt;lstats, i);</span><br><span class="line">		<span class="keyword">do</span> &#123;</span><br><span class="line">			start = u64_stats_fetch_begin_irq(&amp;lb_stats-&gt;syncp);</span><br><span class="line">			tbytes = lb_stats-&gt;bytes;</span><br><span class="line">			tpackets = lb_stats-&gt;packets;</span><br><span class="line">		&#125; <span class="keyword">while</span> (u64_stats_fetch_retry_irq(&amp;lb_stats-&gt;syncp, start));</span><br><span class="line">		bytes   += tbytes;</span><br><span class="line">		packets += tpackets;</span><br><span class="line">	&#125;</span><br><span class="line">    <span class="comment">//status保存的所有cpu的</span></span><br><span class="line">	stats-&gt;rx_packets = packets;</span><br><span class="line">	stats-&gt;tx_packets = packets;</span><br><span class="line">	stats-&gt;rx_bytes   = bytes;</span><br><span class="line">	stats-&gt;tx_bytes   = bytes;</span><br><span class="line">	<span class="keyword">return</span> stats;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>主要就是定义了几个<code>callback</code>会在调用<code>alloc_netdev</code>时候注册进来。当上层的应用程序发包的时候协议栈里面的tx_softirq会去处理这些信息，然后调用<code>ndo_start_xmit= loopback_xmit</code>进行数据分包。另外还有统计功能。</p>
+
+          
+        
+      
+    </div>
+    
+    
+    
+
+    
+
+    
+
+    
+
+    <footer class="post-footer">
+      
+
+      
+
+      
+
+      
+      
+        <div class="post-eof"></div>
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+      
+    
+      
+      
+      
+        
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
     <link itemprop="mainEntityOfPage" href="http://hanze5.github.io/2022/07/20/25-Linux%E5%86%85%E6%A0%B8%E2%80%94%E2%80%94%E8%BD%AF%E4%B8%AD%E6%96%AD%E7%9A%84%E7%89%B9%E7%82%B9%E4%BB%A5%E5%8F%8A%E6%B3%A8%E5%86%8C%E5%92%8C%E8%A7%A6%E5%8F%91/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
@@ -1840,190 +1998,6 @@
 
       
     
-      
-      
-      
-        
-
-  
-
-  
-  
-  
-
-  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
-  
-  
-  
-  <div class="post-block">
-    <link itemprop="mainEntityOfPage" href="http://hanze5.github.io/2021/06/12/20-Linux%E5%86%85%E6%A0%B8%E2%80%94%E2%80%94%E8%87%AA%E6%97%8B%E9%94%81-spinlock/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="name" content="">
-      <meta itemprop="description" content="">
-      <meta itemprop="image" content="/images/my_avatar.png">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="也许不会有人进来吧">
-    </span>
-
-    
-      <header class="post-header">
-
-        
-        
-          <h1 class="post-title" itemprop="name headline">
-                
-                <a class="post-title-link" href="/2021/06/12/20-Linux%E5%86%85%E6%A0%B8%E2%80%94%E2%80%94%E8%87%AA%E6%97%8B%E9%94%81-spinlock/" itemprop="url">Linux内核——自旋锁 spinlock</a></h1>
-        
-
-        <div class="post-meta">
-          <span class="post-time">
-            
-              <span class="post-meta-item-icon">
-                <i class="fa fa-calendar-o"></i>
-              </span>
-              
-                <span class="post-meta-item-text">发表于</span>
-              
-              <time title="创建于" itemprop="dateCreated datePublished" datetime="2021-06-12T16:55:19+08:00">
-                2021-06-12
-              </time>
-            
-
-            
-
-            
-          </span>
-
-          
-            <span class="post-category" >
-            
-              <span class="post-meta-divider">|</span>
-            
-              <span class="post-meta-item-icon">
-                <i class="fa fa-folder-o"></i>
-              </span>
-              
-                <span class="post-meta-item-text">分类于</span>
-              
-              
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/%E5%AD%A6%E6%97%A0%E6%AD%A2%E5%A2%83/" itemprop="url" rel="index">
-                    <span itemprop="name">学无止境</span>
-                  </a>
-                </span>
-
-                
-                
-              
-            </span>
-          
-
-          
-            
-          
-
-          
-          
-
-          
-
-          
-
-          
-
-        </div>
-      </header>
-    
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-      
-
-      
-        
-          
-            <p>跟着简叔学的，可以B站搜索 <strong>简说linux</strong></p>
-<p>与之前学的信号量相比，自旋锁是一种死等的机制。而信号量不会。只有一个执行单元获取锁并进入到临界区，其他的都给我死等。可以在中断上下文执行，因为是不睡眠的。中断上下文代码不允许睡眠，也不允许调用那些可能会引起睡眠的函数。这种死等的实现是不同的架构有不一样的方法。</p>
-<h2 id="自旋锁的实现"><a href="#自旋锁的实现" class="headerlink" title="自旋锁的实现"></a>自旋锁的实现</h2><ol>
-<li><p>查看结构体定义struct spinlock (/include/linux/spinlock_types.h)<img src="/images/20/1678091181583.png" alt="1678091181583"></p>
-<p>然后再去看看，raw_spinlock</p>
-<p><img src="/images/20/1678091233794.png" alt="1678091233794"></p>
-<p>然后再去看看arch_spinlock_t!!!!然后发现这东西的定义适合cpu架构相关的，多层封装是为了增加灵活性。。以arm为例：</p>
-<p>路径（/arch/arm/include/asm/spinlock_types.h）</p>
-<p><img src="/images/20/1678091414902.png" alt="1678091414902"></p>
-<p>其中owner表示持有这个数字的thread可以获取自旋锁，next表示如果后续有thread请求获取这个自旋锁，给他分配这个数字。</p>
-</li>
-<li><p>自旋锁的初始化  按照上述所说就是把那两个东西置为0，对spinlock的初始化一层层再找到arm里的初始化实现，就长这样<img src="/images/20/1678091817407.png" alt="1678091817407"></p>
-</li>
-<li><p>基本所有实现都是spin—&gt;raw_spin-&gt;arch_spin. 由不同的架构去实现，实现的逻辑就是。</p>
-<ul>
-<li>刚开始owner=next=0;</li>
-<li>第一个thread获取spinlock，可获取成功，此时owner==0,next=0;</li>
-<li>第二个thread获取spinlock,如果第一个thread还没有释放spinlock，则next++, next变为1;</li>
-<li>第三个thread获取spinlock,如果第一个thread还没有释放spinlock，则next++, next变为2;<br>此时第一个thread释放spinlock，则执行ownerowner=1;</li>
-<li>虽然此时第二个thread和第三个thread都在等待spinlock,但是因为第二个thread的next=owner,所以第二个thread可以获取到spinlock，第三个thread则继续等待。这样保证了spinlock的唤醒机制是先到先唤醒，后到后唤醒，保证了公平性。</li>
-</ul>
-</li>
-<li><p>另外，还有一种自旋锁叫做读写自旋锁。读写自旋锁可以让多个读一起读，但是经常让写死等。</p>
-</li>
-</ol>
-<h2 id="自旋锁的使用"><a href="#自旋锁的使用" class="headerlink" title="自旋锁的使用"></a>自旋锁的使用</h2><p>继续修改我们的hello驱动。</p>
-<ol>
-<li><p>首先定义自旋锁与临界资源。</p>
-<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">spinlock_t</span> count_lock;</span><br><span class="line"><span class="type">int</span> open_count=<span class="number">0</span>;</span><br></pre></td></tr></table></figure>
-</li>
-<li><p>然后在hello_init中进行初始化</p>
-<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//自旋锁初始化</span></span><br><span class="line">spin_lock_init(&amp;count_lock);</span><br></pre></td></tr></table></figure>
-</li>
-<li><p>open与close操作中</p>
-<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">int</span> <span class="title function_">hello_open</span><span class="params">(<span class="keyword">struct</span> inode *p, <span class="keyword">struct</span> file *f)</span></span><br><span class="line">&#123;</span><br><span class="line"></span><br><span class="line">    spin_lock(&amp;count_lock);</span><br><span class="line">    <span class="keyword">if</span>(!open_count&gt;=<span class="number">1</span>)</span><br><span class="line">    &#123;</span><br><span class="line">        spin_enlock(&amp;count_lock);</span><br><span class="line">        printk(KERN_EMERG<span class="string">&quot;device is busy,helloopen fall!!\r\n&quot;</span>);</span><br><span class="line">        <span class="keyword">return</span> -EBUSY; </span><br><span class="line">    &#125;</span><br><span class="line">    open_count++;</span><br><span class="line">    spin_lock(&amp;count_lock);</span><br><span class="line">    printk(KERN_EMERG<span class="string">&quot;hello_open ok~~~\r\n&quot;</span>);</span><br><span class="line">    <span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="type">int</span> <span class="title function_">hello_close</span><span class="params">(<span class="keyword">struct</span> inode *inode ,<span class="keyword">struct</span> file *filp)</span></span><br><span class="line">&#123;</span><br><span class="line">    <span class="keyword">if</span>(!open_count!=<span class="number">1</span>)</span><br><span class="line">    &#123;</span><br><span class="line">        printk(KERN_EMERG<span class="string">&quot;device is busy,helloopen fall!!\r\n&quot;</span>);</span><br><span class="line">        <span class="keyword">return</span> -EBUSY; </span><br><span class="line">    &#125;</span><br><span class="line">    spin_enlock(&amp;count_lock);</span><br><span class="line">    printk(KERN_INFO<span class="string">&quot;hello_close ok&quot;</span>);</span><br><span class="line">    <span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">&#125;</span><br><span class="line"></span><br></pre></td></tr></table></figure>
-<p>之前也说过了自旋锁的特性，尽量要让临界区执行的快一点。不然cpu会经常死等。</p>
-<p>结果和信号量结果相同。因为从应用程序来看确实本质区别也不大。</p>
-</li>
-</ol>
-
-          
-        
-      
-    </div>
-    
-    
-    
-
-    
-
-    
-
-    
-
-    <footer class="post-footer">
-      
-
-      
-
-      
-
-      
-      
-        <div class="post-eof"></div>
-      
-    </footer>
-  </div>
-  
-  
-  
-  </article>
-
-
-      
-    
   </section>
 
   
@@ -2078,7 +2052,7 @@
               
                 <a href="/">
               
-                  <span class="site-state-item-count">28</span>
+                  <span class="site-state-item-count">29</span>
                   <span class="site-state-item-name">日志</span>
                 </a>
               </div>
