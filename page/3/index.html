@@ -252,6 +252,206 @@
   
   
   <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="http://hanze5.github.io/2021/07/12/21-Linux%E5%86%85%E6%A0%B8%E2%80%94%E2%80%94%E5%AD%97%E7%AC%A6%E5%9E%8B%E9%A9%B1%E5%8A%A8%E5%88%B0platform%E9%A9%B1%E5%8A%A8%E7%9A%84%E5%8D%8E%E4%B8%BD%E8%BD%AC%E8%BA%AB/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/images/my_avatar.png">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="也许不会有人进来吧">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+                
+                <a class="post-title-link" href="/2021/07/12/21-Linux%E5%86%85%E6%A0%B8%E2%80%94%E2%80%94%E5%AD%97%E7%AC%A6%E5%9E%8B%E9%A9%B1%E5%8A%A8%E5%88%B0platform%E9%A9%B1%E5%8A%A8%E7%9A%84%E5%8D%8E%E4%B8%BD%E8%BD%AC%E8%BA%AB/" itemprop="url">Linux内核——字符型驱动到platform驱动的华丽转身</a></h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2021-07-12T19:41:57+08:00">
+                2021-07-12
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E5%AD%A6%E6%97%A0%E6%AD%A2%E5%A2%83/" itemprop="url" rel="index">
+                    <span itemprop="name">学无止境</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+          
+
+          
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        
+          
+            <p>跟着简叔学的，可以B站搜索 <strong>简说linux</strong></p>
+<h2 id="platform驱动"><a href="#platform驱动" class="headerlink" title="platform驱动"></a>platform驱动</h2><p>platform驱动是一种模拟的总线驱动。将字符型驱动包装成platform驱动有两大好处。</p>
+<ul>
+<li>把设备都挂接在一个pseudo总线上，便于管理，同时也符合Linux的设备模型机制。其结果是，配套的sysfs节点、设备电源管理都成为可能;</li>
+<li>隔离设备和驱动。在BSP中定义platform设备和它使用的资源、设备的具体配置信息;而在驱动中，只需要通过通用的API去获取资源和数据，做到了BSP相关代码和驱动代码的分离，使得驱动具有更好的可扩展性和跨平台性。</li>
+</ul>
+<p>不在总线上的驱动都可一包装成platform驱动</p>
+<p>什么是BSP<a target="_blank" rel="noopener" href="https://blog.csdn.net/shangtang1/article/details/79248947">(14条消息) 嵌入式中的BSP—-BSP到底是什么？_芯片bsp_shangtang的博客-CSDN博客</a></p>
+<p>内核里分别用device和driver来表示设备和驱动，面向对象的思想，device是所有设备的基类，driver是所有驱动的基类。将我们瞎写的字符型驱动改造成platform驱动比较规范话，</p>
+<h2 id="改造"><a href="#改造" class="headerlink" title="改造"></a>改造</h2><ol>
+<li><p>首先需要添加头文件</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;linux/platform_device.h&gt;</span></span></span><br></pre></td></tr></table></figure>
+</li>
+<li><p>hello_init函数 要改成</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">static</span> <span class="type">int</span> <span class="title function_">hello_probe</span><span class="params">(<span class="keyword">struct</span> platform _device *pdev)</span></span><br></pre></td></tr></table></figure>
+</li>
+<li><p>卸载函数改成</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">static</span> <span class="type">int</span> <span class="title function_">hellodev_remove</span><span class="params">(<span class="keyword">struct</span> platform_device *pdev)</span></span><br></pre></td></tr></table></figure>
+</li>
+<li><p>定义设备资源</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#<span class="keyword">define</span> LEDBASE 0x56000010</span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> LENDLEN 0x0c</span></span><br><span class="line"><span class="type">static</span> <span class="class"><span class="keyword">struct</span> <span class="title">resource</span> <span class="title">hello_dev_resource</span>[] =</span> &#123;</span><br><span class="line">	[<span class="number">0</span>] = &#123;</span><br><span class="line">		.start = LEDBASE,</span><br><span class="line">		.end   = LEDBASE + LEDLEN - <span class="number">1</span>,</span><br><span class="line">		.flags = IORESOURCE_MEM,                        <span class="comment">//内存资源</span></span><br><span class="line">	&#125;</span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+</li>
+<li><p>定义设备</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">platform_device</span> <span class="title">hello_device</span> =</span> &#123;</span><br><span class="line">	.name		  = <span class="string">&quot;hello-device&quot;</span>,     <span class="comment">//设备名</span></span><br><span class="line">	.id		  = <span class="number">-1</span>,</span><br><span class="line">	.num_resources	  = ARRAY_SIZE(hello_dev_resource),  <span class="comment">//指定资源  可以是io资源 内存资源 还有ARQ资源？</span></span><br><span class="line">	.resource	  = hello_dev_resource,</span><br><span class="line">	.dev = &#123;</span><br><span class="line">		.release = hello_plat_release,</span><br><span class="line">    &#125;</span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+</li>
+<li><p>定义驱动</p>
+<p>在这里指定驱动模块插入和删除的操作是哪个。并且给驱动起个名字。</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">static</span> <span class="class"><span class="keyword">struct</span> <span class="title">platform_driver</span> <span class="title">hellodev_driver</span> =</span> &#123;</span><br><span class="line">	.probe		= hellodev_probe,</span><br><span class="line">	.remove		= hellodev_remove,</span><br><span class="line">	.driver		= &#123;</span><br><span class="line">		.owner	= THIS_MODULE,</span><br><span class="line">		.name	= <span class="string">&quot;hello-device&quot;</span>,</span><br><span class="line">	&#125;,</span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+</li>
+</ol>
+<ol>
+<li><p>最后定义内核才插入和删除该设备时 的操作。 注册设备  注册驱动  删除设备  删除驱动</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">int</span> <span class="title function_">charDrvInit</span><span class="params">(<span class="type">void</span>)</span></span><br><span class="line">&#123;</span><br><span class="line">	platform_device_register(&amp;hello_device);</span><br><span class="line">    <span class="keyword">return</span> platform_driver_register(&amp;hellodev_driver); </span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="type">void</span> __exit <span class="title function_">charDrvExit</span><span class="params">(<span class="type">void</span>)</span></span><br><span class="line">&#123;</span><br><span class="line">	platform_device_unregister(&amp;hello_device);</span><br><span class="line">    platform_driver_unregister(&amp;hellodev_driver);</span><br><span class="line">    <span class="keyword">return</span>;</span><br><span class="line">&#125;</span><br><span class="line">module_init(charDrvInit);</span><br><span class="line">module_exit(charDrvExit);</span><br><span class="line">MODULE_LICENSE(<span class="string">&quot;GPL&quot;</span>);</span><br><span class="line"></span><br></pre></td></tr></table></figure>
+</li>
+<li><p>编译安装</p>
+<p><img src="/images/21/1678101131204.png" alt="1678101131204"></p>
+</li>
+</ol>
+<h2 id="Platform驱动设备-匹配注册机制"><a href="#Platform驱动设备-匹配注册机制" class="headerlink" title="Platform驱动设备 匹配注册机制"></a>Platform驱动设备 匹配注册机制</h2><ol>
+<li><p>几个重要的结构体一看就能懂。</p>
+<p><img src="/images/21/1678101331998.png" alt="1678101331998"></p>
+<p>device是linux内核所有设备的基类  resouce就是资源。</p>
+<p><img src="/images/21/1678101429981.png" alt="1678101429981"></p>
+<p>驱动就是行为，所以大部分都是函数。插入删除关闭休眠唤醒。device_driver 就是所有驱动的基类。</p>
+<p>*id_table</p>
+<p><img src="/images/21/1678102019401.png" alt="1678102019401"></p>
+<p>一般匹配就是通过bus去匹配</p>
+</li>
+<li><p>注册函数 的实现</p>
+<p>设备初始化包括资源初始化，如果设备父设备为空那么会指定一个叫platform的虚拟设备，用来表示总线设备是虚拟的，类型是platformbus，然后使用device_add函数将设备加入内核。</p>
+<p>驱动的注册就是把那几个函数地址赋值。bus用于匹配，都是platform类型的就</p>
+<p>平台设备是一条链，平台驱动是一条链表，他们都挂在platform bus这个东西上上。那么驱动和设备的匹配就是遍历链表一个一个匹配。只有某一个设备和某一个驱动匹配上了，才会成功地插入驱动。</p>
+</li>
+</ol>
+<p><strong>其实这块可以细究</strong>一下的，但是最近没什么时间了。。。。。发现学内核很需要心境</p>
+
+          
+        
+      
+    </div>
+    
+    
+    
+
+    
+
+    
+
+    
+
+    <footer class="post-footer">
+      
+
+      
+
+      
+
+      
+      
+        <div class="post-eof"></div>
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+      
+    
+      
+      
+      
+        
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
     <link itemprop="mainEntityOfPage" href="http://hanze5.github.io/2021/06/12/20-Linux%E5%86%85%E6%A0%B8%E2%80%94%E2%80%94%E8%87%AA%E6%97%8B%E9%94%81-spinlock/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
@@ -1969,7 +2169,7 @@
               
                 <a href="/">
               
-                  <span class="site-state-item-count">29</span>
+                  <span class="site-state-item-count">30</span>
                   <span class="site-state-item-name">日志</span>
                 </a>
               </div>
