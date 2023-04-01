@@ -252,6 +252,161 @@
   
   
   <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="http://hanze5.github.io/2021/11/19/10-C-%E5%AE%9E%E6%88%98%E2%80%94%E2%80%94%E9%AB%98%E5%B9%B6%E5%8F%91%E6%9C%8D%E5%8A%A1%E5%99%A8/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/images/my_avatar.png">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="也许不会有人进来吧">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+                
+                <a class="post-title-link" href="/2021/11/19/10-C-%E5%AE%9E%E6%88%98%E2%80%94%E2%80%94%E9%AB%98%E5%B9%B6%E5%8F%91%E6%9C%8D%E5%8A%A1%E5%99%A8/" itemprop="url">C++实战——高并发服务器</a></h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2021-11-19T21:34:35+08:00">
+                2021-11-19
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E5%AD%A6%E6%97%A0%E6%AD%A2%E5%A2%83/" itemprop="url" rel="index">
+                    <span itemprop="name">学无止境</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+          
+
+          
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        
+          
+            <p>文章代码来源:<a target="_blank" rel="noopener" href="https://github.com/gaojingcome/WebServer">高并发Web服务器</a></p>
+<h2 id="简单介绍"><a href="#简单介绍" class="headerlink" title="简单介绍"></a>简单介绍</h2><p>服务器的工作实际上就是监听并且处理各种各样的事件。当服务器处于启动状态，就会不断用Epoll去监听，正在被监听的文件描述符事件。根据返回值和事件类型做出相应的处理。</p>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">while</span>(!isClose_) &#123;</span><br><span class="line">	<span class="keyword">if</span>(timeoutMS_ &gt; <span class="number">0</span>) &#123;</span><br><span class="line">   	timeMS = timer_-&gt;<span class="built_in">GetNextTick</span>();</span><br><span class="line">   &#125;</span><br><span class="line">   <span class="comment">//一直使用 epoller_-&gt;Wait 去检测事件 返回值 有多少个</span></span><br><span class="line">   <span class="type">int</span> eventCnt = epoller_-&gt;<span class="built_in">Wait</span>(timeMS);</span><br><span class="line">   <span class="comment">//遍历这些事件</span></span><br><span class="line">   <span class="keyword">for</span>(<span class="type">int</span> i = <span class="number">0</span>; i &lt; eventCnt; i++) &#123;</span><br><span class="line">       <span class="comment">/* 处理事件 */</span></span><br><span class="line">       <span class="type">int</span> fd = epoller_-&gt;<span class="built_in">GetEventFd</span>(i);</span><br><span class="line">       <span class="type">uint32_t</span> events = epoller_-&gt;<span class="built_in">GetEvents</span>(i);</span><br><span class="line">       <span class="comment">//如果是监听描述符    说明有监听进来</span></span><br><span class="line">       <span class="keyword">if</span>(fd == listenFd_) &#123;</span><br><span class="line">           <span class="built_in">DealListen_</span>();   <span class="comment">//处理事件监听</span></span><br><span class="line">       &#125;</span><br><span class="line">       <span class="comment">//出现了错误   关闭文件描述符</span></span><br><span class="line">       <span class="keyword">else</span> <span class="keyword">if</span>(events &amp; (EPOLLRDHUP | EPOLLHUP | EPOLLERR)) &#123;</span><br><span class="line">           <span class="built_in">assert</span>(users_.<span class="built_in">count</span>(fd) &gt; <span class="number">0</span>);</span><br><span class="line">           <span class="built_in">CloseConn_</span>(&amp;users_[fd]);</span><br><span class="line">       &#125;</span><br><span class="line">       <span class="comment">//非监听文件描述符有事件    处理读操作</span></span><br><span class="line">       <span class="keyword">else</span> <span class="keyword">if</span>(events &amp; EPOLLIN) &#123;</span><br><span class="line">           <span class="built_in">assert</span>(users_.<span class="built_in">count</span>(fd) &gt; <span class="number">0</span>);</span><br><span class="line">           <span class="built_in">DealRead_</span>(&amp;users_[fd]);</span><br><span class="line">       &#125;</span><br><span class="line">       <span class="comment">//处理写操作</span></span><br><span class="line">       <span class="keyword">else</span> <span class="keyword">if</span>(events &amp; EPOLLOUT) &#123;</span><br><span class="line">           <span class="built_in">assert</span>(users_.<span class="built_in">count</span>(fd) &gt; <span class="number">0</span>);</span><br><span class="line">           <span class="built_in">DealWrite_</span>(&amp;users_[fd]);</span><br><span class="line">       &#125; <span class="keyword">else</span> &#123;<span class="comment">//关闭连接</span></span><br><span class="line">       	<span class="built_in">LOG_ERROR</span>(<span class="string">&quot;Unexpected event&quot;</span>);</span><br><span class="line">       &#125;</span><br><span class="line">   &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>这里面就挑选个人感觉比较重要的 两个时间的处理代码。</p>
+<h3 id="处理监听事件"><a href="#处理监听事件" class="headerlink" title="处理监听事件"></a>处理监听事件</h3><figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="type">void</span> <span class="title">WebServer::AddClient_</span><span class="params">(<span class="type">int</span> fd, sockaddr_in addr)</span> </span>&#123;</span><br><span class="line">    <span class="built_in">assert</span>(fd &gt; <span class="number">0</span>);</span><br><span class="line">    users_[fd].<span class="built_in">init</span>(fd, addr);</span><br><span class="line">    <span class="keyword">if</span>(timeoutMS_ &gt; <span class="number">0</span>) &#123;</span><br><span class="line">        timer_-&gt;<span class="built_in">add</span>(fd, timeoutMS_, std::<span class="built_in">bind</span>(&amp;WebServer::CloseConn_, <span class="keyword">this</span>, &amp;users_[fd]));</span><br><span class="line">    &#125;</span><br><span class="line">    epoller_-&gt;<span class="built_in">AddFd</span>(fd, EPOLLIN | connEvent_);</span><br><span class="line">    <span class="built_in">SetFdNonblock</span>(fd);</span><br><span class="line">    <span class="built_in">LOG_INFO</span>(<span class="string">&quot;Client[%d] in!&quot;</span>, users_[fd].<span class="built_in">GetFd</span>());</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="type">void</span> <span class="title">WebServer::DealListen_</span><span class="params">()</span> </span>&#123;</span><br><span class="line">    <span class="keyword">struct</span> <span class="title class_">sockaddr_in</span> addr;</span><br><span class="line">    <span class="type">socklen_t</span> len = <span class="built_in">sizeof</span>(addr);</span><br><span class="line">    <span class="keyword">do</span> &#123;</span><br><span class="line">        <span class="type">int</span> fd = <span class="built_in">accept</span>(listenFd_, (<span class="keyword">struct</span> sockaddr *)&amp;addr, &amp;len);</span><br><span class="line">        <span class="keyword">if</span>(fd &lt;= <span class="number">0</span>) &#123; <span class="keyword">return</span>;&#125;</span><br><span class="line">        <span class="comment">//超过最大数量 做相应处理 </span></span><br><span class="line">        <span class="keyword">else</span> <span class="keyword">if</span>(HttpConn::userCount &gt;= MAX_FD) &#123;</span><br><span class="line">            <span class="built_in">SendError_</span>(fd, <span class="string">&quot;Server busy!&quot;</span>);</span><br><span class="line">            <span class="built_in">LOG_WARN</span>(<span class="string">&quot;Clients is full!&quot;</span>);</span><br><span class="line">            <span class="keyword">return</span>;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="built_in">AddClient_</span>(fd, addr);<span class="comment">//添加客户端</span></span><br><span class="line">    &#125; <span class="keyword">while</span>(listenEvent_ &amp; EPOLLET); <span class="comment">//如果是ET模式  就必须一次性把事件读完</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h3 id="处理读写"><a href="#处理读写" class="headerlink" title="处理读写"></a>处理读写</h3><p>处理读写事件主要工作相当于将读数据的任务发布给线程池。经过了很多封装，这里面要去源码去层层查看理解。</p>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="type">void</span> <span class="title">WebServer::DealRead_</span><span class="params">(HttpConn* client)</span> </span>&#123;</span><br><span class="line">    <span class="built_in">assert</span>(client);</span><br><span class="line">    <span class="built_in">ExtentTime_</span>(client);</span><br><span class="line">    threadpool_-&gt;<span class="built_in">AddTask</span>(std::<span class="built_in">bind</span>(&amp;WebServer::OnRead_, <span class="keyword">this</span>, client));</span><br><span class="line">&#125;</span><br><span class="line"><span class="function"><span class="type">void</span> <span class="title">WebServer::DealWrite_</span><span class="params">(HttpConn* client)</span> </span>&#123;</span><br><span class="line">    <span class="built_in">assert</span>(client);</span><br><span class="line">    <span class="built_in">ExtentTime_</span>(client);</span><br><span class="line">    threadpool_-&gt;<span class="built_in">AddTask</span>(std::<span class="built_in">bind</span>(&amp;WebServer::OnWrite_, <span class="keyword">this</span>, client));</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="type">void</span> <span class="title">WebServer::OnRead_</span><span class="params">(HttpConn* client)</span> </span>&#123;</span><br><span class="line">    <span class="built_in">assert</span>(client);</span><br><span class="line">    <span class="type">int</span> ret = <span class="number">-1</span>;</span><br><span class="line">    <span class="type">int</span> readErrno = <span class="number">0</span>;</span><br><span class="line">    ret = client-&gt;<span class="built_in">read</span>(&amp;readErrno); <span class="comment">//读取客户端数据</span></span><br><span class="line">    <span class="keyword">if</span>(ret &lt;= <span class="number">0</span> &amp;&amp; readErrno != EAGAIN) &#123;</span><br><span class="line">        <span class="built_in">CloseConn_</span>(client);</span><br><span class="line">        <span class="keyword">return</span>;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="comment">//业务逻辑处理</span></span><br><span class="line">    <span class="built_in">OnProcess</span>(client);</span><br><span class="line">&#125;</span><br><span class="line"><span class="function"><span class="type">void</span> <span class="title">WebServer::OnWrite_</span><span class="params">(HttpConn* client)</span> </span>&#123;</span><br><span class="line">    <span class="built_in">assert</span>(client);</span><br><span class="line">    <span class="type">int</span> ret = <span class="number">-1</span>;</span><br><span class="line">    <span class="type">int</span> writeErrno = <span class="number">0</span>;</span><br><span class="line">    ret = client-&gt;<span class="built_in">write</span>(&amp;writeErrno);</span><br><span class="line">    <span class="keyword">if</span>(client-&gt;<span class="built_in">ToWriteBytes</span>() == <span class="number">0</span>) &#123;</span><br><span class="line">        <span class="comment">/* 传输完成 */</span></span><br><span class="line">        <span class="keyword">if</span>(client-&gt;<span class="built_in">IsKeepAlive</span>()) &#123;</span><br><span class="line">            <span class="comment">//业务逻辑处理</span></span><br><span class="line">            <span class="built_in">OnProcess</span>(client);</span><br><span class="line">            <span class="keyword">return</span>;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">else</span> <span class="keyword">if</span>(ret &lt; <span class="number">0</span>) &#123;</span><br><span class="line">        <span class="keyword">if</span>(writeErrno == EAGAIN) &#123;</span><br><span class="line">            <span class="comment">/* 继续传输 */</span></span><br><span class="line">            epoller_-&gt;<span class="built_in">ModFd</span>(client-&gt;<span class="built_in">GetFd</span>(), connEvent_ | EPOLLOUT);</span><br><span class="line">            <span class="keyword">return</span>;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="built_in">CloseConn_</span>(client);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h3 id="业务处理逻辑"><a href="#业务处理逻辑" class="headerlink" title="业务处理逻辑"></a>业务处理逻辑</h3><p>主要解释上部分处理读写事件中的<code>OnProcess</code>的，这部分代码 线程池里的子线程处理 。注意这里并不是真正的处理逻辑，真正的处理逻辑是<code>client-&gt;process()</code>，他的返回值为真的话，说明处理完一个用户请求了，该做出相应了所以可以看到监听描述符的时间是<code>EPOLLOUT</code>。当监听到TCP缓冲区不满也就是可写，就会开始写的任务。否则就还是处理读（监听读使事件）。注意这里的读写是对于TCP缓冲区而言。</p>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="type">void</span> <span class="title">WebServer::OnProcess</span><span class="params">(HttpConn* client)</span> </span>&#123;</span><br><span class="line">    <span class="comment">//如果client-&gt;process()为真 则说明处理完请求，要做出相应 所以事件是EPOLLOUT</span></span><br><span class="line">    <span class="keyword">if</span>(client-&gt;<span class="built_in">process</span>()) &#123;</span><br><span class="line">        epoller_-&gt;<span class="built_in">ModFd</span>(client-&gt;<span class="built_in">GetFd</span>(), connEvent_ | EPOLLOUT);</span><br><span class="line">    &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">        epoller_-&gt;<span class="built_in">ModFd</span>(client-&gt;<span class="built_in">GetFd</span>(), connEvent_ | EPOLLIN);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>（待更新。。。）</p>
+
+          
+        
+      
+    </div>
+    
+    
+    
+
+    
+
+    
+
+    
+
+    <footer class="post-footer">
+      
+
+      
+
+      
+
+      
+      
+        <div class="post-eof"></div>
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+      
+    
+      
+      
+      
+        
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
     <link itemprop="mainEntityOfPage" href="http://hanze5.github.io/2021/11/18/9-C-%E5%AE%9E%E6%88%98%E2%80%94%E2%80%94Socket%E5%88%9D%E5%A7%8B%E5%8C%96%E6%B5%81%E7%A8%8B/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
@@ -1988,157 +2143,6 @@
 
       
     
-      
-      
-      
-        
-
-  
-
-  
-  
-  
-
-  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
-  
-  
-  
-  <div class="post-block">
-    <link itemprop="mainEntityOfPage" href="http://hanze5.github.io/2020/02/08/1.%E9%9A%8F%E7%AC%941/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="name" content="">
-      <meta itemprop="description" content="">
-      <meta itemprop="image" content="/images/my_avatar.png">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="也许不会有人进来吧">
-    </span>
-
-    
-      <header class="post-header">
-
-        
-        
-          <h1 class="post-title" itemprop="name headline">
-                
-                <a class="post-title-link" href="/2020/02/08/1.%E9%9A%8F%E7%AC%941/" itemprop="url">奋斗在一线的，不止是医生与军人</a></h1>
-        
-
-        <div class="post-meta">
-          <span class="post-time">
-            
-              <span class="post-meta-item-icon">
-                <i class="fa fa-calendar-o"></i>
-              </span>
-              
-                <span class="post-meta-item-text">发表于</span>
-              
-              <time title="创建于" itemprop="dateCreated datePublished" datetime="2020-02-08T09:04:54+08:00">
-                2020-02-08
-              </time>
-            
-
-            
-
-            
-          </span>
-
-          
-            <span class="post-category" >
-            
-              <span class="post-meta-divider">|</span>
-            
-              <span class="post-meta-item-icon">
-                <i class="fa fa-folder-o"></i>
-              </span>
-              
-                <span class="post-meta-item-text">分类于</span>
-              
-              
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/%E6%97%A5%E4%BA%8B/" itemprop="url" rel="index">
-                    <span itemprop="name">日事</span>
-                  </a>
-                </span>
-
-                
-                
-              
-            </span>
-          
-
-          
-            
-          
-
-          
-          
-
-          
-
-          
-
-          
-
-        </div>
-      </header>
-    
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-      
-
-      
-        
-          
-            <p>也许从标题可以看出，文章的内容无非是要歌颂在一线奋战除医生军人以外的其他人们。确有心之所感，但说来惭愧，写这段话的目的，我不与予隐瞒，是出于我的私心。</p>
-<p>疫情爆发以来，家人对于疫情的态度也有了极其大的转变。从之前的不甚在意，到现在邻里朋友间建立“疫情防控群”互相通知周边疫情状况。近期，确诊人的出行交际关系已经慢慢蔓延渗透到身边。</p>
-<p>距上次出家门大概已近十天，用人心惶惶形容目前家人的心境并不夸张，但是父亲的工作却依旧如常。父亲是一名煤矿工人，每天做班车去几十公里外的矿区上班。途中的其工友来自各个街道，家中孩子近期也自五湖四海归来。班车每天消毒，但是个人的防护设备，仅仅是自己准备的口罩。</p>
-<p>想来家中的亲戚也知道了矿区工作的危险性，我在妈妈和他们的视频中隐约听到了不要与我们家来往，“谁知道他班儿上的人家里人都去过哪”。我担心父亲，关于“钱重要还是命重要的话题”最近也时常被提起，但是父亲的回答确实令我没有想到，他说“咱这地区没有煤拿啥供暖，拿啥发电？”。未曾想到除了作为一个父亲之外他竟如此伟大，真是令我又难过又想笑。</p>
-<p>所以这篇短文的目的，只想在铺天盖地的歌颂医者军人的文段里，再夹杂一些段落，一些语句，一些痕迹，去好好的说说那些不为人所知的人们。他们没有防护服，仅有的防护设备是自己准备的口罩（还不知道是花了多大力气才搞到）。明知疫情严重，依然奋斗在工作岗位，只因“大家需要”。工人，社区工作者…有遗漏</p>
-<p>我的的确确是出于私心才写下这篇短文，我的的确确时想有人去知道我的父亲这个阶层，这个团体的人。我在爸爸早上离去的关门声后醒来，一上午心绪再不能平静。希望写下这些之后，能在爸爸晚上归来时，有东西去缓解无可奈何带给我的苦楚。</p>
-
-          
-        
-      
-    </div>
-    
-    
-    
-
-    
-
-    
-
-    
-
-    <footer class="post-footer">
-      
-
-      
-
-      
-
-      
-      
-        <div class="post-eof"></div>
-      
-    </footer>
-  </div>
-  
-  
-  
-  </article>
-
-
-      
-    
   </section>
 
   
@@ -2193,7 +2197,7 @@
               
                 <a href="/">
               
-                  <span class="site-state-item-count">31</span>
+                  <span class="site-state-item-count">32</span>
                   <span class="site-state-item-name">日志</span>
                 </a>
               </div>
