@@ -238,6 +238,510 @@
     
       
       
+        
+      
+      
+        
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="http://hanze5.github.io/2023/04/05/34-%E4%BA%86%E8%A7%A3NVMe/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/images/my_avatar.png">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="也许不会有人进来吧">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+                
+                <a class="post-title-link" href="/2023/04/05/34-%E4%BA%86%E8%A7%A3NVMe/" itemprop="url">了解NVMe</a></h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2023-04-05T16:33:12+08:00">
+                2023-04-05
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+
+          
+            
+          
+
+          
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        
+          
+            <h1 id><a href="#" class="headerlink" title=" "></a> </h1><p>感觉不了解一下NVMe，Femu的代码阅读起来还想确实有点困难。使用FEMU模拟NVMe设备，是需要了解这个协议的。完全参考蛋蛋读NVMe,讲的十分清晰。</p>
+<h2 id="1-host-如何使用-NVMe协议与SSD通信"><a href="#1-host-如何使用-NVMe协议与SSD通信" class="headerlink" title="1.host 如何使用 NVMe协议与SSD通信"></a>1.host 如何使用 NVMe协议与SSD通信</h2><p>来源：<a target="_blank" rel="noopener" href="https://www.ssdfans.com/?p=8137">蛋蛋读NVMe之一 (ssdfans.com)</a></p>
+<p>PCIe（Peripheral Component Interconnect Express）是一种高速串行总线标准，用于连接计算机内部的各种硬件设备。下图为PCIe系统的简单架构图，图中的NVMe Subsystem一般就是SSD。SSD作为一个PCIe Endpoint通过PCIe连着Root Complex （RC）, 然后RC连接着CPU和内存。Root Complex是PCIe系统中引入的概念，它将CPU、内存子系统和PCIe子系连接起来。Root Complex是PCIe总线的根节点，将PCIe设备与CPU/Memory连接到一起，与其余PCIe设备（包括Switch）连接的端口称为RootPort。</p>
+<p><em>”我们可以认为RC就是CPU的代言人，助理，或者小蜜。作为系统中最高层，CPU说：我很忙的，你SSD有什么事情先跟我小蜜说！尽管如此，SSD的地位还是较过去提升了一级，过去SSD别说直接接触霸道总裁，就是连小蜜的面都见不到，SSD和小蜜之间还隔着一座南桥呢。滚蛋吧，南桥君！“——蛋蛋</em></p>
+<p><img src="/images/34/1680570283993.png" alt="1680570283993"></p>
+<p>NVMe有两种命令，一种叫<strong><code>Admin Command</code></strong>，用以Host管理和控制SSD；另外一种就是<strong><code>I/O Command</code></strong>，用以Host和SSD之间数据的传输。</p>
+<p>有了这两种命令还需要，通信的重要三个组件：<strong><code>Submission Queue （SQ）</code></strong>，<strong><code>Completion Queue（CQ）</code></strong>和<strong><code>Doorbell Register</code></strong> （DB）。 SQ和CQ位于Host的内存中，DB则位于SSD的控制器内部。</p>
+<p>当Host要发送命令时，先把准备好的命令放在SQ中，然后通知SSD来取；通知的方式就是，通过SSD端的DB寄存器，通知SSD可以来取命令；CQ也是位于Host内存中，一个命令执行完成，成功或失败，SSD总会往CQ中写入命令完成状态。</p>
+<p>总结步骤:</p>
+<p><img src="file:///C:\Users\DawnLake\AppData\Roaming\Tencent\Users\1479320516\QQ\WinTemp\RichOle\J~KT0{A$`5WIEF_OJTOG[GS.png" alt="img"></p>
+<ol>
+<li>Host写命令到内存中的SQ；</li>
+<li>Host写SSD控制器的DB，通知SSD取指；</li>
+<li>SSD控制器收到通知，于是从内存中的SQ取指；</li>
+<li>SSD控制器执行指令；</li>
+<li>指令执行完成，SSD控制器往内存中的CQ写指令执行结果；</li>
+<li>然后SSD控制器产生MSI中断通知Host指令完成；</li>
+<li>Host收到MSI中断，处理CQ，查看指令完成状态；</li>
+<li>Host处理完CQ中的指令执行结果，通过DB回复SSD：指令执行结果已处理！</li>
+</ol>
+<h2 id="2-SQ-CQ和DB-详解"><a href="#2-SQ-CQ和DB-详解" class="headerlink" title="2. SQ,CQ和DB 详解"></a>2. SQ,CQ和DB 详解</h2><p>来源：<a target="_blank" rel="noopener" href="https://www.ssdfans.com/?p=8139">蛋蛋读NVMe之二 (ssdfans.com)</a></p>
+<p><img src="file:///C:\Users\DawnLake\AppData\Roaming\Tencent\Users\1479320516\QQ\WinTemp\RichOle\X34FLE~Y6%XKUJ@9@~6KG`C.png" alt="img"></p>
+<p>SQ与CQ并不一定是一对一的关系。而之前说的NVMe有两种命令，从而也有两种SQ与CQ。一种是Admin，另外一种是I/O，前者放Admin命令，用以Host管理控制SSD，后者放置I/O命令，用以Host与SSD之间传输数据，不可以混着放。系统中只有一对Admin SQ/CQ，I/O SQ/CQ却可以很多，多达65535（64K减去一个SQ/CQ）。Host端每个Core可以有一个或者多个SQ，但只有一个CQ。设置多个core可以利用多线程满足性能需求，一个线程独享一个SQ，且可以为SQ设置不同的优先级，重要的SQ指令优先被执行。</p>
+<p>实际系统中用多少个SQ，取决于系统配置和性能需求，可灵活设置I/O SQ个数。</p>
+<p>作为队列，每个SQ和CQ都有一定的深度：对Admin SQ/CQ来说，其深度可以是2-4096（4K）；对I/O SQ/CQ，深度可以是2-65536(64K)。队列深度也是可以配置的。 这也是NVMe相较与其他协议更屌的地方。AHCI只有一个命令队列，且队列深度是固定的32。  </p>
+<p>还有重要的一点：每个SQ放入的是命令条目，无论是Admin还是I/O命令，每个命令条目大小都是64字节；每个CQ放入的是命令完成状态信息条目，每个条目大小是16字节。</p>
+<p>再进行一波小总结：</p>
+<ol>
+<li><p><strong>SQ用以Host发命令，CQ用以SSD回命令完成状态</strong></p>
+</li>
+<li><p><strong>SQ/CQ可以在Host的内存中，也可以在SSD中，但一般在Host 内存中（所有系列文章都是基于SQ/CQ在Host内存中讲的）;</strong></p>
+</li>
+<li><p><strong>两种类型的SQ/CQ：Admin和I/O，前者发送Admin命令，后者发送I/O命令;</strong></p>
+</li>
+<li><p><strong>系统中只能有一对Admin SQ/CQ，但可以有很多对I/O SQ/CQ;</strong></p>
+</li>
+<li><p><strong>I/O SQ与CQ可以是一对一的关系，也可以是一对多的关系；</strong></p>
+</li>
+<li><p><strong>I/O SQ是可以赋予不同优先级的；</strong></p>
+</li>
+<li><p><strong>I/O SQ/CQ深度可达64K，Admin SQ/CQ深达4K；</strong></p>
+</li>
+<li><p><strong>I/O SQ/CQ的广度和深度都可以灵活配置；</strong></p>
+</li>
+<li><p><strong>每条命令大小是64字节，每条命令完成状态是16字节；</strong></p>
+</li>
+</ol>
+<p>SQ与CQ都是是环形队列，DB而就是用来记录一个SQ或者CQ的Head和Tail。<strong>每个SQ或者CQ，都有两个对应的DB: Head DB和Tail DB</strong>。DB是在SSD端的寄存器，记录SQ和CQ的头和尾的位置。这样SQ头尾之间的就是待处理的命令，SSD通过该SQ的两个DB获取这个信息。Host存放命令到SQ后就会更新SSD端的DB寄存器。 SSD controller 把这三个指令取到之后，会更新DB。</p>
+<p>同样的，当 SSD执行完命令，会将消息放入CQ，并更新CQ尾的DB寄存器，然后通过MSI中断通知host已经执行完host的命令了。host取出CQ中的完成信息进行处理，并更新CQ的头。<strong>生产者修改尾，消费者修改头。</strong></p>
+<p>细细琢磨可能发现一些小漏洞，Host只能写DB，而不能读DB，且只能写SQ尾和写CQ头。那它如何知晓SQ头与CQ尾。Host发了取指通知后，它并不清楚SSD什么时候去取命令，取了多少命令。答：<strong>SSD往CQ中写入命令状态信息，就包含了这几条</strong>。</p>
+<p>小总结：</p>
+<ol>
+<li><strong>DB在SSD Controller端，是寄存器</strong></li>
+<li><strong>DB记录着SQ和CQ的Head和Tail</strong></li>
+<li><strong>每个SQ或者CQ有两个DB: Head DB 和Tail DB</strong></li>
+<li><strong>Host只能写DB，不能读DB</strong></li>
+<li><strong>Host通过SSD往CQ中写入的命令完成状态获取Head或者Tail</strong></li>
+</ol>
+<h2 id="3-数据怎么传递的"><a href="#3-数据怎么传递的" class="headerlink" title="3.数据怎么传递的"></a>3.数据怎么传递的</h2><p>来源：<a target="_blank" rel="noopener" href="https://www.ssdfans.com/?p=8141">蛋蛋读NVMe之三 (ssdfans.com)</a></p>
+<p>数据传递无非两种方向，host内存 &lt;==&gt; SSD。</p>
+<p><img src="file:///C:\Users\DawnLake\AppData\Roaming\Tencent\Users\1479320516\QQ\WinTemp\RichOle\5Q{UQ_Z]TV0ZG(G{NWCFJ" alt="img">F.png)</p>
+<p>Host如果想往SSD上写入用户数据，需要告诉SSD<strong>写入什么数据，写入多少数据</strong>，以及<strong>数据源在内存中的什么位置</strong>，这些信息包含在Host向SSD发送的<strong>Write命令</strong>中。每笔用户数据对应着一个叫做LBA（Logical Block Address）的东西，<strong>Write命令通过指定LBA来告诉SSD写入的是什么数据</strong>。对NVMe/PCIe来说，SSD收到Write命令后，通过PCIe去Host的内存数据所在位置读取数据，然后把这些数据写入到闪存中，<strong>同时得到LBA与闪存位置的映射关系</strong>。</p>
+<p>Host如果想读取SSD上的用户数据，同样需要<strong>告诉SSD需要什么数据，需要多少数据</strong>，以及<strong>数据最后需要放到Host内存的哪个位置上去</strong>，这些信息包含在Host向SSD发送的<strong>Read命令</strong>中。SSD<strong>根据LBA，查找映射表</strong>，找到对应闪存物理位置，然后读取闪存获得数据。数据从闪存读上来以后，对NVMe/PCIe来说，SSD会通过PCIe把数据写入到Host指定的内存中。这样就完成了Host对SSD的读访问。<em>（SSD的映射表是用来记录逻辑块地址（LBA）和物理块地址（PBA）之间的对应关系的，它是SSD固件的核心部分。SSD工作时，它的绝大部分映射表是存储在FLASH里面，还有一部分存储在片上RAM上。这样做的目的是为了提高性能和减少对FLASH的磨损。当SSD断电时，会把映射表写回到FLASH中，以防止数据丢失。）</em></p>
+<p><em>再说明一下 Root Complex是PCIe总线系统中的一个概念，它将CPU、内存子系统和PCIe子系连接起来。它负责将CPU的访问事务转换为PCIe总线上的访问事务，同时也要解析下游PCIe设备上报的报文，并根据报文内容，将信息或者数据通知CPU。内存和SSD的数据交换需要通过Root Complex作为桥梁，因为Root Complex可以将存储域地址空间转换为PCIe域地址空间。</em></p>
+<p>无论是写入还是读取，Host都是发送命令的一方，并不负责数据的主动传输。其中Host关注的是逻辑地址，SSD需要通过逻辑地址找到真正的数据存放位置。Host也有两种方式来告诉SSD数据所在内存位置，一是PRP (Physical Region Page )，二是SGL (Scatter/Gather )。</p>
+<h3 id="3-1-PRP-Physical-Region-Page"><a href="#3-1-PRP-Physical-Region-Page" class="headerlink" title="3.1 PRP (Physical Region Page)"></a>3.1 PRP (Physical Region Page)</h3><p>NVMe把Host的内存划分为一个一个页（Page），页的大小可以是4KB,8KB,16KB… 128MB。好像一般都是4KB。</p>
+<p><img src="/images/34/1680608024474.png" alt="1680608024474"></p>
+<p>PRP Entry本质就是一个64位内存物理地址，只不过把这个物理地址分成两部分：页起始地址和页内偏移。最后两bit是0，说明PRP表示的物理地址只能四字节对齐访问。页内偏移可以是0，也可以是个非零的值。</p>
+<p><img src="/images/34/1680608127938.png" alt="1680608127938"></p>
+<p>PRP Entry描述的是一段连续的物理内存的起始地址。如果需要描述若干个不连续的物理内存呢？那就需要若干个PRP Entry。把若干个PRP Entry链接起来，就成了PRP List。</p>
+<p><img src="/images/34/1680608903047.png" alt="1680608903047"></p>
+<p>PRP List中的每个PRP Entry的偏移量都必须是0，PRP List中的每个PRP Entry都是描述一个物理页。它们不允许有相同的物理页，不然SSD往同一个物理页写入几次的数据，导致先写入的数据被覆盖。</p>
+<p>每个NVMe命令中有两个域：PRP1和PRP2，Host就是通过这两个域告诉SSD数据在内存中的位置或者数据需要写入的地址。</p>
+<p><img src="/images/34/1680609114540.png" alt="1680609114540"></p>
+<p>PRP1和PRP2有可能指向数据所在位置，也可能指向PRP List。类似C语言中的指针概念，PRP1和PRP2可能是指针，也可能是指针的指针，还有可能是指针的指针的指针。根据不同的命令，SSD总能一层一层的剥下包装，找到数据在内存的真正物理地址。（个人理解应该是多级页表类似的东西）</p>
+<p>下面是一个PRP1指向PRP List的示例：</p>
+<p><img src="/images/34/1680609873982.png" alt="1680609873982"></p>
+<p>PRP1指向一个PRP List，PRP List位于Page 200，页内偏移50的位置。SSD确定PRP1是个指向PRP List的指针后，就会去Host内存中（Page 200，Offset 50）把PRP List取过来。获得PRP List后，就获得数据的真正物理地址，SSD然后就会往这些物理地址读入或者写入数据。</p>
+<h3 id="3-2-SGL-Scatter-Gather"><a href="#3-2-SGL-Scatter-Gather" class="headerlink" title="3.2 SGL (Scatter/Gather )"></a>3.2 SGL (Scatter/Gather )</h3><p>对Admin命令来说，它只用PRP告诉SSD内存物理地址；对I/O 命令来说，除了用PRP，Host还可以用SGL的方式来告诉SSD数据在内存中写入或者读取的物理地址。</p>
+<p><img src="/images/34/1680609985979.png" alt="1680609985979"></p>
+<p>Host在命令中会告诉SSD采用何种方式。具体来说，如果<strong>命令当中DW0[15：14]是0，就是PRP的方式，否则就是SGL的方式。</strong></p>
+<p>SGL是一个数据结构，用以描述一段数据空间，这个空间可以是数据源所在的空间，也可以是数据目标空间。SGL(Scatter Gather List)首先是个List，是个链表，由一个或者多个<code>SGL Segment</code>组成，而每个<code>SGL Segment</code>又由一个或者多个<code>SGL Descriptor</code>组成。<code>SGL Descriptor</code>是SGL最基本的单元，它描述了一段连续的物理内存空间：起始地址+空间大小。</p>
+<p>每个SGL Descriptor大小是16字节。一块内存空间，可以用来放用户数据，也可以用来放<code>SGL Segment</code>，根据这段空间的不同用途，<code>SGL Descriptor</code>也分几种类型。</p>
+<p><img src="/images/34/1680610218236.png" alt="1680610218236"></p>
+<p>有4种SGL Descriptor，一种是<strong>Data Block</strong>，这个好理解，就是描述的这段空间是用户数据空间；一种是<strong>Segment描述符</strong>。SGL是由SGL Segment组成的链表。既然是链表，前面一个Segment就需要有个指针指向下一个Segment，这个指针就是SGL Segment描述符，它描述的是它下个Segment所在的空间。特别地，对链表当中倒数第二个Segment，它的SGL Segment描述符我们把它叫做SGL Last Segment描述符。它本质还是SGL Segment描述符，描述的还是SGL Segment所在的空间。为什么需要把倒数第二个SGL Segment描述符单独的定义成一种类型呢？我认为是让SSD在解析SGL的时候，碰到SGL Last Segment描述符，就知道链表快到头了，后面只有一个Segement了；最后一种，<strong>SGL Bit Bucket</strong>，它只对Host读有用，用以告诉SSD，你往这个内存写入的东西我是不要的。好吧，不要，就不传了。</p>
+<div class="table-container">
+<table>
+<thead>
+<tr>
+<th><img src="/images/34/1680610737566.png" alt="1680610737566"></th>
+<th><img src="/images/34/1680611590697.png" alt="1680611590697"></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>假设Host需要往SSD中读取13KB的数据，其中真正只需要11KB数据，这11KB的数据需要放到3个大小不同的内存中，分别是：3KB,4KB和4KB。</p>
+<p>PRP与SGL的区别是：一段数据空间，对PRP来说，它只能映射到一个个物理页，而对SGL来说，它可以映射到任意大小的连续物理空间。有点像内存管理的分页与分段，果然计算机思想到哪都能用。</p>
+<p><img src="/images/34/1680610810836.png" alt="1680610810836"></p>
+<h2 id="4-NVMe与PCIe传输层交互"><a href="#4-NVMe与PCIe传输层交互" class="headerlink" title="4.NVMe与PCIe传输层交互"></a>4.NVMe与PCIe传输层交互</h2><p>来源：<a target="_blank" rel="noopener" href="https://www.ssdfans.com/?p=8146">蛋蛋读NVMe之四 (ssdfans.com)</a>这部分感觉对个人研究意义不大 所以就直接搬运了。方便以后看</p>
+<p><img src="/images/34/1680613119866.png" alt="1680613119866"></p>
+<p>任何一种计算机协议，它都是采用这种分层结构的。下层总是为上层服务的。有些协议，上图所有的层次都有定义和实现，而有些协议，只定义了其中的几层。然而，要让一种协议能工作，它需要一个完整的协议栈，PCIe定义了下三层，NVMe定义了最上层，两者一拍即合，构成一个完整的Host与SSD通讯的协议。</p>
+<p>PCIe与NVMe最直接接触的是传输层。在NVMe层，我们能看到的是64字节的命令，16字节的命令返回状态，以及跟命令相关的数据。而在PCIe的传输层，我们能看到的是TLP （Transaction Layer Packet）。还是跟快递做类比，你要寄东西，可能是手机，可能是电脑，不管是什么，你交给快递小哥，他总是把你要寄的东西打包，快递员看到的就是包裹，他根本不关心你里面的内容。PCIe传输层作为NVMe最直接的服务者，不管你NVMe发给我的是命令，还是命令状态，还是用户数据，我统统帮你放进包裹，打包后交给下一层，让数据链路层继续处理。</p>
+<p>PCIe传输层传输的是TLP，它就是个包裹，一般由包头和数据组成，当然也有可能只有包头没有数据。NVMe传下来的数据都是放在TLP的数据部分的（Payload）。为实现不同的目的，TLP可分为以下几种类型：</p>
+<ol>
+<li>Configuration Read/Write</li>
+<li>I/O Read/Write</li>
+<li>Memory Read/write</li>
+<li>Message</li>
+<li>Completion</li>
+</ol>
+<p>注意，这个Completion跟NVMe层的Completion不是同一个东西，他们处在不同层。在NVMe命令处理过程中，PCIe传输层基本只用Memory read/write TLP来为NVMe服务，其他TLP我们不用管。</p>
+<p>一图看懂NVMe命令处理流程</p>
+<p><img src="/images/34/1680654337786.png" alt="1680654337786"></p>
+<p><strong>首先，Host准备了一个Read命令给SSD</strong></p>
+<p><img src="/images/34/1680654364515.png" alt="1680654364515"></p>
+<p>基本意思就是，这是个读指令，Host需要从起始LBA 0x20E0448(SLBA)上读取128个DWORD (512字节)的数据，读到哪里去呢？PRP1给出内存地址是0x14ACCB000。这个命令放在编号为3的SQ里 (SQID = 3)，CQ编号也是3 (CQID = 3)。</p>
+<p><strong>第二步就是：Host通过写SQ的Tail DB，通知SSD来取命令</strong>。</p>
+<p><img src="/images/34/1680654756554.png" alt="1680654756554"></p>
+<p>上图中，上层是NVMe层，下层是PCIe的传输层，这一层我们看到的是TLP。Host想往SQ Tail DB中写入的值是5。PCIe是通过一个<strong>Memory Write TLP</strong>来实现Host写CQ的Tail DB的。</p>
+<p>一个Host，下面可能连接着若干个Endpoint，该SSD只是其中的一个Endpoint而已，那有个问题，Host怎么能准确更新该SSD Controller中的Tail DB寄存器呢？怎么寻址？其实，在上电的过程中，每个Endpoint的内部空间都会通过内存映射(memory map)的方式映射到Host的内存中，SSD Controller当中的寄存器会被映射到Host的内存，当然也包括 Tail DB寄存器。Host在用Memory Write写的时候，Address只需设置该寄存器在Host内存中映射的地址，就能准确写入到该寄存器。以上图为例，该Tail DB寄存器应该映射在Host内存地址F7C11018，所以Host写DB，只需指定这个物理地址，就能准确无误的写入到对应的寄存器中去。应该注意的是：<strong>Host并不是往自己内存的那个物理地址写入东西，而是用那个物理地址作为寻址用</strong>，往SSD方向写。否则就太神奇了，往自己内存写东西就能改变SSD中的寄存器值，那不是量子效应吗？我们的东西还没有那么玄乎。</p>
+<p><strong>第三步：SSD收到通知，去Host端的SQ中取指。</strong></p>
+<p><img src="/images/34/1680655490881.png" alt="1680655490881"></p>
+<p>PCIe是通过发一个<strong>Memory Read TLP</strong>到Host的SQ中取指的。可以看到，PCIe需要往Host内存中读取16个DWORD的数据。为什么是16 DWORD数据，因为每个NVMe命令的大小是64个字节。从上图中，我们可以推断SQ 3当前的Head指向的内存地址是0x101A41100？怎么推断来的？因为SSD总是从Host 的SQ的Head取指的，而上图中，Address就是0x101A41100，所以我们有此推断。</p>
+<p>在上图中，SSD往Host发送了一个Memory Read的请求，Host通过Completion的方式把命令数据返回给SSD。和前面的Memory Write不同，Memory Read中是不含数据，只是个请求，数据的传输需要对方发个Completion。像这种需要对方返回状态的TLP请求，我们叫它Non-Posted请求。怎么理解呢？Post，有”邮政”的意思，就像你寄信一样，你往邮箱中一扔，对方能不能收到，就看快递员的素养了，反正你是把信发出去了。像Memory Write这种，就是Posted请求，数据传给对方，至于对方有没有处理，我们不在乎；而像Memory Read这种请求，它就必须是Non-Posted了，因为如果对方不响应（不返回数据）给我，Memory Read就是失败的。所以，每个Memory read请求都有相应的Completion。</p>
+<p><strong>第四步：SSD执行读命令，把数据从闪存中读到缓存中，然后把数据传给Host。</strong></p>
+<p>数据从闪存中读到缓存中，这个是SSD内部的操作，跟PCIe和NVMe没有任何关系，因此，我们捕捉不到SSD的这个行为。我们在PCIe接口上，我们只能捕捉到SSD把数据传给Host的过程。</p>
+<p><img src="/images/34/1680655572199.png" alt="1680655572199"></p>
+<p>从上图中可以看出，SSD是通过<strong>Memory write TLP</strong> 把Host命令所需的128个DWORD数据写入到Host命令所要求的内存中去。SSD每次写入32个DWORD，一共写了4次。正如之前所说，我们没有看到Completion，合理。</p>
+<p><strong>第五步就是：SSD往Host的CQ中返回状态</strong></p>
+<p>SSD一旦把数据返回给Host，SSD认为命令以及处理完毕，</p>
+<p><img src="/images/34/1680655693047.png" alt="1680655693047"></p>
+<p>从上图中可以看出，SSD是通过<strong>Memory write TLP</strong> 把16个字节的命令完成状态信息写入到Host的CQ中。</p>
+<p><strong>第六步就是：SSD采用中断的方式告诉Host去处理CQ</strong></p>
+<p>SSD往Host的CQ中写入后</p>
+<p><img src="/images/34/1680656338713.png" alt="1680656338713"></p>
+<p>SSD中断Host，NVMe/PCIe有四种方式：Pin-based interrupt, single message MSI,multiple message MSI,和MSI-X。关于中断，具体的可以参看spec 第171页，有详细介绍，有兴趣的可以去看看。从上图中，这个例子中使用的是MSI-X中断方式。跟传统的中断不一样，它不是通过硬件引脚的方式，而是把中断信息和正常的数据信息一样，PCIe打包把中断信息告知Host。上图告诉我们，SSD还是通过<strong>Memory Write TLP</strong>把中断信息告知Host，这个中断信息长度是1DWORD。</p>
+<p>第七步就是：<strong>Host处理相应的CQ。</strong>Host收到中断后，Host处理相应的CQ。这步是在Host端内部发生的事情，在PCIe线上我们捕捉不到这个处理过程。</p>
+<p>最后一步，Host处理完相应的CQ后，<strong>需要更新SSD端的CQ Head DB,告知SSD CQ处理完毕。</strong></p>
+<p><img src="/images/34/1680656536788.png" alt="1680656536788"></p>
+<p>跟前面一样，Host还是通过<strong>Memory Write TLP</strong>更新SSD端的CQ Head DB。</p>
+<h2 id="5-NVMe中端到端数据保护功能"><a href="#5-NVMe中端到端数据保护功能" class="headerlink" title="5.NVMe中端到端数据保护功能"></a>5.NVMe中端到端数据保护功能</h2><p>来源：<a target="_blank" rel="noopener" href="http://www.ssdfans.com/?p=8148">蛋蛋读NVMe之五 (ssdfans.com)</a></p>
+<p>Host与SSD之间，数据传输的最小单元是逻辑块（Logical Block,LB），每个逻辑块大小可以是512/520/1024/2048/4096字节等，Host在格式化SSD的时候，逻辑块大小就确定了，以后两者就按这个逻辑块大小进行数据交互。</p>
+<p>数据从Host到NVM（Non-Volatile Memory，目前一般是闪存，后面我就用闪存来代表NVM），首先要经过PCIe传输到SSD的Controller，然后Controller把数据写入到闪存；反过来，Host想从闪存上读取数据，首先SSD Controller从闪存上获得数据，然后经过PCIe把数据传送给Host。</p>
+<p><img src="/images/34/1680657295119.png" alt="1680657295119"></p>
+<p>Host与SSD之间，数据在PCIe上传输的时候，由于信道噪声的存在（说白了就是存在干扰），可能导致数据出错；另外，在SSD内部，Controller与闪存之间，数据也可能发生错误。路途凶险。为确保Host与闪存之间数据的完整性，即Host写入到闪存的数据与最初Host写的数据一致，以及Host读到的数据与最初从闪存上读上来的数据一致，NVMe提供了一个端到端数据保护功能。</p>
+<p>除了逻辑块数据本身，NVMe还允许每个逻辑块带个助理，叫做元数据（Meta Data）。这个助理的职责，NVMe虽然没有明确的要求，但如果数据需要保护，NVMe要求这个助理必须能充当保镖的角色。</p>
+<p>元数据有两种存在方式，一种是作为逻辑块数据的扩展，和逻辑块数据放一起存放，这是贴身保镖：</p>
+<p><img src="/images/34/1680657794179.png" alt="1680657794179"></p>
+<p>另外一种方式就是逻辑块数据放在一起，元数据单独放在别处。虽不是贴身保护，但保镖在附近时刻注意着主人的安全，属非贴身保镖：</p>
+<p><img src="/images/34/1680658047226.png" alt="1680658047226"></p>
+<p>贴身保护与否，我们不关心形式，我们只关心元数据是如何保护逻辑块数据的。NVMe要求每个逻辑块数据的保镖配备下面这把武器:</p>
+<p><img src="/images/34/1680659045782.png" alt="1680659045782"></p>
+<p>其中的”Guard”是16比特的CRC （Cyclic Redundancy Check），它是逻辑块数据算出来的；”Application Tag”和”Reference Tag”包含该数据块的逻辑地址（LBA）等信息。CRC校验能够检测出数据是否有错，后者则是保证数据不会出现张冠李戴的问题。</p>
+<p>佩了保镖的数据看起来就是下面这个样子（以512字节的数据块为例）：</p>
+<p><img src="/images/34/1680659118271.png" alt="1680659118271"></p>
+<p>在Host与SSD数据传输过程中，NVMe可以让每个逻辑块数据都带上保镖，也可以让他们不带保镖，也可以在某个治安差的地方把保镖带上，然后在治安环境好的地方不用保镖。</p>
+<p><strong>Host往SSD写入数据，不带保镖的情况：</strong></p>
+<p><img src="/images/34/1680659147592.png" alt="1680659147592"></p>
+<p>如果是无关紧要的数据，完全没有必要进行端到端的保护，毕竟数据保护需要传输额外的数据 （每个逻辑数据块需要至少额外8字节的数据保护信息，有效带宽减少），还需要SSD做额外的数据完整性校验（耗时，性能变差），最关键的是PCIe通道上，其数据天然就能受到保护。</p>
+<p>对每个TLP来说，其中有个Digest域，就是对HDR和Data进行数据保护的，本质就是CRC。这个Digest是可选的。如果使能了Digest，数据在PCIe上传输是毫无风险的，因为有便衣警察保护，在NVMe层完全没有必要进行额外的数据保护。</p>
+<p>当然，它不能发现数据张冠李戴的问题。</p>
+<p><strong>Host往SSD写入数据，全程带上保镖的情况</strong>：</p>
+<p><img src="/images/34/1680659340015.png" alt="1680659340015"></p>
+<p>红色<strong>PI</strong>，Protection Information。</p>
+<p>Host数据通过PCIe传输到SSD Controller之间，按理来说数据已经受到PCIe的保护，但PCIe保镖也有可能不在情况，那就是TLP中Digest域可能不存在，这是PCIe允许的。这个时候，如果要保证在PCIe上数据传输的可靠性，就需要NVMe自带保镖。数据到达SSD Controller时，SSD Controller会重新计算逻辑块数据的CRC，与保镖的CRC比较，如果两者匹配，说明数据传输是没有问题的；否则，数据就是有问题的，这个时候，SSD Controller就会给Host报错。</p>
+<p>除了CRC校验，还要检测有没有张冠李戴的问题，通过检测Reference Tag 和Application Tag，看看这个没有CRC问题的数据是不是该笔Host写命令对应的数据，如果不匹配，同样需要向Host报错。</p>
+<p>如果数据检测没有问题，SSD Controller会把逻辑块数据和PI一同写入闪存中。这个PI一同写入到闪存中有什么意义呢？在读的时候有意义。</p>
+<p><img src="/images/34/1680659978487.png" alt="1680659978487"></p>
+<p>SSD Controller读闪存的时候，会对读上来的数据进行CRC校验，如果写入的时候带有PI，这个时候就能检测出读上来的数据是否正确，从而决定这个数据要不要传给Host。有人要说，对闪存来说，数据不是受ECC保护吗？为什么还要额外进行数据校验？没错，写入到闪存中的数据是受ECC保护，这个没有问题，但在SSD内部，数据从Controller到闪存之间，一般都要经过DRAM或者SRAM，在之前SSD Controller写入到闪存，或者这个时候从闪存读数据到SSD Controller，可能就会发生比特翻转之类的小概率事件，从而导致数据不正确。如果在NVMe层再做个CRC保护，这类数据错误就能被发现了。</p>
+<p>除了数据在SSD内发生反转，由于固件问题，或者别的原因，还是会出现数据张冠李戴的问题：数据虽然没有CRC错误，但是它不是我们想要的数据。因此，还需要做Reference Tag和Application Tag检测。</p>
+<p>SSD Controller通过PCIe把数据传给Host，Host端也会对数据进行校验，看SSD返回过来的数据是否有错。</p>
+<p><strong>Host往SSD写入数据，半程带保镖的情况</strong>：</p>
+<p><img src="/images/34/1680660184516.png" alt="1680660184516"></p>
+<p>这种情况，Host与Controller端之间是没有数据保护，因为PCIe已经能提供数据完整性保证了（TLP中的Digest使能）。但在SSD内部，Controller到闪存之间，由于乱七八糟的原因（数据反转，LBA数据不匹配），存在数据错误的可能，NVMe要求SSD Controller在把数据写入到闪存前，计算好数据的PI，然后把数据和PI一同写入到闪存。</p>
+<p>SSD Controller读闪存的时候，会对读上来的数据进行PI校验，如果没有问题，剥除PI，然后把逻辑块数据返回给Host；如果校验失败，说明数据存在问题，SSD需要向Host报错。如下图所示：</p>
+<p><img src="/images/34/1680660680739.png" alt="1680660680739"></p>
+<p>数据端到端保护是NVMe的一个特色，其本质就是在数据块当中加入CRC和数据块对应的LBA等冗余信息，SSD Controller或者Host端利用这个这些信息进行数据校验，然后根据校验结果执行相应的操作。加入这些检错信息的好处是能让Host与SSD Controller及时发现数据错误，副作用就是：</p>
+<ol>
+<li>每个数据块需要额外的至少8字节的数据保护信息，有效带宽减少：数据块大小越小，带宽影响越大。</li>
+<li>SSD Controller需要做数据校验，影响性能。</li>
+</ol>
+<h1 id="6-NVMe的命名空间"><a href="#6-NVMe的命名空间" class="headerlink" title="6.NVMe的命名空间"></a>6.NVMe的命名空间</h1><p>来源：<a target="_blank" rel="noopener" href="http://www.ssdfans.com/?p=8157">蛋蛋读NVMe之六 (ssdfans.com)</a></p>
+<p><img src="/images/34/1680661034564.png" alt="1680661034564"></p>
+<p>上图中红圈圈起来的是一个NVMe子系统，通常来说就是SSD。一个NVMe SSD主要由<strong>SSD Controller</strong>，<strong>闪存空间</strong>和<strong>PCIe接口</strong>组成。如果把闪存空间划分成若干个独立的逻辑空间，每个空间逻辑块地址（LBA）范围是0到N-1 (N是逻辑空间大小)，这样划分出来的每一个逻辑空间我们就叫做NS。对SATA SSD来说，一个闪存空间只对应着一个逻辑空间，与之不同的是，NVMe SSD可以是一个闪存空间对应多个逻辑空间。</p>
+<p>每个NS都有一个名称与ID，如同每个人都有名字和身份证号码，ID是独一无二的，系统就是通过 NS的ID来区分不同的NS。</p>
+<p><img src="/images/34/1680661191271.png" alt="1680661191271"></p>
+<p>如上图例子，整个闪存空间划分成2个NS，名字分别是NS A和NS B，对应的NS ID分别是1和2。如果NS A大小是M （以逻辑块大小为单位），NS B大小是N，则他们的逻辑地址空间分别是0到M-1和0到N-1。Host读写SSD，都是要在命令中指定读写的是哪个NS中的逻辑块。原因很简单，如果不指定NS，对同一个LBA来说，假设就是LBA 0，SSD根本就不知道去读或者写哪里，因为有两个逻辑空间，每个逻辑空间都有LBA 0。</p>
+<p>一个NVMe命令一共64字节，其中第4到第7个Byte指定了要访问的NS。</p>
+<p><img src="/images/34/1680661290794.png" alt="1680661290794"></p>
+<p>对每个NS来说，都有一个4KB大小的数据结构来描述它</p>
+<p><img src="/images/34/1680663023189.png" alt="1680663023189"></p>
+<p>该数据结构描述了该NS的大小，整个空间已经写了多少，每个LBA的大小，以及端到端数据保护相关设置，该NS是否属于某个Controller还是几个Controller可以共享，等等。</p>
+<p>NS由Host创建和管理，每个创建好的NS，从Host操作系统角度看来，就是一个独立的磁盘，用户可在每个NS做分区等操作。</p>
+<p><img src="/images/34/1680663042816.png" alt="1680663042816"></p>
+<p>上例中，整个闪存空间划分成两个NS，NS A和NS B，操作系统看到两个完全独立的磁盘。我的天呀，太神奇了，我买一个SSD，居然得到两个磁盘，赚大发了。</p>
+<p>每个NS是独立的，逻辑块大小可以不同，端到端数据保护配置也可以不同：你可以让一个NS使用保镖，另一个NS不使用保镖，再一个NS半程使用保镖（见《<a target="_blank" rel="noopener" href="http://www.ssdfans.com/?p=1282">蛋蛋读NVMe之五</a>》）。</p>
+<p>其实，NS更多的是应用在企业级，可以根据客户不同需求创建不同特征的NS，也就是在一个SSD上创建出若干个不同功能特征的磁盘（NS）供不同客户使用。</p>
+<p>NS的另外一个重要使用场合是：SR-IOV。</p>
+<p>什么是SR-IOV？ 英文全称为 Single Root- I/O Virtualization，SR-IOV技术允许在虚拟机之间高效共享PCIe设备，并且它是在硬件中实现的，可以获得能够与本机性能媲美的I/O 性能。单个I/O 资源（单个SSD）可由许多虚拟机共享。共享的设备将提供专用的资源，并且还使用共享的通用资源。这样，每个虚拟机都可访问唯一的资源。</p>
+<p><img src="/images/34/1680663067817.png" alt="1680663067817"></p>
+<p>如上图所示，该SSD作为PCIe的一个Endpoint，实现了一个物理功能 (Physical Function ,PF)，有4个虚拟功能（Virtual Function，VF）关联该PF。每个VF，都有自己独享的NS，还有公共的NS （NS E)。此功能使得虚拟功能可以共享物理设备，并在没有 CPU 和虚拟机管理程序软件开销的情况下执行 I/O。关于SR-IOV更多知识，请自行百度或者谷歌。这里我们只需知道NVMe中的NS有用武之地就可以。</p>
+<p>对一个NVMe子系统来说，除了包含若干个NS，还可以由若干个 SSD Controller。注意，这里不是说一个SSD Controller有多个CPU，而是说一个SSD有几个实现了NVMe功能的Controller。</p>
+<p><img src="/images/34/1680663088125.png" alt="1680663088125"></p>
+<p>如上图例子，一个NVMe子系统包含了两个Controller，分别实现不同功能（也可以是相同功能）。整个闪存空间分成3个NS，其中NS A由Controller 0（左边）独享，NS C由Controller 1（右边）独享，而NS B是两者共享。独享的意思是说只有与之关联的Controller才能访问该NS，别的Controller是不能对之访问的，上图中Controller 0是不能对NS C进行读写操作的，同样，Controller 1也不能访问 NS A；共享的意思是说，该NS（这里是NS B）是可以被两个Controller共同 访问的。对共享NS，由于几个Controller都可以对它进行访问，所以要求每个Controller对该NS的访问都是原子操作，从而避免同步问题。</p>
+<p>事实上，一个NVMe子系统，除了可以有若干个NS，除了可以有若干个Controller，还可以有若干个PCIe接口。</p>
+<p><img src="/images/34/1680663130886.png" alt="1680663130886"></p>
+<p>与前面的架构不一样，上图的架构是每一个Controller有自己的PCIe接口，而不是两者共享一个。Dual Port，哈哈，在SATA SSD上没有见过吧。这两个接口，往上有可能连着同一个主机，也可能连着不同的主机。现在能提供 Dual PCIe Port的SSD 接口只有SFF-8639 ，也叫U.2，它支持标准的NVMe协议和Dual-Port，号称SSD接口明日之星。</p>
+<p><img src="/images/34/1680680846539.png" alt="1680680846539"></p>
+<p>下图是两个PCIe接口连着一个主机的情况：</p>
+<p><img src="/images/34/1680681617859.png" alt="1680681617859"></p>
+<p>为什么要这么玩？</p>
+<p>我认为，一方面，Host访问SSD，可以双管齐下，性能可能更好点。不过对访问NS B来说，同一时刻只能被一个Controller访问，双管齐下又如何。考虑到还可以同时操作NS A 和 NS C，性能或多或少的有所提升。</p>
+<p>我觉得，更重要的是，这种双接口冗余设计，可以提升系统可靠性。假设 PCIe A接口出现问题，这个时候Host可以通过 PCIe B无缝衔接，继续对NS B进行访问。当然了，NS A是无法访问了。</p>
+<p>如果Host突然死机怎么办？据小道消息，阿法狗输给李世石那盘，就是阿法狗死机了，然后重启再战，结果超时认输。哈哈，开个玩笑。在一些很苛刻的场景下，是不允许Host宕机的。但是，是电脑总有死机的时候，怎么办？最直接有效的办法还是采用冗余容错策略：SSD有两个Controller，有两个PCIe接口，那么我主机也弄个双主机：一个主机挂了，另一个主机接管任务，继续执行，你就慢慢重启吧。</p>
+<p><img src="/images/34/1680681697873.png" alt="1680681697873"></p>
+<p>蛋蛋似乎就更新了六部分。</p>
+
+          
+        
+      
+    </div>
+    
+    
+    
+
+    
+
+    
+
+    
+
+    <footer class="post-footer">
+      
+
+      
+
+      
+
+      
+      
+        <div class="post-eof"></div>
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+      
+    
+      
+      
+        
+      
+      
+        
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="http://hanze5.github.io/2023/04/01/33-FEMU%E6%BA%90%E7%A0%81%E9%98%85%E8%AF%BB%E2%80%94%E2%80%94ZNS%EF%BC%881%EF%BC%89/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/images/my_avatar.png">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="也许不会有人进来吧">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+                
+                <a class="post-title-link" href="/2023/04/01/33-FEMU%E6%BA%90%E7%A0%81%E9%98%85%E8%AF%BB%E2%80%94%E2%80%94ZNS%EF%BC%881%EF%BC%89/" itemprop="url">FEMU源码阅读——ZNS（1）</a></h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2023-04-01T21:55:26+08:00">
+                2023-04-01
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E5%AD%A6%E6%97%A0%E6%AD%A2%E5%A2%83/" itemprop="url" rel="index">
+                    <span itemprop="name">学无止境</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+          
+
+          
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        
+          
+            <p>FEMU是弗吉尼亚理工学院的<strong>Huaicheng LI</strong>教授团队开发的一款SSD模拟器。基于QEMU，所以模拟出来的SSD设备可以被qemu使用。FEMU可用于模拟多种SSD，个人研究更关注ZNS SSD ，所以找到了相关部分的代码。</p>
+<p>代码路径：FEMU/hw/femu/zns</p>
+<p>该路径中有两个文件：</p>
+<p><img src="/images/33/1680349189919.png" alt="1680349189919"></p>
+<h2 id="0-需要明确的一些概念"><a href="#0-需要明确的一些概念" class="headerlink" title="0.需要明确的一些概念"></a>0.需要明确的一些概念</h2><ul>
+<li><strong>Namespace</strong>是NVMe SSD中的一个概念，它是将闪存空间划分成若干个独立的逻辑空间，每个空间逻辑块的地址范围为0到N-1（N是逻辑空间大小），这样划分的每个逻辑空间叫做Namespace。每个Namespace都有一个名称和ID，系统是通过NS的ID来区分不同的NS。</li>
+<li><strong>Zone</strong>，NVMe Zoned Namespaces是NVMe规范中的一套新命令集，该命令集暴露了一套接口（zoned block storage interface）给主机，该接口将其容量划分为多个Zone，在每个Zone内允许随机读，但只允许顺序写。每个Zone都有一段LBA (Logical Block Address, 逻辑地址空间)区间，这段区间只能顺序写，而且如果要覆盖写，则必须显示的进行一次擦除操作。在这套命令集中，NS由zone组成。似乎官方文档中并没有明确的说明同一NS中的zone大小必须一致。</li>
+</ul>
+<h2 id="1-头文件zns-h"><a href="#1-头文件zns-h" class="headerlink" title="1. 头文件zns.h"></a>1. 头文件zns.h</h2><p>该文件包含了许多与NVMe Zoned 命名空间的相关定义和结构。其中有很多结构的名称全面都加了一个宏<code>QEMU_PACKED</code>。该宏定义用于指定结构体的对齐方式。在使用QEMU时可以使用这个宏来指定结构体的对齐方式。</p>
+<h2 id="2-源文件zns-c"><a href="#2-源文件zns-c" class="headerlink" title="2. 源文件zns.c"></a>2. 源文件zns.c</h2>
+          
+        
+      
+    </div>
+    
+    
+    
+
+    
+
+    
+
+    
+
+    <footer class="post-footer">
+      
+
+      
+
+      
+
+      
+      
+        <div class="post-eof"></div>
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+      
+    
+      
+      
+        
+      
       
         
 
@@ -404,6 +908,8 @@
     
       
       
+        
+      
       
         
 
@@ -418,7 +924,7 @@
   
   
   <div class="post-block">
-    <link itemprop="mainEntityOfPage" href="http://hanze5.github.io/2023/03/24/31-SPDK%E2%80%94%E2%80%94NVMe%E5%8D%8F%E8%AE%AE%EF%BC%88%E4%B8%8E%E5%AD%98%E5%82%A8%E7%A0%94%E7%A9%B6%E7%9B%B8%E5%85%B3%E6%80%A7%E4%B8%8D%E5%A4%A7/">
+    <link itemprop="mainEntityOfPage" href="http://hanze5.github.io/2023/03/24/31-%E6%80%BB%E7%BA%BF%E5%8D%8F%E8%AE%AE%E4%B8%8E%E6%8E%A5%E5%8F%A3%EF%BC%88%E4%B8%8E%E5%AD%98%E5%82%A8%E7%A0%94%E7%A9%B6%E7%9B%B8%E5%85%B3%E6%80%A7%E4%B8%8D%E5%A4%A7)/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
       <meta itemprop="name" content="">
@@ -437,7 +943,7 @@
         
           <h1 class="post-title" itemprop="name headline">
                 
-                <a class="post-title-link" href="/2023/03/24/31-SPDK%E2%80%94%E2%80%94NVMe%E5%8D%8F%E8%AE%AE%EF%BC%88%E4%B8%8E%E5%AD%98%E5%82%A8%E7%A0%94%E7%A9%B6%E7%9B%B8%E5%85%B3%E6%80%A7%E4%B8%8D%E5%A4%A7/" itemprop="url">总线、协议与接口（与存储研究相关性不大)</a></h1>
+                <a class="post-title-link" href="/2023/03/24/31-%E6%80%BB%E7%BA%BF%E5%8D%8F%E8%AE%AE%E4%B8%8E%E6%8E%A5%E5%8F%A3%EF%BC%88%E4%B8%8E%E5%AD%98%E5%82%A8%E7%A0%94%E7%A9%B6%E7%9B%B8%E5%85%B3%E6%80%A7%E4%B8%8D%E5%A4%A7)/" itemprop="url">总线、协议与接口（与存储研究相关性不大)</a></h1>
         
 
         <div class="post-meta">
@@ -576,6 +1082,8 @@
       
     
       
+      
+        
       
       
         
@@ -879,6 +1387,8 @@
     
       
       
+        
+      
       
         
 
@@ -1028,6 +1538,8 @@
       
     
       
+      
+        
       
       
         
@@ -1200,6 +1712,8 @@
     
       
       
+        
+      
       
         
 
@@ -1360,6 +1874,8 @@
       
     
       
+      
+        
       
       
         
@@ -1570,6 +2086,8 @@
       
     
       
+      
+        
       
       
         
@@ -1812,329 +2330,6 @@
 
       
     
-      
-      
-      
-        
-
-  
-
-  
-  
-  
-
-  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
-  
-  
-  
-  <div class="post-block">
-    <link itemprop="mainEntityOfPage" href="http://hanze5.github.io/2022/10/12/6.%E6%96%87%E4%BB%B6I-O/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="name" content="">
-      <meta itemprop="description" content="">
-      <meta itemprop="image" content="/images/my_avatar.png">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="也许不会有人进来吧">
-    </span>
-
-    
-      <header class="post-header">
-
-        
-        
-          <h1 class="post-title" itemprop="name headline">
-                
-                <a class="post-title-link" href="/2022/10/12/6.%E6%96%87%E4%BB%B6I-O/" itemprop="url">文件I/O</a></h1>
-        
-
-        <div class="post-meta">
-          <span class="post-time">
-            
-              <span class="post-meta-item-icon">
-                <i class="fa fa-calendar-o"></i>
-              </span>
-              
-                <span class="post-meta-item-text">发表于</span>
-              
-              <time title="创建于" itemprop="dateCreated datePublished" datetime="2022-10-12T19:45:26+08:00">
-                2022-10-12
-              </time>
-            
-
-            
-
-            
-          </span>
-
-          
-            <span class="post-category" >
-            
-              <span class="post-meta-divider">|</span>
-            
-              <span class="post-meta-item-icon">
-                <i class="fa fa-folder-o"></i>
-              </span>
-              
-                <span class="post-meta-item-text">分类于</span>
-              
-              
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/%E5%AD%A6%E6%97%A0%E6%AD%A2%E5%A2%83/" itemprop="url" rel="index">
-                    <span itemprop="name">学无止境</span>
-                  </a>
-                </span>
-
-                
-                
-              
-            </span>
-          
-
-          
-            
-          
-
-          
-          
-
-          
-
-          
-
-          
-
-        </div>
-      </header>
-    
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-      
-
-      
-        
-          
-            <h1 id="文件IO"><a href="#文件IO" class="headerlink" title="文件IO"></a>文件IO</h1><h2 id="标准c库IO函数"><a href="#标准c库IO函数" class="headerlink" title="标准c库IO函数"></a>标准c库IO函数</h2><p><img src="/images/6/1677755794700.png" alt="1677755794700"></p>
-<h2 id="标准c库IO和linux系统IO的关系"><a href="#标准c库IO和linux系统IO的关系" class="headerlink" title="标准c库IO和linux系统IO的关系"></a>标准c库IO和linux系统IO的关系</h2><p><img src="/images/6/1677755995584.png" alt="1677755995584"></p>
-<p>系统IO就是read write</p>
-<h2 id="虚拟空间地址"><a href="#虚拟空间地址" class="headerlink" title="虚拟空间地址"></a>虚拟空间地址</h2><p><img src="/images/6/1677756149401.png" alt="1677756149401"></p>
-<h2 id="文件描述符"><a href="#文件描述符" class="headerlink" title="文件描述符"></a>文件描述符</h2><p><img src="/images/6/1677756495794.png" alt="1677756495794"></p>
-<h2 id="linux系统IO函数（Linux系统API一般也称为系统调用）"><a href="#linux系统IO函数（Linux系统API一般也称为系统调用）" class="headerlink" title="linux系统IO函数（Linux系统API一般也称为系统调用）"></a>linux系统IO函数（Linux系统API一般也称为系统调用）</h2><figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta prompt_">#</span><span class="language-bash">可以使用man命令查看标准库函数的原型</span></span><br><span class="line">man open</span><br></pre></td></tr></table></figure>
-<p>这里不打算详细分析源码，打算在日后学习linux内核的时候再看。</p>
-
-          
-        
-      
-    </div>
-    
-    
-    
-
-    
-
-    
-
-    
-
-    <footer class="post-footer">
-      
-
-      
-
-      
-
-      
-      
-        <div class="post-eof"></div>
-      
-    </footer>
-  </div>
-  
-  
-  
-  </article>
-
-
-      
-    
-      
-      
-      
-        
-
-  
-
-  
-  
-  
-
-  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
-  
-  
-  
-  <div class="post-block">
-    <link itemprop="mainEntityOfPage" href="http://hanze5.github.io/2022/10/02/5.%E9%9D%99%E6%80%81%E5%BA%93%E5%92%8C%E5%8A%A8%E6%80%81%E5%BA%93/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="name" content="">
-      <meta itemprop="description" content="">
-      <meta itemprop="image" content="/images/my_avatar.png">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="也许不会有人进来吧">
-    </span>
-
-    
-      <header class="post-header">
-
-        
-        
-          <h1 class="post-title" itemprop="name headline">
-                
-                <a class="post-title-link" href="/2022/10/02/5.%E9%9D%99%E6%80%81%E5%BA%93%E5%92%8C%E5%8A%A8%E6%80%81%E5%BA%93/" itemprop="url">静态库和动态库</a></h1>
-        
-
-        <div class="post-meta">
-          <span class="post-time">
-            
-              <span class="post-meta-item-icon">
-                <i class="fa fa-calendar-o"></i>
-              </span>
-              
-                <span class="post-meta-item-text">发表于</span>
-              
-              <time title="创建于" itemprop="dateCreated datePublished" datetime="2022-10-02T19:11:53+08:00">
-                2022-10-02
-              </time>
-            
-
-            
-
-            
-          </span>
-
-          
-            <span class="post-category" >
-            
-              <span class="post-meta-divider">|</span>
-            
-              <span class="post-meta-item-icon">
-                <i class="fa fa-folder-o"></i>
-              </span>
-              
-                <span class="post-meta-item-text">分类于</span>
-              
-              
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/%E5%AD%A6%E6%97%A0%E6%AD%A2%E5%A2%83/" itemprop="url" rel="index">
-                    <span itemprop="name">学无止境</span>
-                  </a>
-                </span>
-
-                
-                
-              
-            </span>
-          
-
-          
-            
-          
-
-          
-          
-
-          
-
-          
-
-          
-
-        </div>
-      </header>
-    
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-      
-
-      
-        
-          
-            <h1 id="静态库和动态库"><a href="#静态库和动态库" class="headerlink" title="静态库和动态库"></a>静态库和动态库</h1><h2 id="什么是库"><a href="#什么是库" class="headerlink" title="什么是库"></a>什么是库</h2><p>库文件是计算机上的一类文件，可以简单的把库文件看成一种代码仓库，它提供给使用者一些可以直接拿来用的变量、类、函数等<br>库是一种特殊的程序，编写库文件和编写一般的程序的区别不大，只是库文件不能单独运行。<br>库文件有两种，静态库和动态库(共享库) ，他们的<strong>区别是</strong></p>
-<ul>
-<li>​    静态库在程序的链接阶段就被复制到了程序中，</li>
-<li>​    而动态库在链接阶段只是被记录的一些信息(如文件名)，而没有把动态库复制到程序中，而是在程序运行 阶段由系统动态加载到内存中供程序调用。</li>
-</ul>
-<p>库的好处：代码保密(c++程序即使被反编译也只能还原20%左右) 、方便部署和发布    </p>
-<h2 id="静态库命名规则："><a href="#静态库命名规则：" class="headerlink" title="静态库命名规则："></a>静态库命名规则：</h2><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">linux：libxxx.a</span><br><span class="line">	lib:固定前缀</span><br><span class="line">	xxx:库的名字</span><br><span class="line">	 .a:固定后缀</span><br><span class="line">windows：libxxx.lib</span><br></pre></td></tr></table></figure>
-<h2 id="静态库的制作"><a href="#静态库的制作" class="headerlink" title="静态库的制作"></a>静态库的制作</h2><p>​    gcc获得.o文件</p>
-<p>​    将.o文件打包，使用ar工具（archive)</p>
-<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">ar rcs libxxx.a xxx.o xxx.o</span><br><span class="line"><span class="meta prompt_">#</span><span class="language-bash">r - 将文件插入备存文件中</span></span><br><span class="line"><span class="meta prompt_">#</span><span class="language-bash">c - 建立备存文件</span></span><br><span class="line"><span class="meta prompt_">#</span><span class="language-bash">s - 索引</span></span><br></pre></td></tr></table></figure>
-<p><img src="/images/5/1677754140889.png" alt="1677754140889"></p>
-<p>库文件需要头文件配合一起使用，因为头文件知名库文件里实现的函数。</p>
-<p>编译时</p>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">-I 头文件目录  -l库文件 -L库文件路径</span><br></pre></td></tr></table></figure>
-<h2 id="动态库命名规则："><a href="#动态库命名规则：" class="headerlink" title="动态库命名规则："></a>动态库命名规则：</h2><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">linux：libxxx.so</span><br><span class="line">	lib:固定前缀</span><br><span class="line">	xxx:库的名字</span><br><span class="line">	.so:固定后缀</span><br><span class="line">	linux下动态库是一个可执行文件</span><br><span class="line">windows：libxxx.dll</span><br></pre></td></tr></table></figure>
-<h2 id="动态库的制作"><a href="#动态库的制作" class="headerlink" title="动态库的制作"></a>动态库的制作</h2><p>​    gcc获得.o文件,得到和位置无关的代码</p>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">gcc -c -fpic/-fPIC a.c b.c</span><br><span class="line">gcc -share a.o b.o -o libxxx.so</span><br></pre></td></tr></table></figure>
-<p>​    这里就不制作了 挺简单的。</p>
-<h2 id="静态库和动态库的工作原理"><a href="#静态库和动态库的工作原理" class="headerlink" title="静态库和动态库的工作原理"></a>静态库和动态库的工作原理</h2><p>静态库:GCC进行链接时,会把静态库中的代码打包到可执行程序中</p>
-<p>动态库:GCC进行链接时,动态库的代码不会被打包到可执行程序中 在程序启动之后，动态库会被动态加载到内存中。但是可以被多个程序共享（shared）</p>
-<p>通过ldd(list dynamic dependcies)命令检查可执行文件动态库依赖关系 </p>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">ldd a.out</span><br></pre></td></tr></table></figure>
-<h2 id="区别"><a href="#区别" class="headerlink" title="区别"></a>区别</h2><p><img src="/images/5/1677755090849.png" alt="1677755090849"></p>
-<p><img src="/images/5/1677755114608.png" alt="1677755114608"></p>
-<p><img src="/images/5/1677755128214.png" alt="1677755128214"></p>
-<p><img src="/images/5/1677755166902.png" alt="1677755166902"></p>
-
-          
-        
-      
-    </div>
-    
-    
-    
-
-    
-
-    
-
-    
-
-    <footer class="post-footer">
-      
-
-      
-
-      
-
-      
-      
-        <div class="post-eof"></div>
-      
-    </footer>
-  </div>
-  
-  
-  
-  </article>
-
-
-      
-    
   </section>
 
   
@@ -2189,7 +2384,7 @@
               
                 <a href="/">
               
-                  <span class="site-state-item-count">32</span>
+                  <span class="site-state-item-count">34</span>
                   <span class="site-state-item-name">日志</span>
                 </a>
               </div>
@@ -2211,7 +2406,7 @@
               
               <div class="site-state-item site-state-tags">
                 <a href="/tags/index.html">
-                  <span class="site-state-item-count">10</span>
+                  <span class="site-state-item-count">11</span>
                   <span class="site-state-item-name">标签</span>
                 </a>
               </div>
