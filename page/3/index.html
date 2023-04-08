@@ -254,6 +254,212 @@
   
   
   <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="http://hanze5.github.io/2022/07/13/22-Linux%E5%86%85%E6%A0%B8%E2%80%94%E2%80%94%E5%86%85%E6%A0%B8%E7%A9%BA%E9%97%B4%E7%9A%84%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86%E4%B8%8E%E5%88%86%E9%85%8D/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/images/my_avatar.png">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="也许不会有人进来吧">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+                
+                <a class="post-title-link" href="/2022/07/13/22-Linux%E5%86%85%E6%A0%B8%E2%80%94%E2%80%94%E5%86%85%E6%A0%B8%E7%A9%BA%E9%97%B4%E7%9A%84%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86%E4%B8%8E%E5%88%86%E9%85%8D/" itemprop="url">Linux内核——内核空间的内存管理与分配</a></h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2022-07-13T08:05:12+08:00">
+                2022-07-13
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E5%AD%A6%E6%97%A0%E6%AD%A2%E5%A2%83/" itemprop="url" rel="index">
+                    <span itemprop="name">学无止境</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+          
+
+          
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        
+          
+            <p>跟着简叔学的，可以B站搜索 <strong>简说linux</strong></p>
+<h2 id="页框和伙伴算法"><a href="#页框和伙伴算法" class="headerlink" title="页框和伙伴算法"></a>页框和伙伴算法</h2><ul>
+<li>定义:内核使用struct page结构体描述每个物理页，也叫页框。一般一个页框对应一个4k的空间</li>
+<li>场景:内核在很多情况下，需要申请连续的页框，而且数量不定，比如4个，5个，9个等。</li>
+<li>实现: Linux把所有的空闲页框分组为11个块链表，每个链表上的页框块是固定的。在第i条链表中每个页框块都包含2的i次方个连续页。</li>
+<li>注意:系统中每个页框块的第一个页框的物理地址是该块大小的整数倍。例如:大小为16个页框的块，其起始地址是16*2^12的倍数。</li>
+</ul>
+<p><img src="/images/22/1678103470108.png" alt="1678103470108"> </p>
+<p>我要申请4k 就去找0里摘取一个；8k就找。</p>
+<h2 id="页框操作"><a href="#页框操作" class="headerlink" title="页框操作"></a>页框操作</h2><p>分配2^order个连续的物理页，并返回一个指针，指向第一个页的page结构体</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">static</span> <span class="keyword">inline</span> <span class="keyword">struct</span> page * <span class="title function_">alloc_pages</span><span class="params">(<span class="type">gfp_t</span> gfp_mask, <span class="type">unsigned</span> <span class="type">int</span> order)</span></span><br></pre></td></tr></table></figure>
+<p>返回page页面所映射的的虚拟地址</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">void</span> *<span class="title function_">page_address</span><span class="params">(<span class="type">const</span> <span class="keyword">struct</span> page *page)</span></span><br></pre></td></tr></table></figure>
+<h2 id="slab实现了内存的管理和分配"><a href="#slab实现了内存的管理和分配" class="headerlink" title="slab实现了内存的管理和分配"></a>slab实现了内存的管理和分配</h2><ul>
+<li>slab层把不同的对象划分为所谓的高速缓存(cache)组，其中每个高速缓存都存放不同类型的对象;</li>
+<li>每种对象类型对应一个高速缓存(cache) ;</li>
+<li>例如一个高速缓存存放task_struct结构体，而另外一个高速缓存存放struct inode结构体;. </li>
+<li>slab由一个或者多个物理上连续的页组成。每个高速缓存由多个slab组成。</li>
+</ul>
+<p><img src="/images/22/1678104047825.png" alt="1678104047825">|<img src="/images/22/1678104158296.png" alt="1678104158296"></p>
+<p>slad又分为三个状态，用于形容 对象的分配情况。查看右图128B的情况，128Bcache中的每个对象大小都是128个字节，就是由2^15个page组成一个对象。每个slab又是由一个或多个page组成。</p>
+<p>slab可以</p>
+<ol>
+<li>减少伙伴算法在分配小块连续内存时所产生的内部碎片;</li>
+<li>将频繁使用的对象缓存起来，减少分配、初始化和释放对象的时间开销。</li>
+<li>通过着色技术调整对象以更好的使用硬件高速缓存;</li>
+</ol>
+<p>这块没怎么看明白。。。。这里留下网址以后再继续看</p>
+<p><a target="_blank" rel="noopener" href="https://www.toutiao.com/article/6874373733595742727/?log_from=09cb26731ee35_1678104694035">linux操作系统内存大串讲：段页式，slab，共享内存-今日头条 (toutiao.com)</a></p>
+<h2 id="slab高速缓存的使用"><a href="#slab高速缓存的使用" class="headerlink" title="slab高速缓存的使用"></a>slab高速缓存的使用</h2><ol>
+<li><p>通过命令 cat /proc/slabinfo 可查看系统中的长用的</p>
+<p><img src="/images/22/1678145522310.png" alt="1678145522310"></p>
+</li>
+<li><p>内核中用 <code>struct kmem_cache</code>表示一个高速缓存。   通过下面的方法创建高速缓存</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">struct</span>  kmem_cache*  <span class="title function_">kmem_cache_create</span><span class="params">(<span class="type">const</span> <span class="type">char</span> *name,<span class="type">size_t</span> size,<span class="type">size_t</span> align,</span></span><br><span class="line"><span class="params">                                      <span class="type">unsigned</span> <span class="type">long</span> flags,<span class="type">void</span> (*ctor)(<span class="type">void</span>))</span> </span><br><span class="line">    </span><br></pre></td></tr></table></figure>
+</li>
+<li><p>申请和释放高速缓存  和申请 slab。 申请高速缓存的实现运用到了申请slab</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">void</span> *<span class="title function_">kmem_cache_alloc</span><span class="params">(<span class="keyword">struct</span> kmem_cache *cachep, <span class="type">gfp_t</span> flags)</span> </span><br><span class="line"><span class="type">void</span> <span class="title function_">kmem_cache_destroy</span><span class="params">(<span class="keyword">struct</span> kmem_cache *s)</span></span><br><span class="line">    </span><br><span class="line">static_always_inline <span class="type">void</span> * <span class="title function_">slab_alloc</span><span class="params">(<span class="keyword">struct</span> kmem_cache *cachep, <span class="type">gfp_t</span> flags, <span class="type">unsigned</span> <span class="type">long</span> caller)</span></span><br></pre></td></tr></table></figure>
+</li>
+</ol>
+<h2 id="内核中的最常用的内存申请"><a href="#内核中的最常用的内存申请" class="headerlink" title="内核中的最常用的内存申请"></a>内核中的最常用的内存申请</h2><ol>
+<li>给硬件分配内存必须连续</li>
+</ol>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">static</span> _always_inline <span class="type">void</span> *<span class="title function_">kmalloc</span><span class="params">(<span class="type">size_t</span> size, <span class="type">gfp_t</span> flags)</span></span><br><span class="line"><span class="type">static</span> <span class="keyword">inline</span> <span class="type">void</span> *<span class="title function_">kzalloc</span><span class="params">(<span class="type">size_t</span> size, <span class="type">gfp_t</span> flags)</span></span><br><span class="line"><span class="comment">//返回一个指向内存块的指针，其内存块大小至少size大小，所分配的内存在物理上是连续的。</span></span><br><span class="line"><span class="type">void</span> *<span class="title function_">vmalloc</span><span class="params">(<span class="type">unsigned</span> <span class="type">long</span> size)</span></span><br><span class="line"><span class="type">void</span> *<span class="title function_">vzalloc</span><span class="params">(<span class="type">unsigned</span> <span class="type">long</span> size)</span><span class="comment">//多了一步初始化操作 初始化成0</span></span><br><span class="line"><span class="comment">//返回一个指向内存块的指针，其内存块大小至少size大小，所分配的内存在物理上无需连续。</span></span><br></pre></td></tr></table></figure>
+<p><img src="/images/22/1678105707629.png" alt="1678105707629"></p>
+<h3 id="kzalloc实现"><a href="#kzalloc实现" class="headerlink" title="kzalloc实现"></a>kzalloc实现</h3><p>我们的代码中就用到了<img src="/images/22/1678105885291.png" alt="1678105885291"></p>
+<p>它的内部就是用kmalloc实现的，只是多了一步初始化为0的操作。</p>
+<p><img src="/images/22/1678105935522.png" alt="1678105935522"></p>
+<p>kmalloc的源码在/linux-4.9.229/include/linux/slab.h</p>
+<p><img src="/images/22/1678105981827.png" alt="1678105981827"></p>
+<p>大部分情况不会进入到if的判断里面，下图代码在 /mm/slab.c</p>
+<p><img src="/images/22/1678106254461.png" alt="1678106254461"></p>
+<p>到底依赖伙伴系统的算法。根据size和flag得到对应的高速缓存，通过调用kmalloc_slab里找到合适的缓存，然后找到对象返回到ret。kmalloc_slab的实现在/mm/slab_common.c</p>
+<p><img src="/images/22/1678106514598.png" alt="1678106514598"></p>
+<p>​        可以猜测到，通过大小查索引，是范围查找，合适的缓存。</p>
+<p><img src="/images/22/1678106829368.png" alt="1678106829368"></p>
+<p>  <img src="/images/22/1678106877955.png" alt="1678106877955"></p>
+<p>妙啊！ 除以8算出8的几倍，通过倍数当作索引来找出合适的size</p>
+<p>（这块儿看了好久都没理顺，打算先放一放往下看了。。。。）</p>
+
+          
+        
+      
+    </div>
+    
+    
+    
+
+    
+
+    
+
+    
+
+    <footer class="post-footer">
+      
+
+      
+
+      
+
+      
+      
+        <div class="post-eof"></div>
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+      
+    
+      
+      
+        
+      
+      
+        
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
     <link itemprop="mainEntityOfPage" href="http://hanze5.github.io/2021/12/06/2.%E5%85%B3%E4%BA%8EFPGA%E5%85%A8%E5%B1%80%E5%B8%83%E7%BA%BF/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
@@ -1877,178 +2083,6 @@
 
       
     
-      
-      
-        
-      
-      
-        
-
-  
-
-  
-  
-  
-
-  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
-  
-  
-  
-  <div class="post-block">
-    <link itemprop="mainEntityOfPage" href="http://hanze5.github.io/2021/06/02/16-Linux%E5%86%85%E6%A0%B8%E2%80%94%E2%80%94%E5%A6%82%E4%BD%95%E5%B0%86%E9%A9%B1%E5%8A%A8%E4%BB%A3%E7%A0%81%E6%B7%BB%E5%8A%A0%E5%88%B0%E5%86%85%E6%A0%B8%E6%BA%90%E7%A0%81%E6%A0%91/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="name" content="">
-      <meta itemprop="description" content="">
-      <meta itemprop="image" content="/images/my_avatar.png">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="也许不会有人进来吧">
-    </span>
-
-    
-      <header class="post-header">
-
-        
-        
-          <h1 class="post-title" itemprop="name headline">
-                
-                <a class="post-title-link" href="/2021/06/02/16-Linux%E5%86%85%E6%A0%B8%E2%80%94%E2%80%94%E5%A6%82%E4%BD%95%E5%B0%86%E9%A9%B1%E5%8A%A8%E4%BB%A3%E7%A0%81%E6%B7%BB%E5%8A%A0%E5%88%B0%E5%86%85%E6%A0%B8%E6%BA%90%E7%A0%81%E6%A0%91/" itemprop="url">Linux内核——如何将驱动代码添加到内核源码树</a></h1>
-        
-
-        <div class="post-meta">
-          <span class="post-time">
-            
-              <span class="post-meta-item-icon">
-                <i class="fa fa-calendar-o"></i>
-              </span>
-              
-                <span class="post-meta-item-text">发表于</span>
-              
-              <time title="创建于" itemprop="dateCreated datePublished" datetime="2021-06-02T09:24:42+08:00">
-                2021-06-02
-              </time>
-            
-
-            
-
-            
-          </span>
-
-          
-            <span class="post-category" >
-            
-              <span class="post-meta-divider">|</span>
-            
-              <span class="post-meta-item-icon">
-                <i class="fa fa-folder-o"></i>
-              </span>
-              
-                <span class="post-meta-item-text">分类于</span>
-              
-              
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/%E5%AD%A6%E6%97%A0%E6%AD%A2%E5%A2%83/" itemprop="url" rel="index">
-                    <span itemprop="name">学无止境</span>
-                  </a>
-                </span>
-
-                
-                
-              
-            </span>
-          
-
-          
-            
-          
-
-          
-          
-
-          
-
-          
-
-          
-
-        </div>
-      </header>
-    
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-      
-
-      
-        
-          
-            <h1 id="以字符设备驱动为例s"><a href="#以字符设备驱动为例s" class="headerlink" title="以字符设备驱动为例s"></a>以字符设备驱动为例s</h1><ol>
-<li><p>首先，把.c文件拷贝到/driver/char中要修改源码给目录下的/driver/char中的Kconfig文件，这样才能在编译内核时看到我们驱动的配置选单，参考其他的config 有样学样</p>
-<p><img src="/images/16/1678061581009.png" alt="1678061581009"></p>
-<p>tristate字段说明 该驱动有三个选项 y m n 。 y代表编译到内核里面，m是编程驱动.ko n是不编译。</p>
-</li>
-<li><p>接下来到内核源码根目录下执行，</p>
-<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">/home/dawnlake/Downloads/linux-4.9.229$ make memuconfig</span><br></pre></td></tr></table></figure>
-</li>
-</ol>
-<p>   <img src="/images/16/1678061753376.png" alt="1678061753376"></p>
-<p>   <img src="/images/16/1678061802952.png" alt="1678061802952"></p>
-<p>   <img src="/images/16/1678061851658.png" alt="1678061851658"></p>
-<p>   查看help</p>
-<p>   <img src="/images/16/1678061906964.png" alt="1678061906964"></p>
-<ol>
-<li><p>接下来需要修改/drivers/char目录下的makefile文件 </p>
-<p><img src="/images/16/1678065704335.png" alt="1678065704335"></p>
-</li>
-</ol>
-<ol>
-<li><p>然后再回到内核源码根目录下执行，make</p>
-<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br></pre></td><td class="code"><pre><span class="line">root@dawnlake-virtual-machine:/home/dawnlake/Downloads/linux-4.9.229$ make</span><br><span class="line">scripts/kconfig/conf  --silentoldconfig Kconfig</span><br><span class="line">  CHK     include/config/kernel.release</span><br><span class="line">  CHK     include/generated/uapi/linux/version.h</span><br><span class="line">  CHK     include/generated/utsrelease.h</span><br><span class="line">  CHK     include/generated/bounds.h</span><br><span class="line">  CHK     include/generated/timeconst.h</span><br><span class="line">  CHK     include/generated/asm-offsets.h</span><br><span class="line">  CALL    scripts/checksyscalls.sh</span><br><span class="line">  CHK     scripts/mod/devicetable-offsets.h</span><br><span class="line">  CHK     include/generated/compile.h</span><br><span class="line">  CC      drivers/char/helloDev.o</span><br><span class="line">  LD      drivers/char/built-in.o</span><br><span class="line">  LD      drivers/built-in.o</span><br><span class="line">  LD      vmlinux.o</span><br><span class="line">  MODPOST vmlinux.o</span><br><span class="line">  GEN     .version</span><br><span class="line">  CHK     include/generated/compile.h</span><br><span class="line">  UPD     include/generated/compile.h</span><br><span class="line">  CC      init/version.o</span><br><span class="line">  LD      init/built-in.o</span><br><span class="line">  KSYM    .tmp_kallsyms1.o</span><br><span class="line">  KSYM    .tmp_kallsyms2.o</span><br><span class="line">  LD      vmlinux</span><br><span class="line">  SORTEX  vmlinux</span><br><span class="line">  SYSMAP  System.map</span><br><span class="line">  VOFFSET arch/x86/boot/compressed/../voffset.h</span><br><span class="line">  CC      arch/x86/boot/compressed/misc.o</span><br><span class="line">  OBJCOPY arch/x86/boot/compressed/vmlinux.bin</span><br><span class="line">  GZIP    arch/x86/boot/compressed/vmlinux.bin.gz</span><br><span class="line">  MKPIGGY arch/x86/boot/compressed/piggy.S</span><br><span class="line">  AS      arch/x86/boot/compressed/piggy.o</span><br><span class="line">  LD      arch/x86/boot/compressed/vmlinux</span><br><span class="line">ld: arch/x86/boot/compressed/head_64.o: warning: relocation in read-only section `.head.text&#x27;</span><br><span class="line">ld: warning: creating DT_TEXTREL in a PIE</span><br><span class="line">  ZOFFSET arch/x86/boot/zoffset.h</span><br><span class="line">  AS      arch/x86/boot/header.o</span><br><span class="line">  CC      arch/x86/boot/version.o</span><br><span class="line">  LD      arch/x86/boot/setup.elf</span><br><span class="line">  OBJCOPY arch/x86/boot/setup.bin</span><br><span class="line">  OBJCOPY arch/x86/boot/vmlinux.bin</span><br><span class="line">  BUILD   arch/x86/boot/bzImage</span><br><span class="line">Setup is 15580 bytes (padded to 15872 bytes).</span><br><span class="line">System is 6681 kB</span><br><span class="line">CRC 959cc45</span><br><span class="line">Kernel: arch/x86/boot/bzImage is ready  (#2)</span><br><span class="line">  Building modules, stage 2.</span><br><span class="line">  MODPOST 18 modules</span><br></pre></td></tr></table></figure>
-<p>现在内核启动时候就会自动加载我们的hello驱动，如果在menuconfig设置m而不是y（*） ，就会只生成.ko文件而不是直接加载，需要手动插入。</p>
-</li>
-</ol>
-
-          
-        
-      
-    </div>
-    
-    
-    
-
-    
-
-    
-
-    
-
-    <footer class="post-footer">
-      
-
-      
-
-      
-
-      
-      
-        <div class="post-eof"></div>
-      
-    </footer>
-  </div>
-  
-  
-  
-  </article>
-
-
-      
-    
   </section>
 
   
@@ -2103,7 +2137,7 @@
               
                 <a href="/">
               
-                  <span class="site-state-item-count">34</span>
+                  <span class="site-state-item-count">35</span>
                   <span class="site-state-item-name">日志</span>
                 </a>
               </div>

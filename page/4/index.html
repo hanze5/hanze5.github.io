@@ -254,6 +254,178 @@
   
   
   <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="http://hanze5.github.io/2021/06/02/16-Linux%E5%86%85%E6%A0%B8%E2%80%94%E2%80%94%E5%A6%82%E4%BD%95%E5%B0%86%E9%A9%B1%E5%8A%A8%E4%BB%A3%E7%A0%81%E6%B7%BB%E5%8A%A0%E5%88%B0%E5%86%85%E6%A0%B8%E6%BA%90%E7%A0%81%E6%A0%91/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/images/my_avatar.png">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="也许不会有人进来吧">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+                
+                <a class="post-title-link" href="/2021/06/02/16-Linux%E5%86%85%E6%A0%B8%E2%80%94%E2%80%94%E5%A6%82%E4%BD%95%E5%B0%86%E9%A9%B1%E5%8A%A8%E4%BB%A3%E7%A0%81%E6%B7%BB%E5%8A%A0%E5%88%B0%E5%86%85%E6%A0%B8%E6%BA%90%E7%A0%81%E6%A0%91/" itemprop="url">Linux内核——如何将驱动代码添加到内核源码树</a></h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2021-06-02T09:24:42+08:00">
+                2021-06-02
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E5%AD%A6%E6%97%A0%E6%AD%A2%E5%A2%83/" itemprop="url" rel="index">
+                    <span itemprop="name">学无止境</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+          
+
+          
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        
+          
+            <h1 id="以字符设备驱动为例s"><a href="#以字符设备驱动为例s" class="headerlink" title="以字符设备驱动为例s"></a>以字符设备驱动为例s</h1><ol>
+<li><p>首先，把.c文件拷贝到/driver/char中要修改源码给目录下的/driver/char中的Kconfig文件，这样才能在编译内核时看到我们驱动的配置选单，参考其他的config 有样学样</p>
+<p><img src="/images/16/1678061581009.png" alt="1678061581009"></p>
+<p>tristate字段说明 该驱动有三个选项 y m n 。 y代表编译到内核里面，m是编程驱动.ko n是不编译。</p>
+</li>
+<li><p>接下来到内核源码根目录下执行，</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">/home/dawnlake/Downloads/linux-4.9.229$ make memuconfig</span><br></pre></td></tr></table></figure>
+</li>
+</ol>
+<p>   <img src="/images/16/1678061753376.png" alt="1678061753376"></p>
+<p>   <img src="/images/16/1678061802952.png" alt="1678061802952"></p>
+<p>   <img src="/images/16/1678061851658.png" alt="1678061851658"></p>
+<p>   查看help</p>
+<p>   <img src="/images/16/1678061906964.png" alt="1678061906964"></p>
+<ol>
+<li><p>接下来需要修改/drivers/char目录下的makefile文件 </p>
+<p><img src="/images/16/1678065704335.png" alt="1678065704335"></p>
+</li>
+</ol>
+<ol>
+<li><p>然后再回到内核源码根目录下执行，make</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br></pre></td><td class="code"><pre><span class="line">root@dawnlake-virtual-machine:/home/dawnlake/Downloads/linux-4.9.229$ make</span><br><span class="line">scripts/kconfig/conf  --silentoldconfig Kconfig</span><br><span class="line">  CHK     include/config/kernel.release</span><br><span class="line">  CHK     include/generated/uapi/linux/version.h</span><br><span class="line">  CHK     include/generated/utsrelease.h</span><br><span class="line">  CHK     include/generated/bounds.h</span><br><span class="line">  CHK     include/generated/timeconst.h</span><br><span class="line">  CHK     include/generated/asm-offsets.h</span><br><span class="line">  CALL    scripts/checksyscalls.sh</span><br><span class="line">  CHK     scripts/mod/devicetable-offsets.h</span><br><span class="line">  CHK     include/generated/compile.h</span><br><span class="line">  CC      drivers/char/helloDev.o</span><br><span class="line">  LD      drivers/char/built-in.o</span><br><span class="line">  LD      drivers/built-in.o</span><br><span class="line">  LD      vmlinux.o</span><br><span class="line">  MODPOST vmlinux.o</span><br><span class="line">  GEN     .version</span><br><span class="line">  CHK     include/generated/compile.h</span><br><span class="line">  UPD     include/generated/compile.h</span><br><span class="line">  CC      init/version.o</span><br><span class="line">  LD      init/built-in.o</span><br><span class="line">  KSYM    .tmp_kallsyms1.o</span><br><span class="line">  KSYM    .tmp_kallsyms2.o</span><br><span class="line">  LD      vmlinux</span><br><span class="line">  SORTEX  vmlinux</span><br><span class="line">  SYSMAP  System.map</span><br><span class="line">  VOFFSET arch/x86/boot/compressed/../voffset.h</span><br><span class="line">  CC      arch/x86/boot/compressed/misc.o</span><br><span class="line">  OBJCOPY arch/x86/boot/compressed/vmlinux.bin</span><br><span class="line">  GZIP    arch/x86/boot/compressed/vmlinux.bin.gz</span><br><span class="line">  MKPIGGY arch/x86/boot/compressed/piggy.S</span><br><span class="line">  AS      arch/x86/boot/compressed/piggy.o</span><br><span class="line">  LD      arch/x86/boot/compressed/vmlinux</span><br><span class="line">ld: arch/x86/boot/compressed/head_64.o: warning: relocation in read-only section `.head.text&#x27;</span><br><span class="line">ld: warning: creating DT_TEXTREL in a PIE</span><br><span class="line">  ZOFFSET arch/x86/boot/zoffset.h</span><br><span class="line">  AS      arch/x86/boot/header.o</span><br><span class="line">  CC      arch/x86/boot/version.o</span><br><span class="line">  LD      arch/x86/boot/setup.elf</span><br><span class="line">  OBJCOPY arch/x86/boot/setup.bin</span><br><span class="line">  OBJCOPY arch/x86/boot/vmlinux.bin</span><br><span class="line">  BUILD   arch/x86/boot/bzImage</span><br><span class="line">Setup is 15580 bytes (padded to 15872 bytes).</span><br><span class="line">System is 6681 kB</span><br><span class="line">CRC 959cc45</span><br><span class="line">Kernel: arch/x86/boot/bzImage is ready  (#2)</span><br><span class="line">  Building modules, stage 2.</span><br><span class="line">  MODPOST 18 modules</span><br></pre></td></tr></table></figure>
+<p>现在内核启动时候就会自动加载我们的hello驱动，如果在menuconfig设置m而不是y（*） ，就会只生成.ko文件而不是直接加载，需要手动插入。</p>
+</li>
+</ol>
+
+          
+        
+      
+    </div>
+    
+    
+    
+
+    
+
+    
+
+    
+
+    <footer class="post-footer">
+      
+
+      
+
+      
+
+      
+      
+        <div class="post-eof"></div>
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+      
+    
+      
+      
+        
+      
+      
+        
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
     <link itemprop="mainEntityOfPage" href="http://hanze5.github.io/2021/05/23/15-Linux%E5%86%85%E6%A0%B8%E2%80%94%E2%80%94%E7%BC%96%E5%86%99%E6%9C%80%E7%AE%80%E5%8D%95%E7%9A%84%E5%AD%97%E7%AC%A6%E8%AE%BE%E5%A4%87%E9%A9%B1%E5%8A%A8/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
@@ -783,7 +955,7 @@
               
                 <a href="/">
               
-                  <span class="site-state-item-count">34</span>
+                  <span class="site-state-item-count">35</span>
                   <span class="site-state-item-name">日志</span>
                 </a>
               </div>

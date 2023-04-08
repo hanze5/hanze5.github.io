@@ -254,6 +254,251 @@
   
   
   <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="http://hanze5.github.io/2022/10/17/28-DPDK%E2%80%94%E2%80%94cpu%E4%BA%B2%E5%92%8C%E6%80%A7%E7%BA%BF%E7%A8%8B%E6%B1%A0/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/images/my_avatar.png">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="也许不会有人进来吧">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+                
+                <a class="post-title-link" href="/2022/10/17/28-DPDK%E2%80%94%E2%80%94cpu%E4%BA%B2%E5%92%8C%E6%80%A7%E7%BA%BF%E7%A8%8B%E6%B1%A0/" itemprop="url">DPDK——cpu亲和性线程池</a></h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2022-10-17T20:53:53+08:00">
+                2022-10-17
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E5%AD%A6%E6%97%A0%E6%AD%A2%E5%A2%83/" itemprop="url" rel="index">
+                    <span itemprop="name">学无止境</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+          
+
+          
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        
+          
+            <h2 id="0-为什么要有cpu亲和性"><a href="#0-为什么要有cpu亲和性" class="headerlink" title="0.为什么要有cpu亲和性"></a>0.为什么要有cpu亲和性</h2><p>在多核运行的机器上，每个CPU本身自己会有缓存，在缓存中存着进程使用的数据，而没有绑定CPU的话，进程可能会被操作系统调度到其他CPU上，如此CPU cache（高速缓冲存储器）命中率就低了，也就是说调到的CPU缓存区中原来没有这类数据，要先把内存或硬盘的数据载入缓存。而当缓存区绑定CPU后，程序就会一直在指定的CPU执行，不会被操作系统调度到其他CPU，性能上会有一定的提高。</p>
+<p>为了让程序拥有更好的性能，有时候需要将进程或线程绑定到特定的CPU上，这样可以减少调度的开销和保护关键进程或线程。</p>
+<h2 id="1-重要的结构体"><a href="#1-重要的结构体" class="headerlink" title="1.重要的结构体"></a>1.重要的结构体</h2><h3 id="1-1-逻辑核心"><a href="#1-1-逻辑核心" class="headerlink" title="1.1 逻辑核心"></a>1.1 逻辑核心</h3><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment"> * Structure storing internal configuration (per-lcore)</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">lcore_config</span> &#123;</span></span><br><span class="line">	<span class="type">pthread_t</span> thread_id;       <span class="comment">/**&lt; pthread identifier */</span></span><br><span class="line">	<span class="type">int</span> pipe_main2worker[<span class="number">2</span>];   <span class="comment">/**&lt; communication pipe with main */</span></span><br><span class="line">	<span class="type">int</span> pipe_worker2main[<span class="number">2</span>];   <span class="comment">/**&lt; communication pipe with main */</span></span><br><span class="line"></span><br><span class="line">	<span class="type">lcore_function_t</span> * <span class="keyword">volatile</span> f; <span class="comment">/**&lt; function to call */</span></span><br><span class="line">	<span class="type">void</span> * <span class="keyword">volatile</span> arg;       <span class="comment">/**&lt; argument of function */</span></span><br><span class="line">	<span class="keyword">volatile</span> <span class="type">int</span> ret;          <span class="comment">/**&lt; return value of function */</span></span><br><span class="line"></span><br><span class="line">	<span class="keyword">volatile</span> <span class="class"><span class="keyword">enum</span> <span class="title">rte_lcore_state_t</span> <span class="title">state</span>;</span> <span class="comment">/**&lt; lcore state */</span></span><br><span class="line">	<span class="type">unsigned</span> <span class="type">int</span> socket_id;    <span class="comment">/**&lt; physical socket id for this lcore */</span></span><br><span class="line">	<span class="type">unsigned</span> <span class="type">int</span> core_id;      <span class="comment">/**&lt; core number on socket for this lcore */</span></span><br><span class="line">	<span class="type">int</span> core_index;            <span class="comment">/**&lt; relative index, starting from 0 */</span></span><br><span class="line">	<span class="type">uint8_t</span> core_role;         <span class="comment">/**&lt; role of core eg: OFF, RTE, SERVICE */</span></span><br><span class="line"></span><br><span class="line">	<span class="type">rte_cpuset_t</span> cpuset;       <span class="comment">/**&lt; cpu set which the lcore affinity to */</span></span><br><span class="line">&#125;;</span><br><span class="line"></span><br><span class="line"><span class="keyword">extern</span> <span class="class"><span class="keyword">struct</span> <span class="title">lcore_config</span> <span class="title">lcore_config</span>[<span class="title">RTE_MAX_LCORE</span>];</span></span><br></pre></td></tr></table></figure>
+<p>该结构体在下称之为 逻辑核心描述符 用于描述dpdk线程池中的某一个线程。这里面其实就是一个线程任务描述符，（此线程描述符非彼线程描述符）把他抽象成一个核心而已。</p>
+<ul>
+<li>线程id </li>
+<li>与主线程通信的两个管道</li>
+<li>该逻辑核心要完成的工作（函数指针，参数，返回值）</li>
+<li>当前逻辑核心状态</li>
+<li>socket_id core_id 和numa架构有关暂且不管</li>
+<li>然后是索引 </li>
+<li>然后是状态  是否被dpdk标记使用，是否正在被使用</li>
+<li>该逻辑核心与那个cpu集亲和。  比如亲和的是物理编号为（0，1）的cpu那么这个线程就只会被这两个核心去调度运行。我们的程序不做特殊说明，默认的情况下，一个线程与核心是1：1.</li>
+</ul>
+<h3 id="1-2-运行时环境设置（Run-time-evironment）"><a href="#1-2-运行时环境设置（Run-time-evironment）" class="headerlink" title="1.2 运行时环境设置（Run-time evironment）"></a>1.2 运行时环境设置（Run-time evironment）</h3><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment"> * The global RTE configuration structure.</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">rte_config</span> &#123;</span></span><br><span class="line">	<span class="type">uint32_t</span> main_lcore;         <span class="comment">/**&lt; Id of the main lcore */</span></span><br><span class="line">	<span class="type">uint32_t</span> lcore_count;        <span class="comment">/**&lt; Number of available logical cores. */</span></span><br><span class="line">	<span class="type">uint32_t</span> numa_node_count;    <span class="comment">/**&lt; Number of detected NUMA nodes. */</span></span><br><span class="line">	<span class="type">uint32_t</span> numa_nodes[RTE_MAX_NUMA_NODES]; <span class="comment">/**&lt; List of detected NUMA nodes. */</span></span><br><span class="line">	<span class="type">uint32_t</span> service_lcore_count;<span class="comment">/**&lt; Number of available service cores. */</span></span><br><span class="line">	<span class="class"><span class="keyword">enum</span> <span class="title">rte_lcore_role_t</span> <span class="title">lcore_role</span>[<span class="title">RTE_MAX_LCORE</span>];</span> <span class="comment">/**&lt; State of cores. */</span></span><br><span class="line"></span><br><span class="line">	<span class="comment">/** Primary or secondary configuration */</span></span><br><span class="line">	<span class="class"><span class="keyword">enum</span> <span class="title">rte_proc_type_t</span> <span class="title">process_type</span>;</span></span><br><span class="line"></span><br><span class="line">	<span class="comment">/** PA or VA mapping mode */</span></span><br><span class="line">	<span class="class"><span class="keyword">enum</span> <span class="title">rte_iova_mode</span> <span class="title">iova_mode</span>;</span></span><br><span class="line"></span><br><span class="line">	<span class="comment">/**</span></span><br><span class="line"><span class="comment">	 * Pointer to memory configuration, which may be shared across multiple</span></span><br><span class="line"><span class="comment">	 * DPDK instances</span></span><br><span class="line"><span class="comment">	 */</span></span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">rte_mem_config</span> *<span class="title">mem_config</span>;</span></span><br><span class="line">&#125; __rte_packed;</span><br></pre></td></tr></table></figure>
+<p>挑重点的说了，</p>
+<ul>
+<li><p>主线程号</p>
+</li>
+<li><p>逻辑线程数量</p>
+</li>
+<li>每个逻辑线程目前的角色（状态）</li>
+<li>进程的类型（同一台机器只能运行一个dpdk主进程，其他的需要加上从进程参数）</li>
+</ul>
+<h2 id="2-线程池的创建和初始化"><a href="#2-线程池的创建和初始化" class="headerlink" title="2.线程池的创建和初始化"></a>2.线程池的创建和初始化</h2><p>线程池的创建和初始化工作均在环境抽象层初始化的时候完成，</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">int</span> ret = rte_eal_init(initDpdkArgc, (<span class="type">char</span>**)initDpdkArgvBuffer);</span><br></pre></td></tr></table></figure>
+<p>其中我们比较关心的参数是，核心数。在我们的代码中我们默认0号核分配给主线程。</p>
+<p>首先我们在dpdk环境抽象层的配置中可以找到关于最大核心数的宏定义,</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#<span class="keyword">define</span> RTE_MAX_LCORE 128</span></span><br></pre></td></tr></table></figure>
+<h3 id="2-1-首先对操作系统的处理器核心做初始化"><a href="#2-1-首先对操作系统的处理器核心做初始化" class="headerlink" title="2.1 首先对操作系统的处理器核心做初始化"></a>2.1 首先对操作系统的处理器核心做初始化</h3><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">if</span> (eal_create_cpu_map() &lt; <span class="number">0</span>) &#123;</span><br><span class="line">    rte_eal_init_alert(<span class="string">&quot;Cannot discover CPU and NUMA.&quot;</span>);</span><br><span class="line">    <span class="comment">/* rte_errno is set */</span></span><br><span class="line">    <span class="keyword">return</span> <span class="number">-1</span>;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="keyword">if</span> (rte_eal_cpu_init() &lt; <span class="number">0</span>) &#123;</span><br><span class="line">    rte_eal_init_alert(<span class="string">&quot;Cannot detect lcores.&quot;</span>);</span><br><span class="line">    rte_errno = ENOTSUP;</span><br><span class="line">    <span class="keyword">return</span> <span class="number">-1</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>这里主要涉及到两个主要的函数，<code>eal_create_cpu_map()</code>和<code>rte_eal_cpu_init()</code>。前者没细看，大概就是为后者提供一个物理cpu核心的逻辑标识。后者的代码如下</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">int</span></span><br><span class="line"><span class="title function_">rte_eal_cpu_init</span><span class="params">(<span class="type">void</span>)</span></span><br><span class="line">&#123;</span><br><span class="line">	<span class="comment">/* pointer to global configuration */</span></span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">rte_config</span> *<span class="title">config</span> =</span> rte_eal_get_configuration();</span><br><span class="line">	<span class="type">unsigned</span> lcore_id;</span><br><span class="line">	<span class="type">unsigned</span> count = <span class="number">0</span>;</span><br><span class="line">	<span class="type">unsigned</span> <span class="type">int</span> socket_id, prev_socket_id;</span><br><span class="line">	<span class="type">int</span> lcore_to_socket_id[RTE_MAX_LCORE];</span><br><span class="line"></span><br><span class="line">	<span class="comment">/*</span></span><br><span class="line"><span class="comment">	 * Parse the maximum set of logical cores, detect the subset of running</span></span><br><span class="line"><span class="comment">	 * ones and enable them by default.</span></span><br><span class="line"><span class="comment">	 */</span></span><br><span class="line">	<span class="keyword">for</span> (lcore_id = <span class="number">0</span>; lcore_id &lt; RTE_MAX_LCORE; lcore_id++) &#123;</span><br><span class="line">		lcore_config[lcore_id].core_index = count;</span><br><span class="line"></span><br><span class="line">		<span class="comment">/* init cpuset for per lcore config */</span></span><br><span class="line">		CPU_ZERO(&amp;lcore_config[lcore_id].cpuset);</span><br><span class="line"></span><br><span class="line">		<span class="comment">/* find socket first */</span></span><br><span class="line">		socket_id = eal_cpu_socket_id(lcore_id);</span><br><span class="line">		lcore_to_socket_id[lcore_id] = socket_id;</span><br><span class="line"></span><br><span class="line">		<span class="keyword">if</span> (eal_cpu_detected(lcore_id) == <span class="number">0</span>) &#123;</span><br><span class="line">			config-&gt;lcore_role[lcore_id] = ROLE_OFF;</span><br><span class="line">			lcore_config[lcore_id].core_index = <span class="number">-1</span>;</span><br><span class="line">			<span class="keyword">continue</span>;</span><br><span class="line">		&#125;</span><br><span class="line"></span><br><span class="line">		<span class="comment">/* By default, lcore 1:1 map to cpu id */</span></span><br><span class="line">		CPU_SET(lcore_id, &amp;lcore_config[lcore_id].cpuset);</span><br><span class="line"></span><br><span class="line">		<span class="comment">/* By default, each detected core is enabled */</span></span><br><span class="line">		config-&gt;lcore_role[lcore_id] = ROLE_RTE;</span><br><span class="line">		lcore_config[lcore_id].core_role = ROLE_RTE;</span><br><span class="line">		lcore_config[lcore_id].core_id = eal_cpu_core_id(lcore_id);</span><br><span class="line">		lcore_config[lcore_id].socket_id = socket_id;</span><br><span class="line">		RTE_LOG(DEBUG, EAL, <span class="string">&quot;Detected lcore %u as &quot;</span></span><br><span class="line">				<span class="string">&quot;core %u on socket %u\n&quot;</span>,</span><br><span class="line">				lcore_id, lcore_config[lcore_id].core_id,</span><br><span class="line">				lcore_config[lcore_id].socket_id);</span><br><span class="line">		count++;</span><br><span class="line">	&#125;</span><br><span class="line">	<span class="keyword">for</span> (; lcore_id &lt; CPU_SETSIZE; lcore_id++) &#123;</span><br><span class="line">		<span class="keyword">if</span> (eal_cpu_detected(lcore_id) == <span class="number">0</span>)</span><br><span class="line">			<span class="keyword">continue</span>;</span><br><span class="line">		RTE_LOG(DEBUG, EAL, <span class="string">&quot;Skipped lcore %u as core %u on socket %u\n&quot;</span>,</span><br><span class="line">			lcore_id, eal_cpu_core_id(lcore_id),</span><br><span class="line">			eal_cpu_socket_id(lcore_id));</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	<span class="comment">/* Set the count of enabled logical cores of the EAL configuration */</span></span><br><span class="line">	config-&gt;lcore_count = count;</span><br><span class="line">	RTE_LOG(DEBUG, EAL,</span><br><span class="line">		<span class="string">&quot;Support maximum %u logical core(s) by configuration.\n&quot;</span>,</span><br><span class="line">		RTE_MAX_LCORE);</span><br><span class="line">	RTE_LOG(INFO, EAL, <span class="string">&quot;Detected %u lcore(s)\n&quot;</span>, config-&gt;lcore_count);</span><br><span class="line"></span><br><span class="line">	<span class="comment">/* sort all socket id&#x27;s in ascending order */</span></span><br><span class="line">	qsort(lcore_to_socket_id, RTE_DIM(lcore_to_socket_id),</span><br><span class="line">			<span class="keyword">sizeof</span>(lcore_to_socket_id[<span class="number">0</span>]), socket_id_cmp);</span><br><span class="line"></span><br><span class="line">	prev_socket_id = <span class="number">-1</span>;</span><br><span class="line">	config-&gt;numa_node_count = <span class="number">0</span>;</span><br><span class="line">	<span class="keyword">for</span> (lcore_id = <span class="number">0</span>; lcore_id &lt; RTE_MAX_LCORE; lcore_id++) &#123;</span><br><span class="line">		socket_id = lcore_to_socket_id[lcore_id];</span><br><span class="line">		<span class="keyword">if</span> (socket_id != prev_socket_id)</span><br><span class="line">			config-&gt;numa_nodes[config-&gt;numa_node_count++] =</span><br><span class="line">					socket_id;</span><br><span class="line">		prev_socket_id = socket_id;</span><br><span class="line">	&#125;</span><br><span class="line">	RTE_LOG(INFO, EAL, <span class="string">&quot;Detected %u NUMA nodes\n&quot;</span>, config-&gt;numa_node_count);</span><br><span class="line"></span><br><span class="line">	<span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>可以看到第一个for循环内，</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">lcore_config[lcore_id].core_index = count;</span><br></pre></td></tr></table></figure>
+<p><code>count</code>也是自增的，所以<code>count</code>实际上和索引号 <code>lcore_id</code>是一样的。然后会有检测，不过这个检测只是检测这个lcore_id是否超出了cpu核的数量。</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">if</span> (eal_cpu_detected(lcore_id) == <span class="number">0</span>) &#123;</span><br><span class="line">    config-&gt;lcore_role[lcore_id] = ROLE_OFF;</span><br><span class="line">    lcore_config[lcore_id].core_index = <span class="number">-1</span>;</span><br><span class="line">    <span class="keyword">continue</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>然后继续看这个for循环。</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/* init cpuset for per lcore config */</span></span><br><span class="line">CPU_ZERO(&amp;lcore_config[lcore_id].cpuset);</span><br><span class="line"></span><br><span class="line"><span class="comment">//定义</span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> CPU_ZERO(s)							\</span></span><br><span class="line"><span class="meta">	do &#123;								\</span></span><br><span class="line"><span class="meta">		unsigned int _i;					\</span></span><br><span class="line"><span class="meta">									\</span></span><br><span class="line"><span class="meta">		for (_i = 0; _i &lt; _NUM_SETS(CPU_SETSIZE); _i++)		\</span></span><br><span class="line"><span class="meta">			(s)-&gt;_bits[_i] = 0LL;				\</span></span><br><span class="line"><span class="meta">	&#125; while (0)</span></span><br></pre></td></tr></table></figure>
+<p>这个函数从定义来看的作用是，这个宏定义用于清空一个cpu集合，将其中所有的位都置为0。它的参数是一个指向<code>cpu_set_t</code>类型的指针，这个类型是一个结构体，包含一个数组<code>bits</code>，每个元素是一个64位的整数。<code>NUM_SETS(CPU_SETSIZE)</code>是一个宏函数，用于计算数组<code>bits</code>的长度，它的参数<code>CPU_SETSIZE</code>是<code>cpu</code>集合中能表示的最大cpu数目。这个宏定义使用了<code>do-while</code>循环语句，遍历数组<code>bits</code>中的每个元素，并将其赋值为0LL（表示长整型常量0）。这样就实现了清空<code>cpu</code>集合的功能。</p>
+<p>最终也就是将每一个<code>lcore_config[lcore_id].cpuset</code>都初始化为0。初始化之后，</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/* By default, lcore 1:1 map to cpu id */</span></span><br><span class="line">CPU_SET(lcore_id, &amp;lcore_config[lcore_id].cpuset);</span><br><span class="line"></span><br><span class="line"><span class="comment">//定义如下</span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> CPU_SET(b, s) ((s)-&gt;_bits[_WHICH_SET(b)] |= (1LL &lt;&lt; _WHICH_BIT(b)))</span></span><br></pre></td></tr></table></figure>
+<p>从定义来看， <code>CPU_SET</code>这个宏定义用于将一个<code>cpu</code>集合中的某个位设置为1，表示将对应的<code>cpu</code>加入到集合中。它的参数是一个整数<code>b</code>，表示要设置的位的序号，和一个指向<code>cpu_set_t</code>类型的指针s，表示要操作的<code>cpu</code>集合。<code>WHICH_SET(b)</code>是一个宏函数，用于计算<code>b</code>所在的数组<code>bits</code>中的元素下标。<code>WHICH_BIT(b)</code>是一个宏函数，用于计算b在该元素中的位偏移量。这个宏定义使用了按位或运算符<code>(|=)</code>，将数组<code>bits</code>中相应元素的相应位设置为1，实现了将<code>cpu</code>加入到集合中的功能。</p>
+<p>也就是说，将<code>&amp;lcore_config[lcore_id].cpuset</code>中的<code>lcore_id</code>位置为1了，代表用了这个cpu。但这也不是具体的线程与<code>cpu</code>核的绑定过程，可以说这只是一种口头上的绑定。</p>
+<p>然后就是对 <code>lcore_config[lcore_id]</code>其他成员的一系列赋值</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/* By default, each detected core is enabled */</span></span><br><span class="line">config-&gt;lcore_role[lcore_id] = ROLE_RTE;</span><br><span class="line">lcore_config[lcore_id].core_role = ROLE_RTE;</span><br><span class="line">lcore_config[lcore_id].core_id = eal_cpu_core_id(lcore_id);</span><br><span class="line">lcore_config[lcore_id].socket_id = socket_id;</span><br><span class="line">RTE_LOG(DEBUG, EAL, <span class="string">&quot;Detected lcore %u as &quot;</span></span><br><span class="line">        <span class="string">&quot;core %u on socket %u\n&quot;</span>,</span><br><span class="line">        lcore_id, lcore_config[lcore_id].core_id,</span><br><span class="line">        lcore_config[lcore_id].socket_id);</span><br></pre></td></tr></table></figure>
+<p>后面就没什么重要的了（本项目可以不那么关注）。</p>
+<h3 id="2-2-线程创建与cpu核的绑定过程"><a href="#2-2-线程创建与cpu核的绑定过程" class="headerlink" title="2.2 线程创建与cpu核的绑定过程"></a>2.2 线程创建与cpu核的绑定过程</h3><p>2.1分析的主要是<code>lcore_config</code> 这个逻辑核描述符的初始化过程。 下面分析线程与cpu核的绑定过程。在环境抽象层的初始化过程中，首先绑定的就是<code>dpdk</code>主线程。</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">if</span> (pthread_setaffinity_np(pthread_self(), <span class="keyword">sizeof</span>(<span class="type">rte_cpuset_t</span>),</span><br><span class="line">			&amp;lcore_config[config-&gt;main_lcore].cpuset) != <span class="number">0</span>) &#123;</span><br><span class="line">		rte_eal_init_alert(<span class="string">&quot;Cannot set affinity&quot;</span>);</span><br><span class="line">		rte_errno = EINVAL;</span><br><span class="line">		<span class="keyword">return</span> <span class="number">-1</span>;</span><br><span class="line">	&#125;</span><br></pre></td></tr></table></figure>
+<p>可以看到，使用到了<code>`pthread_setaffinity_np</code>，<code>pthread</code>库为我们提供的设置线程的cpu亲和性的接口：</p>
+<p><a target="_blank" rel="noopener" href="https://www.noerror.net/blog/pthreadsetaffinitynp函数用法详解">pthread_setaffinity_np函数用法详解 (noerror.net)</a></p>
+<p><a target="_blank" rel="noopener" href="https://zhuanlan.zhihu.com/p/38541212">Linux中CPU亲和性（affinity） - 知乎 (zhihu.com)</a></p>
+<p>源码没怎么看懂，不过根据网上关于<code>pthread_setaffinity_np</code> 的解释。简单来说，当调用 <code>pthread_setaffinity_np</code> 时，如果线程不在 <code>cpuset</code> 指定的 CPU 集合中运行，那么调度器会将该线程从当前 <code>CPU</code> 上移除，并将其加入到 <code>cpuset</code> 中某个 <code>CPU</code> 的就绪队列中。然后，调度器会选择一个合适的时机，将该线程从就绪队列中取出，并加载到目标 <code>CPU</code> 上执行。</p>
+<p>因此接下来，由主线程创建具有<code>cpu</code>亲和性的线程就是使用的<code>pthread_setaffinity_np</code>。具体流程如下</p>
+<p>在 <code>rte_eal_init</code>函数中我们找到了这样一段比较重要的代码</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br></pre></td><td class="code"><pre><span class="line">RTE_LCORE_FOREACH_WORKER(i) &#123;</span><br><span class="line"> </span><br><span class="line">		<span class="comment">/*</span></span><br><span class="line"><span class="comment">		 * create communication pipes between main thread</span></span><br><span class="line"><span class="comment">		 * and children</span></span><br><span class="line"><span class="comment">		 */</span></span><br><span class="line">		<span class="keyword">if</span> (pipe(lcore_config[i].pipe_main2worker) &lt; <span class="number">0</span>)</span><br><span class="line">			rte_panic(<span class="string">&quot;Cannot create pipe\n&quot;</span>);</span><br><span class="line">		<span class="keyword">if</span> (pipe(lcore_config[i].pipe_worker2main) &lt; <span class="number">0</span>)</span><br><span class="line">			rte_panic(<span class="string">&quot;Cannot create pipe\n&quot;</span>);</span><br><span class="line"></span><br><span class="line">		lcore_config[i].state = WAIT;</span><br><span class="line"></span><br><span class="line">		<span class="comment">/* create a thread for each lcore */</span></span><br><span class="line">		ret = pthread_create(&amp;lcore_config[i].thread_id, <span class="literal">NULL</span>,</span><br><span class="line">				     eal_thread_loop, <span class="literal">NULL</span>);</span><br><span class="line">		<span class="keyword">if</span> (ret != <span class="number">0</span>)</span><br><span class="line">			rte_panic(<span class="string">&quot;Cannot create thread\n&quot;</span>);</span><br><span class="line"></span><br><span class="line">		<span class="comment">/* Set thread_name for aid in debugging. */</span></span><br><span class="line">		<span class="built_in">snprintf</span>(thread_name, <span class="keyword">sizeof</span>(thread_name),</span><br><span class="line">			<span class="string">&quot;lcore-worker-%d&quot;</span>, i);</span><br><span class="line">		ret = rte_thread_setname(lcore_config[i].thread_id,</span><br><span class="line">						thread_name);</span><br><span class="line">		<span class="keyword">if</span> (ret != <span class="number">0</span>)</span><br><span class="line">			RTE_LOG(DEBUG, EAL,</span><br><span class="line">				<span class="string">&quot;Cannot set name for lcore thread\n&quot;</span>);</span><br><span class="line"></span><br><span class="line">		ret = pthread_setaffinity_np(lcore_config[i].thread_id,</span><br><span class="line">			<span class="keyword">sizeof</span>(<span class="type">rte_cpuset_t</span>), &amp;lcore_config[i].cpuset);</span><br><span class="line">		<span class="keyword">if</span> (ret != <span class="number">0</span>)</span><br><span class="line">			rte_panic(<span class="string">&quot;Cannot set affinity\n&quot;</span>);</span><br><span class="line">	&#125;</span><br></pre></td></tr></table></figure>
+<p>其中 <code>RTE_LCORE_FOREACH_WORKER(i)</code>的定义是</p>
+<p>也就是找到所有供dpdk使用的逻辑线程。且不为主线程。</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#<span class="keyword">define</span> RTE_LCORE_FOREACH_WORKER(i)					\</span></span><br><span class="line"><span class="meta">	for (i = rte_get_next_lcore(-1, 1, 0);				\</span></span><br><span class="line"><span class="meta">	     i &lt; RTE_MAX_LCORE;						\</span></span><br><span class="line"><span class="meta">	     i = rte_get_next_lcore(i, 1, 0))</span></span><br><span class="line"></span><br><span class="line"><span class="comment">// ==》</span></span><br><span class="line"><span class="type">unsigned</span> <span class="type">int</span> <span class="title function_">rte_get_next_lcore</span><span class="params">(<span class="type">unsigned</span> <span class="type">int</span> i, <span class="type">int</span> skip_main, <span class="type">int</span> wrap)</span></span><br><span class="line">&#123;</span><br><span class="line">	i++;</span><br><span class="line">	<span class="keyword">if</span> (wrap)</span><br><span class="line">		i %= RTE_MAX_LCORE;</span><br><span class="line"></span><br><span class="line">	<span class="keyword">while</span> (i &lt; RTE_MAX_LCORE) &#123;</span><br><span class="line">		<span class="keyword">if</span> (!rte_lcore_is_enabled(i) ||</span><br><span class="line">		    (skip_main &amp;&amp; (i == rte_get_main_lcore()))) &#123;</span><br><span class="line">			i++;</span><br><span class="line">			<span class="keyword">if</span> (wrap)</span><br><span class="line">				i %= RTE_MAX_LCORE;</span><br><span class="line">			<span class="keyword">continue</span>;</span><br><span class="line">		&#125;</span><br><span class="line">		<span class="keyword">break</span>;</span><br><span class="line">	&#125;</span><br><span class="line">	<span class="keyword">return</span> i;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">//==》</span></span><br><span class="line"><span class="type">int</span> <span class="title function_">rte_lcore_is_enabled</span><span class="params">(<span class="type">unsigned</span> <span class="type">int</span> lcore_id)</span></span><br><span class="line">&#123;</span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">rte_config</span> *<span class="title">cfg</span> =</span> rte_eal_get_configuration();</span><br><span class="line"></span><br><span class="line">	<span class="keyword">if</span> (lcore_id &gt;= RTE_MAX_LCORE)</span><br><span class="line">		<span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">	<span class="keyword">return</span> cfg-&gt;lcore_role[lcore_id] == ROLE_RTE;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>看完for循环的是什么东西，再看看for循环里面的内容。首先创建两个通道，用来实现主线程和工作线程的通信。也就是说每个工作线程和主线程之间都有两个通信管道。管道创建之后，再用<code>lcore_config[i].thread_id</code>创建线程。最后线程的id号会赋给<code>lcore_config[i].thread_id</code>。也就是重点关注这两个函数。</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/* create a thread for each lcore */</span></span><br><span class="line">ret = pthread_create(&amp;lcore_config[i].thread_id, <span class="literal">NULL</span>,</span><br><span class="line">                     eal_thread_loop, <span class="literal">NULL</span>);</span><br><span class="line"></span><br><span class="line">ret = pthread_setaffinity_np(lcore_config[i].thread_id,</span><br><span class="line">                     <span class="keyword">sizeof</span>(<span class="type">rte_cpuset_t</span>), &amp;lcore_config[i].cpuset);</span><br></pre></td></tr></table></figure>
+<p>也就是说用前者创建线程，用后者设置<code>cpu</code>亲和性。就通了。至此，总结一下环境抽象层初始化阶段对于<code>cpu</code>亲和性线程池的初始化以及绑定<code>cpu</code>工作。 首先初始化128个，逻辑核描述符，给这个描述符的<code>cpuset</code>进行初始化，后面依次分配。我们默认是一比一分配。也就是一个逻辑核对应一个<code>cpu</code>核。然后再用逻辑描述符的<code>thread_id</code>创建线程（调用<code>pthread_create</code>创建），并调用<code>pthread_setaffinity_np</code>进行线程与cpu核的绑定。绑定之后<code>task_struct</code>也就是PCB(<em>linux并不区分进程线程，所以调度都是以<code>task_struct</code>进行调度</em>)中的<code>cpus_allowed</code>只有一位会是1。</p>
+<p><code>注：task_struct 中关于 CPU 集合的成员是 cpus_allowed，它是一个 cpumask_t 类型的变量，用于表示该任务可以运行在哪些 CPU 上。cpumask_t 是一个位图结构，每一位对应一个 CPU 编号，如果该位为 1，则表示该任务可以运行在该 CPU 上；如果为 0，则表示不能运行在该 CPU 上。</code></p>
+<h3 id="3-线程池的工作模式"><a href="#3-线程池的工作模式" class="headerlink" title="3.线程池的工作模式"></a>3.线程池的工作模式</h3><p>之前我们创建线程池中的线程的时候，使用到的函数指针是<code>eal_thread_loop</code>，也就是我们的每个工作线程需要去处理的工作，我们看看到底是啥</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/* main loop of threads */</span></span><br><span class="line">__rte_noreturn <span class="type">void</span> *</span><br><span class="line"><span class="title function_">eal_thread_loop</span><span class="params">(__rte_unused <span class="type">void</span> *arg)</span></span><br><span class="line">&#123;</span><br><span class="line">	<span class="type">char</span> c;</span><br><span class="line">	<span class="type">int</span> n, ret;</span><br><span class="line">	<span class="type">unsigned</span> lcore_id;</span><br><span class="line">	<span class="type">pthread_t</span> thread_id;</span><br><span class="line">	<span class="type">int</span> m2w, w2m;</span><br><span class="line">	<span class="type">char</span> cpuset[RTE_CPU_AFFINITY_STR_LEN];</span><br><span class="line"></span><br><span class="line">	thread_id = pthread_self();</span><br><span class="line"></span><br><span class="line">	<span class="comment">/* retrieve our lcore_id from the configuration structure */</span></span><br><span class="line">	RTE_LCORE_FOREACH_WORKER(lcore_id) &#123;</span><br><span class="line">		<span class="keyword">if</span> (thread_id == lcore_config[lcore_id].thread_id)</span><br><span class="line">			<span class="keyword">break</span>;</span><br><span class="line">	&#125;</span><br><span class="line">    </span><br><span class="line">	<span class="keyword">if</span> (lcore_id == RTE_MAX_LCORE)</span><br><span class="line">		rte_panic(<span class="string">&quot;cannot retrieve lcore id\n&quot;</span>);</span><br><span class="line"></span><br><span class="line">	m2w = lcore_config[lcore_id].pipe_main2worker[<span class="number">0</span>];</span><br><span class="line">	w2m = lcore_config[lcore_id].pipe_worker2main[<span class="number">1</span>];</span><br><span class="line"></span><br><span class="line">	__rte_thread_init(lcore_id, &amp;lcore_config[lcore_id].cpuset);</span><br><span class="line"></span><br><span class="line">	ret = eal_thread_dump_current_affinity(cpuset, <span class="keyword">sizeof</span>(cpuset));</span><br><span class="line">	RTE_LOG(DEBUG, EAL, <span class="string">&quot;lcore %u is ready (tid=%zx;cpuset=[%s%s])\n&quot;</span>,</span><br><span class="line">		lcore_id, (<span class="type">uintptr_t</span>)thread_id, cpuset, ret == <span class="number">0</span> ? <span class="string">&quot;&quot;</span> : <span class="string">&quot;...&quot;</span>);</span><br><span class="line"></span><br><span class="line">	rte_eal_trace_thread_lcore_ready(lcore_id, cpuset);</span><br><span class="line"></span><br><span class="line">	<span class="comment">/* read on our pipe to get commands */</span></span><br><span class="line">	<span class="keyword">while</span> (<span class="number">1</span>) &#123;</span><br><span class="line">		<span class="type">void</span> *fct_arg;</span><br><span class="line"></span><br><span class="line">		<span class="comment">/* wait command */</span></span><br><span class="line">		<span class="keyword">do</span> &#123;</span><br><span class="line">			n = read(m2w, &amp;c, <span class="number">1</span>);</span><br><span class="line">		&#125; <span class="keyword">while</span> (n &lt; <span class="number">0</span> &amp;&amp; errno == EINTR);</span><br><span class="line"></span><br><span class="line">		<span class="keyword">if</span> (n &lt;= <span class="number">0</span>)</span><br><span class="line">			rte_panic(<span class="string">&quot;cannot read on configuration pipe\n&quot;</span>);</span><br><span class="line"></span><br><span class="line">		lcore_config[lcore_id].state = RUNNING;</span><br><span class="line"></span><br><span class="line">		<span class="comment">/* send ack */</span></span><br><span class="line">		n = <span class="number">0</span>;</span><br><span class="line">		<span class="keyword">while</span> (n == <span class="number">0</span> || (n &lt; <span class="number">0</span> &amp;&amp; errno == EINTR))</span><br><span class="line">			n = write(w2m, &amp;c, <span class="number">1</span>);</span><br><span class="line">		<span class="keyword">if</span> (n &lt; <span class="number">0</span>)</span><br><span class="line">			rte_panic(<span class="string">&quot;cannot write on configuration pipe\n&quot;</span>);</span><br><span class="line"></span><br><span class="line">		<span class="keyword">if</span> (lcore_config[lcore_id].f == <span class="literal">NULL</span>)</span><br><span class="line">			rte_panic(<span class="string">&quot;NULL function pointer\n&quot;</span>);</span><br><span class="line"></span><br><span class="line">		<span class="comment">/* call the function and store the return value */</span></span><br><span class="line">		fct_arg = lcore_config[lcore_id].arg;</span><br><span class="line">		ret = lcore_config[lcore_id].f(fct_arg);</span><br><span class="line">		lcore_config[lcore_id].ret = ret;</span><br><span class="line">		rte_wmb();</span><br><span class="line"></span><br><span class="line">		<span class="comment">/* when a service core returns, it should go directly to WAIT</span></span><br><span class="line"><span class="comment">		 * state, because the application will not lcore_wait() for it.</span></span><br><span class="line"><span class="comment">		 */</span></span><br><span class="line">		<span class="keyword">if</span> (lcore_config[lcore_id].core_role == ROLE_SERVICE)</span><br><span class="line">			lcore_config[lcore_id].state = WAIT;</span><br><span class="line">		<span class="keyword">else</span></span><br><span class="line">			lcore_config[lcore_id].state = FINISHED;</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	<span class="comment">/* never reached */</span></span><br><span class="line">	<span class="comment">/* pthread_exit(NULL); */</span></span><br><span class="line">	<span class="comment">/* return NULL; */</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h3 id="3-1-首先拿到自己对应的lcore-config"><a href="#3-1-首先拿到自己对应的lcore-config" class="headerlink" title="3.1 首先拿到自己对应的lcore_config"></a>3.1 首先拿到自己对应的lcore_config</h3><p>通过比对自身的<code>thread_id</code>和<code>lcore_config[lcore_id].thread_id</code>拿到对应的<code>lcore_config</code></p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">thread_id = pthread_self();</span><br><span class="line"><span class="comment">/* retrieve our lcore_id from the configuration structure */</span></span><br><span class="line">RTE_LCORE_FOREACH_WORKER(lcore_id) &#123;</span><br><span class="line">	<span class="keyword">if</span> (thread_id == lcore_config[lcore_id].thread_id)</span><br><span class="line">		<span class="keyword">break</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h3 id="3-2-根据lcore-config做一些设置"><a href="#3-2-根据lcore-config做一些设置" class="headerlink" title="3.2 根据lcore_config做一些设置"></a>3.2 根据lcore_config做一些设置</h3><p>获取到属于自己的与主进程进行通信的管道</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">m2w = lcore_config[lcore_id].pipe_main2worker[<span class="number">0</span>];</span><br><span class="line">w2m = lcore_config[lcore_id].pipe_worker2main[<span class="number">1</span>];</span><br><span class="line"></span><br></pre></td></tr></table></figure>
+<h3 id="3-3-工作线程一直在做的事情"><a href="#3-3-工作线程一直在做的事情" class="headerlink" title="3.3 工作线程一直在做的事情"></a>3.3 工作线程一直在做的事情</h3><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/* read on our pipe to get commands */</span></span><br><span class="line"><span class="keyword">while</span> (<span class="number">1</span>) &#123;</span><br><span class="line">    <span class="type">void</span> *fct_arg;</span><br><span class="line"></span><br><span class="line">    <span class="comment">/* wait command */</span></span><br><span class="line">    <span class="keyword">do</span> &#123;</span><br><span class="line">        n = read(m2w, &amp;c, <span class="number">1</span>);</span><br><span class="line">    &#125; <span class="keyword">while</span> (n &lt; <span class="number">0</span> &amp;&amp; errno == EINTR);</span><br><span class="line"></span><br><span class="line">    <span class="keyword">if</span> (n &lt;= <span class="number">0</span>)</span><br><span class="line">        rte_panic(<span class="string">&quot;cannot read on configuration pipe\n&quot;</span>);</span><br><span class="line"></span><br><span class="line">    lcore_config[lcore_id].state = RUNNING;</span><br><span class="line"></span><br><span class="line">    <span class="comment">/* send ack */</span></span><br><span class="line">    n = <span class="number">0</span>;</span><br><span class="line">    <span class="keyword">while</span> (n == <span class="number">0</span> || (n &lt; <span class="number">0</span> &amp;&amp; errno == EINTR))</span><br><span class="line">        n = write(w2m, &amp;c, <span class="number">1</span>);</span><br><span class="line">    <span class="keyword">if</span> (n &lt; <span class="number">0</span>)</span><br><span class="line">        rte_panic(<span class="string">&quot;cannot write on configuration pipe\n&quot;</span>);</span><br><span class="line"></span><br><span class="line">    <span class="keyword">if</span> (lcore_config[lcore_id].f == <span class="literal">NULL</span>)</span><br><span class="line">        rte_panic(<span class="string">&quot;NULL function pointer\n&quot;</span>);</span><br><span class="line"></span><br><span class="line">    <span class="comment">/* call the function and store the return value */</span></span><br><span class="line">    fct_arg = lcore_config[lcore_id].arg;</span><br><span class="line">    ret = lcore_config[lcore_id].f(fct_arg);</span><br><span class="line">    lcore_config[lcore_id].ret = ret;</span><br><span class="line">    rte_wmb();</span><br><span class="line"></span><br><span class="line">    <span class="comment">/* when a service core returns, it should go directly to WAIT</span></span><br><span class="line"><span class="comment">		 * state, because the application will not lcore_wait() for it.</span></span><br><span class="line"><span class="comment">		 */</span></span><br><span class="line">    <span class="keyword">if</span> (lcore_config[lcore_id].core_role == ROLE_SERVICE)</span><br><span class="line">        lcore_config[lcore_id].state = WAIT;</span><br><span class="line">    <span class="keyword">else</span></span><br><span class="line">        lcore_config[lcore_id].state = FINISHED;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>首先，一直阻塞，直到从管道内读到了主线程对自己发出的命令。状态由 <code>WAIT</code>切换为 <code>RUNNING</code>，然后发出相应表明自己收到了这个命令。一般收到命令的时候，<code>lcore_config</code> 的<code>f</code>与<code>arg</code>就已经被赋值完毕了。相当于是先得知要做的任务以及任务参数，然后在收到开始做的命令。</p>
+<p>然后</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/* call the function and store the return value */</span></span><br><span class="line">fct_arg = lcore_config[lcore_id].arg;</span><br><span class="line">ret = lcore_config[lcore_id].f(fct_arg);</span><br><span class="line">lcore_config[lcore_id].ret = ret;</span><br></pre></td></tr></table></figure>
+<p>调用这个函数，由于我们的项目function本身就自带一个死循环，只要程序执行就不会跳出，所以一旦一个线程分配了任务，就会把这个任务一直执行下去直到我们的项目程序停止。所以后面就没再看了。</p>
+<h2 id="4-线程池初始化首尾"><a href="#4-线程池初始化首尾" class="headerlink" title="4. 线程池初始化首尾"></a>4. 线程池初始化首尾</h2><p>环境抽象层的初始化工作对于线程池的初始化工作进行到了最后的部分。</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br></pre></td><td class="code"><pre><span class="line"> rte_eal_mp_remote_launch(sync_func, <span class="literal">NULL</span>, SKIP_MAIN);</span><br><span class="line"> rte_eal_mp_wait_lcore();</span><br><span class="line"></span><br><span class="line"><span class="comment">//以及这两个函数的定义</span></span><br><span class="line"><span class="type">int</span></span><br><span class="line"><span class="title function_">rte_eal_mp_remote_launch</span><span class="params">(<span class="type">int</span> (*f)(<span class="type">void</span> *), <span class="type">void</span> *arg,</span></span><br><span class="line"><span class="params">			 <span class="keyword">enum</span> <span class="type">rte_rmt_call_main_t</span> call_main)</span></span><br><span class="line">&#123;</span><br><span class="line">	<span class="type">int</span> lcore_id;</span><br><span class="line">	<span class="type">int</span> main_lcore = rte_get_main_lcore();</span><br><span class="line"></span><br><span class="line">	<span class="comment">/* check state of lcores */</span></span><br><span class="line">	RTE_LCORE_FOREACH_WORKER(lcore_id) &#123;</span><br><span class="line">		<span class="keyword">if</span> (lcore_config[lcore_id].state != WAIT)</span><br><span class="line">			<span class="keyword">return</span> -EBUSY;</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	<span class="comment">/* send messages to cores */</span></span><br><span class="line">	RTE_LCORE_FOREACH_WORKER(lcore_id) &#123;</span><br><span class="line">		rte_eal_remote_launch(f, arg, lcore_id);</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	<span class="keyword">if</span> (call_main == CALL_MAIN) &#123;</span><br><span class="line">		lcore_config[main_lcore].ret = f(arg);</span><br><span class="line">		lcore_config[main_lcore].state = FINISHED;</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	<span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">/*</span></span><br><span class="line"><span class="comment"> * Do a rte_eal_wait_lcore() for every lcore. The return values are</span></span><br><span class="line"><span class="comment"> * ignored.</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="type">void</span></span><br><span class="line"><span class="title function_">rte_eal_mp_wait_lcore</span><span class="params">(<span class="type">void</span>)</span></span><br><span class="line">&#123;</span><br><span class="line">	<span class="type">unsigned</span> lcore_id;</span><br><span class="line"></span><br><span class="line">	RTE_LCORE_FOREACH_WORKER(lcore_id) &#123;</span><br><span class="line">		rte_eal_wait_lcore(lcore_id);</span><br><span class="line">	&#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">/*</span></span><br><span class="line"><span class="comment"> * Wait until a lcore finished its job.</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="type">int</span></span><br><span class="line"><span class="title function_">rte_eal_wait_lcore</span><span class="params">(<span class="type">unsigned</span> worker_id)</span></span><br><span class="line">&#123;</span><br><span class="line">	<span class="keyword">if</span> (lcore_config[worker_id].state == WAIT)</span><br><span class="line">		<span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line"></span><br><span class="line">	<span class="keyword">while</span> (lcore_config[worker_id].state != WAIT &amp;&amp;</span><br><span class="line">	       lcore_config[worker_id].state != FINISHED)</span><br><span class="line">		rte_pause();</span><br><span class="line"></span><br><span class="line">	rte_rmb();</span><br><span class="line"></span><br><span class="line">	<span class="comment">/* we are in finished state, go to wait state */</span></span><br><span class="line">	lcore_config[worker_id].state = WAIT;</span><br><span class="line">	<span class="keyword">return</span> lcore_config[worker_id].ret;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"></span><br></pre></td></tr></table></figure>
+<h2 id="5-如何使用线程池中的线程"><a href="#5-如何使用线程池中的线程" class="headerlink" title="5.如何使用线程池中的线程"></a>5.如何使用线程池中的线程</h2><p>也就是如何通过主线程给工作线程分配任务呢？主要是通过下面的接口。</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/*</span></span><br><span class="line"><span class="comment"> * Send a message to a worker lcore identified by worker_id to call a</span></span><br><span class="line"><span class="comment"> * function f with argument arg. Once the execution is done, the</span></span><br><span class="line"><span class="comment"> * remote lcore switch in FINISHED state.</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="type">int</span></span><br><span class="line"><span class="title function_">rte_eal_remote_launch</span><span class="params">(<span class="type">int</span> (*f)(<span class="type">void</span> *), <span class="type">void</span> *arg, <span class="type">unsigned</span> <span class="type">int</span> worker_id)</span></span><br><span class="line">&#123;</span><br><span class="line">	<span class="type">int</span> n;</span><br><span class="line">	<span class="type">char</span> c = <span class="number">0</span>;</span><br><span class="line">	<span class="type">int</span> m2w = lcore_config[worker_id].pipe_main2worker[<span class="number">1</span>];</span><br><span class="line">	<span class="type">int</span> w2m = lcore_config[worker_id].pipe_worker2main[<span class="number">0</span>];</span><br><span class="line">	<span class="type">int</span> rc = -EBUSY;</span><br><span class="line"></span><br><span class="line">	<span class="keyword">if</span> (lcore_config[worker_id].state != WAIT)</span><br><span class="line">		<span class="keyword">goto</span> finish;</span><br><span class="line"></span><br><span class="line">	lcore_config[worker_id].f = f;</span><br><span class="line">	lcore_config[worker_id].arg = arg;</span><br><span class="line"></span><br><span class="line">	<span class="comment">/* send message */</span></span><br><span class="line">	n = <span class="number">0</span>;</span><br><span class="line">	<span class="keyword">while</span> (n == <span class="number">0</span> || (n &lt; <span class="number">0</span> &amp;&amp; errno == EINTR))</span><br><span class="line">		n = write(m2w, &amp;c, <span class="number">1</span>);</span><br><span class="line">	<span class="keyword">if</span> (n &lt; <span class="number">0</span>)</span><br><span class="line">		rte_panic(<span class="string">&quot;cannot write on configuration pipe\n&quot;</span>);</span><br><span class="line"></span><br><span class="line">	<span class="comment">/* wait ack */</span></span><br><span class="line">	<span class="keyword">do</span> &#123;</span><br><span class="line">		n = read(w2m, &amp;c, <span class="number">1</span>);</span><br><span class="line">	&#125; <span class="keyword">while</span> (n &lt; <span class="number">0</span> &amp;&amp; errno == EINTR);</span><br><span class="line"></span><br><span class="line">	<span class="keyword">if</span> (n &lt;= <span class="number">0</span>)</span><br><span class="line">		rte_panic(<span class="string">&quot;cannot read on configuration pipe\n&quot;</span>);</span><br><span class="line"></span><br><span class="line">	rc = <span class="number">0</span>;</span><br><span class="line">finish:</span><br><span class="line">	rte_eal_trace_thread_remote_launch(f, arg, worker_id, rc);</span><br><span class="line">	<span class="keyword">return</span> rc;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>逻辑很简单，给一个<code>lcore_config</code> 分配 <code>f</code>与 <code>arg</code>，再用过队列给他下达开始执行的命令就好了。</p>
+<h2 id="6-总结"><a href="#6-总结" class="headerlink" title="6.总结"></a>6.总结</h2><p><code>cpu</code>亲和性线程池实现的核心就是 <code>lcore_config</code>。它关联了 线程 ，cpu，任务。首先我们先用主线程<code>id</code>初始化<code>lcore_config</code>并绑定cpu核。我们默认cpu核心与线程是一比一绑定。所以<code>lcore_config</code>的索引就是我们要使用cpu的索引。</p>
+<p> 通过主线程初始化指定个数的工作线程，</p>
+<ul>
+<li><p>首先就是要初始化对应个数的<code>lcore_config</code>，</p>
+</li>
+<li><p>然后在初始化亲和的<code>cpu</code>。一般用掩码表示，比如64位哪位为1，就代表64个cpu核心我用哪一个。就像我们刚才所讲的我们默认<code>cpu</code>核心与线程是一比一绑定。所以<code>lcore_config</code>的索引就是我们要使用<code>cpu</code>的索引。设置过后</p>
+</li>
+<li><p>通过调用 <code>pthread_create</code>  创建线程，线程跑的是 <code>eal_thread_loop</code>。</p>
+</li>
+<li><p>通过调用<code>pthread_setaffinity_np</code>进行亲和性<code>cpu</code>的绑定。</p>
+</li>
+<li><p>通过调用</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">int</span> </span><br><span class="line"><span class="title function_">rte_eal_remote_launch</span><span class="params">(<span class="type">int</span> (*f)(<span class="type">void</span> *), <span class="type">void</span> *arg, <span class="type">unsigned</span> <span class="type">int</span> worker_id)</span></span><br></pre></td></tr></table></figure>
+<p>给线程发布任务。主要就是给<code>lcore_config</code>的<code>f</code>与<code>arg</code>通过消息队列告诉他，可以执行啦，他就去执行了，</p>
+</li>
+<li><p><code>eal_thread_loop</code>中就是首先根据自己的进程id找到对应的<code>lcore_config</code>。拿到这个就可以通过管道得知有任务交给我了。那么这个时候<code>lcore_config</code>的<code>f</code>与<code>arg</code>往往已经赋值好了，执行就完事儿了。</p>
+</li>
+</ul>
+<p>实际上害有更新亲和性cpu的操作，但是基本用不到所以那块儿我就没看。</p>
+<p>哇！！！终于走通了！！！好耶！！！！！！！！ 单纯使用的话，其实不需要搞懂这么多。</p>
+
+          
+        
+      
+    </div>
+    
+    
+    
+
+    
+
+    
+
+    
+
+    <footer class="post-footer">
+      
+
+      
+
+      
+
+      
+      
+        <div class="post-eof"></div>
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+      
+    
+      
+      
+        
+      
+      
+        
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
     <link itemprop="mainEntityOfPage" href="http://hanze5.github.io/2022/10/12/6.%E6%96%87%E4%BB%B6I-O/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
@@ -1801,212 +2046,6 @@
 
       
     
-      
-      
-        
-      
-      
-        
-
-  
-
-  
-  
-  
-
-  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
-  
-  
-  
-  <div class="post-block">
-    <link itemprop="mainEntityOfPage" href="http://hanze5.github.io/2022/07/13/22-Linux%E5%86%85%E6%A0%B8%E2%80%94%E2%80%94%E5%86%85%E6%A0%B8%E7%A9%BA%E9%97%B4%E7%9A%84%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86%E4%B8%8E%E5%88%86%E9%85%8D/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="name" content="">
-      <meta itemprop="description" content="">
-      <meta itemprop="image" content="/images/my_avatar.png">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="也许不会有人进来吧">
-    </span>
-
-    
-      <header class="post-header">
-
-        
-        
-          <h1 class="post-title" itemprop="name headline">
-                
-                <a class="post-title-link" href="/2022/07/13/22-Linux%E5%86%85%E6%A0%B8%E2%80%94%E2%80%94%E5%86%85%E6%A0%B8%E7%A9%BA%E9%97%B4%E7%9A%84%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86%E4%B8%8E%E5%88%86%E9%85%8D/" itemprop="url">Linux内核——内核空间的内存管理与分配</a></h1>
-        
-
-        <div class="post-meta">
-          <span class="post-time">
-            
-              <span class="post-meta-item-icon">
-                <i class="fa fa-calendar-o"></i>
-              </span>
-              
-                <span class="post-meta-item-text">发表于</span>
-              
-              <time title="创建于" itemprop="dateCreated datePublished" datetime="2022-07-13T08:05:12+08:00">
-                2022-07-13
-              </time>
-            
-
-            
-
-            
-          </span>
-
-          
-            <span class="post-category" >
-            
-              <span class="post-meta-divider">|</span>
-            
-              <span class="post-meta-item-icon">
-                <i class="fa fa-folder-o"></i>
-              </span>
-              
-                <span class="post-meta-item-text">分类于</span>
-              
-              
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/%E5%AD%A6%E6%97%A0%E6%AD%A2%E5%A2%83/" itemprop="url" rel="index">
-                    <span itemprop="name">学无止境</span>
-                  </a>
-                </span>
-
-                
-                
-              
-            </span>
-          
-
-          
-            
-          
-
-          
-          
-
-          
-
-          
-
-          
-
-        </div>
-      </header>
-    
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-      
-
-      
-        
-          
-            <p>跟着简叔学的，可以B站搜索 <strong>简说linux</strong></p>
-<h2 id="页框和伙伴算法"><a href="#页框和伙伴算法" class="headerlink" title="页框和伙伴算法"></a>页框和伙伴算法</h2><ul>
-<li>定义:内核使用struct page结构体描述每个物理页，也叫页框。一般一个页框对应一个4k的空间</li>
-<li>场景:内核在很多情况下，需要申请连续的页框，而且数量不定，比如4个，5个，9个等。</li>
-<li>实现: Linux把所有的空闲页框分组为11个块链表，每个链表上的页框块是固定的。在第i条链表中每个页框块都包含2的i次方个连续页。</li>
-<li>注意:系统中每个页框块的第一个页框的物理地址是该块大小的整数倍。例如:大小为16个页框的块，其起始地址是16*2^12的倍数。</li>
-</ul>
-<p><img src="/images/22/1678103470108.png" alt="1678103470108"> </p>
-<p>我要申请4k 就去找0里摘取一个；8k就找。</p>
-<h2 id="页框操作"><a href="#页框操作" class="headerlink" title="页框操作"></a>页框操作</h2><p>分配2^order个连续的物理页，并返回一个指针，指向第一个页的page结构体</p>
-<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">static</span> <span class="keyword">inline</span> <span class="keyword">struct</span> page * <span class="title function_">alloc_pages</span><span class="params">(<span class="type">gfp_t</span> gfp_mask, <span class="type">unsigned</span> <span class="type">int</span> order)</span></span><br></pre></td></tr></table></figure>
-<p>返回page页面所映射的的虚拟地址</p>
-<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">void</span> *<span class="title function_">page_address</span><span class="params">(<span class="type">const</span> <span class="keyword">struct</span> page *page)</span></span><br></pre></td></tr></table></figure>
-<h2 id="slab实现了内存的管理和分配"><a href="#slab实现了内存的管理和分配" class="headerlink" title="slab实现了内存的管理和分配"></a>slab实现了内存的管理和分配</h2><ul>
-<li>slab层把不同的对象划分为所谓的高速缓存(cache)组，其中每个高速缓存都存放不同类型的对象;</li>
-<li>每种对象类型对应一个高速缓存(cache) ;</li>
-<li>例如一个高速缓存存放task_struct结构体，而另外一个高速缓存存放struct inode结构体;. </li>
-<li>slab由一个或者多个物理上连续的页组成。每个高速缓存由多个slab组成。</li>
-</ul>
-<p><img src="/images/22/1678104047825.png" alt="1678104047825">|<img src="/images/22/1678104158296.png" alt="1678104158296"></p>
-<p>slad又分为三个状态，用于形容 对象的分配情况。查看右图128B的情况，128Bcache中的每个对象大小都是128个字节，就是由2^15个page组成一个对象。每个slab又是由一个或多个page组成。</p>
-<p>slab可以</p>
-<ol>
-<li>减少伙伴算法在分配小块连续内存时所产生的内部碎片;</li>
-<li>将频繁使用的对象缓存起来，减少分配、初始化和释放对象的时间开销。</li>
-<li>通过着色技术调整对象以更好的使用硬件高速缓存;</li>
-</ol>
-<p>这块没怎么看明白。。。。这里留下网址以后再继续看</p>
-<p><a target="_blank" rel="noopener" href="https://www.toutiao.com/article/6874373733595742727/?log_from=09cb26731ee35_1678104694035">linux操作系统内存大串讲：段页式，slab，共享内存-今日头条 (toutiao.com)</a></p>
-<h2 id="slab高速缓存的使用"><a href="#slab高速缓存的使用" class="headerlink" title="slab高速缓存的使用"></a>slab高速缓存的使用</h2><ol>
-<li><p>通过命令 cat /proc/slabinfo 可查看系统中的长用的</p>
-<p><img src="/images/22/1678145522310.png" alt="1678145522310"></p>
-</li>
-<li><p>内核中用 <code>struct kmem_cache</code>表示一个高速缓存。   通过下面的方法创建高速缓存</p>
-<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">struct</span>  kmem_cache*  <span class="title function_">kmem_cache_create</span><span class="params">(<span class="type">const</span> <span class="type">char</span> *name,<span class="type">size_t</span> size,<span class="type">size_t</span> align,</span></span><br><span class="line"><span class="params">                                      <span class="type">unsigned</span> <span class="type">long</span> flags,<span class="type">void</span> (*ctor)(<span class="type">void</span>))</span> </span><br><span class="line">    </span><br></pre></td></tr></table></figure>
-</li>
-<li><p>申请和释放高速缓存  和申请 slab。 申请高速缓存的实现运用到了申请slab</p>
-<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">void</span> *<span class="title function_">kmem_cache_alloc</span><span class="params">(<span class="keyword">struct</span> kmem_cache *cachep, <span class="type">gfp_t</span> flags)</span> </span><br><span class="line"><span class="type">void</span> <span class="title function_">kmem_cache_destroy</span><span class="params">(<span class="keyword">struct</span> kmem_cache *s)</span></span><br><span class="line">    </span><br><span class="line">static_always_inline <span class="type">void</span> * <span class="title function_">slab_alloc</span><span class="params">(<span class="keyword">struct</span> kmem_cache *cachep, <span class="type">gfp_t</span> flags, <span class="type">unsigned</span> <span class="type">long</span> caller)</span></span><br></pre></td></tr></table></figure>
-</li>
-</ol>
-<h2 id="内核中的最常用的内存申请"><a href="#内核中的最常用的内存申请" class="headerlink" title="内核中的最常用的内存申请"></a>内核中的最常用的内存申请</h2><ol>
-<li>给硬件分配内存必须连续</li>
-</ol>
-<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">static</span> _always_inline <span class="type">void</span> *<span class="title function_">kmalloc</span><span class="params">(<span class="type">size_t</span> size, <span class="type">gfp_t</span> flags)</span></span><br><span class="line"><span class="type">static</span> <span class="keyword">inline</span> <span class="type">void</span> *<span class="title function_">kzalloc</span><span class="params">(<span class="type">size_t</span> size, <span class="type">gfp_t</span> flags)</span></span><br><span class="line"><span class="comment">//返回一个指向内存块的指针，其内存块大小至少size大小，所分配的内存在物理上是连续的。</span></span><br><span class="line"><span class="type">void</span> *<span class="title function_">vmalloc</span><span class="params">(<span class="type">unsigned</span> <span class="type">long</span> size)</span></span><br><span class="line"><span class="type">void</span> *<span class="title function_">vzalloc</span><span class="params">(<span class="type">unsigned</span> <span class="type">long</span> size)</span><span class="comment">//多了一步初始化操作 初始化成0</span></span><br><span class="line"><span class="comment">//返回一个指向内存块的指针，其内存块大小至少size大小，所分配的内存在物理上无需连续。</span></span><br></pre></td></tr></table></figure>
-<p><img src="/images/22/1678105707629.png" alt="1678105707629"></p>
-<h3 id="kzalloc实现"><a href="#kzalloc实现" class="headerlink" title="kzalloc实现"></a>kzalloc实现</h3><p>我们的代码中就用到了<img src="/images/22/1678105885291.png" alt="1678105885291"></p>
-<p>它的内部就是用kmalloc实现的，只是多了一步初始化为0的操作。</p>
-<p><img src="/images/22/1678105935522.png" alt="1678105935522"></p>
-<p>kmalloc的源码在/linux-4.9.229/include/linux/slab.h</p>
-<p><img src="/images/22/1678105981827.png" alt="1678105981827"></p>
-<p>大部分情况不会进入到if的判断里面，下图代码在 /mm/slab.c</p>
-<p><img src="/images/22/1678106254461.png" alt="1678106254461"></p>
-<p>到底依赖伙伴系统的算法。根据size和flag得到对应的高速缓存，通过调用kmalloc_slab里找到合适的缓存，然后找到对象返回到ret。kmalloc_slab的实现在/mm/slab_common.c</p>
-<p><img src="/images/22/1678106514598.png" alt="1678106514598"></p>
-<p>​        可以猜测到，通过大小查索引，是范围查找，合适的缓存。</p>
-<p><img src="/images/22/1678106829368.png" alt="1678106829368"></p>
-<p>  <img src="/images/22/1678106877955.png" alt="1678106877955"></p>
-<p>妙啊！ 除以8算出8的几倍，通过倍数当作索引来找出合适的size</p>
-<p>（这块儿看了好久都没理顺，打算先放一放往下看了。。。。）</p>
-
-          
-        
-      
-    </div>
-    
-    
-    
-
-    
-
-    
-
-    
-
-    <footer class="post-footer">
-      
-
-      
-
-      
-
-      
-      
-        <div class="post-eof"></div>
-      
-    </footer>
-  </div>
-  
-  
-  
-  </article>
-
-
-      
-    
   </section>
 
   
@@ -2061,7 +2100,7 @@
               
                 <a href="/">
               
-                  <span class="site-state-item-count">34</span>
+                  <span class="site-state-item-count">35</span>
                   <span class="site-state-item-name">日志</span>
                 </a>
               </div>

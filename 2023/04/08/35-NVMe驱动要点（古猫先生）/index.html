@@ -1,0 +1,789 @@
+<!DOCTYPE html>
+
+
+
+  
+
+
+<html class="theme-next pisces use-motion" lang="zh-Hans">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+<meta name="theme-color" content="#222">
+
+
+
+
+
+
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css" />
+
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=5.1.4" rel="stylesheet" type="text/css" />
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png?v=5.1.4">
+
+
+  <link rel="mask-icon" href="/images/logo.svg?v=5.1.4" color="#222">
+
+
+
+
+
+  <meta name="keywords" content="随便看看,NVMe," />
+
+
+
+
+
+
+
+
+
+
+<meta name="description" content="来源：NVME驱动_古猫先生的博客-CSDN博客 主要是留存资料方便查看。其实做ZNSSSD研究读驱动没有太大必要。 古猫先生所阅读的NVMe从Kconfig和Makefile来看，了解NVMe over PCIe相关的知识点，主要关注三个文件：core.c, pci.c, scsi.c. 1.概述与nvme_core_init函数解析打开core.c文件，找到程序入口module_init(n">
+<meta property="og:type" content="article">
+<meta property="og:title" content="NVMe驱动要点（古猫先生）">
+<meta property="og:url" content="http://hanze5.github.io/2023/04/08/35-NVMe%E9%A9%B1%E5%8A%A8%E8%A6%81%E7%82%B9%EF%BC%88%E5%8F%A4%E7%8C%AB%E5%85%88%E7%94%9F%EF%BC%89/index.html">
+<meta property="og:site_name" content="也许不会有人进来吧">
+<meta property="og:description" content="来源：NVME驱动_古猫先生的博客-CSDN博客 主要是留存资料方便查看。其实做ZNSSSD研究读驱动没有太大必要。 古猫先生所阅读的NVMe从Kconfig和Makefile来看，了解NVMe over PCIe相关的知识点，主要关注三个文件：core.c, pci.c, scsi.c. 1.概述与nvme_core_init函数解析打开core.c文件，找到程序入口module_init(n">
+<meta property="og:locale">
+<meta property="og:image" content="http://hanze5.github.io/images/35/1680767899551.png">
+<meta property="og:image" content="http://hanze5.github.io/images/35/1680780632361.png">
+<meta property="og:image" content="http://hanze5.github.io/images/35/1680830380877.png">
+<meta property="article:published_time" content="2023-04-08T00:09:36.000Z">
+<meta property="article:modified_time" content="2023-04-08T00:30:24.643Z">
+<meta property="article:author" content="Dawnlake">
+<meta property="article:tag" content="随便看看">
+<meta property="article:tag" content="NVMe">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="http://hanze5.github.io/images/35/1680767899551.png">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '',
+    scheme: 'Pisces',
+    version: '5.1.4',
+    sidebar: {"position":"left","display":"post","offset":12,"b2t":false,"scrollpercent":false,"onmobile":false},
+    fancybox: true,
+    tabs: true,
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    duoshuo: {
+      userId: '0',
+      author: '博主'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="http://hanze5.github.io/2023/04/08/35-NVMe驱动要点（古猫先生）/"/>
+
+
+
+
+
+  <title>NVMe驱动要点（古猫先生） | 也许不会有人进来吧</title>
+  
+
+
+
+
+
+
+
+
+<meta name="generator" content="Hexo 6.3.0"></head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/"  class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">也许不会有人进来吧</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+      
+        <p class="site-subtitle"></p>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br />
+            
+            首页
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br />
+            
+            标签
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-th"></i> <br />
+            
+            分类
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br />
+            
+            归档
+          </a>
+        </li>
+      
+
+      
+    </ul>
+  
+
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="http://hanze5.github.io/2023/04/08/35-NVMe%E9%A9%B1%E5%8A%A8%E8%A6%81%E7%82%B9%EF%BC%88%E5%8F%A4%E7%8C%AB%E5%85%88%E7%94%9F%EF%BC%89/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/images/my_avatar.png">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="也许不会有人进来吧">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">NVMe驱动要点（古猫先生）</h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2023-04-08T08:09:36+08:00">
+                2023-04-08
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+
+          
+            
+          
+
+          
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <h1 id><a href="#" class="headerlink" title=" "></a> </h1><p>来源：<a target="_blank" rel="noopener" href="https://blog.csdn.net/zhuzongpeng/category_12008684.html">NVME驱动_古猫先生的博客-CSDN博客</a></p>
+<p>主要是留存资料方便查看。其实做ZNSSSD研究读驱动没有太大必要。</p>
+<p>古猫先生所阅读的NVMe从Kconfig和Makefile来看，了解NVMe over PCIe相关的知识点，主要关注三个文件：core.c, pci.c, scsi.c.</p>
+<h2 id="1-概述与nvme-core-init函数解析"><a href="#1-概述与nvme-core-init函数解析" class="headerlink" title="1.概述与nvme_core_init函数解析"></a>1.概述与nvme_core_init函数解析</h2><p>打开core.c文件，找到程序入口<strong>module_init(nvme_core_init)</strong>,</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">int</span> __init <span class="title function_">nvme_core_init</span><span class="params">(<span class="type">void</span>)</span></span><br><span class="line">&#123;</span><br><span class="line"></span><br><span class="line">    <span class="type">int</span> result;</span><br><span class="line"></span><br><span class="line">    <span class="comment">//1. 注册字符设备&quot;nvme&quot;</span></span><br><span class="line">    result = __register_chrdev(nvme_char_major, <span class="number">0</span>, NVME_MINORS, <span class="string">&quot;nvme&quot;</span>, &amp;nvme_dev_fops);</span><br><span class="line"></span><br><span class="line">    <span class="keyword">if</span> (result &lt; <span class="number">0</span>)</span><br><span class="line">    	<span class="keyword">return</span> result;</span><br><span class="line">    <span class="keyword">else</span> <span class="keyword">if</span> (result &gt; <span class="number">0</span>)</span><br><span class="line">    	nvme_char_major = result;</span><br><span class="line"></span><br><span class="line">    <span class="comment">//2. 新建一个nvme class，拥有者(Owner)是为THIS_MODULE</span></span><br><span class="line">    nvme_class = class_create(THIS_MODULE, <span class="string">&quot;nvme&quot;</span>);</span><br><span class="line"></span><br><span class="line">    <span class="comment">//如果有Error发生，删除字符设备nvme</span></span><br><span class="line">    <span class="keyword">if</span> (IS_ERR(nvme_class)) </span><br><span class="line">    &#123;</span><br><span class="line">        result = PTR_ERR(nvme_class);</span><br><span class="line">        <span class="keyword">goto</span> unregister_chrdev;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line"></span><br><span class="line">     unregister_chrdev:</span><br><span class="line">    __unregister_chrdev(nvme_char_major, <span class="number">0</span>, NVME_MINORS, <span class="string">&quot;nvme&quot;</span>);</span><br><span class="line">    <span class="keyword">return</span> result;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>从上面的code来看，nvme_core_init主要做了两件事：</p>
+<ol>
+<li>调用__register_chrdev函数，<strong>注册一个名为”nvme”的字符设备.</strong></li>
+<li>调用class_create函数，<strong>动态创建设备的逻辑类</strong>，并完成部分字段的初始化，然后将其添加到内核中。<strong>创建的逻辑类位于/sys/class/</strong>.</li>
+</ol>
+<p>在注册字符设备时，涉及到了设备号的知识点：</p>
+<p>一个字符设备或者块设备都有一个主设备号（Major）和次设备号（Minor）。主设备号用来表示一个特定的驱动程序，次设备号用来表示使用该驱动程序的各个设备。比如，我们在Linux系统上挂了两块NVMe SSD. 那么主设备号就可以自动分配一个数字(比如8），次设备号分别为1和2.</p>
+<p>例如，在32位机子中，设备号共32位，高12位表示主设备号，低20位表示次设备号。<br><strong>注册字符设备之后，可以通过open，ioctrl，release接口对其进行操作</strong>。nvme字符设备的文件操作结构体<code>nvme_dev_fops</code>定义如下:</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">static</span> <span class="type">const</span> <span class="class"><span class="keyword">struct</span> <span class="title">file_operations</span> <span class="title">nvme_dev_fops</span> =</span> &#123;</span><br><span class="line"></span><br><span class="line">    .owner = THIS_MODULE,</span><br><span class="line"></span><br><span class="line">     <span class="comment">// open()用来打开一个设备，在该函数中可以对设备进行初始化。</span></span><br><span class="line">    .open = nvme_dev_open, </span><br><span class="line"></span><br><span class="line">     <span class="comment">// release()用来释放open()函数中申请的资源。</span></span><br><span class="line">    .release = nvme_dev_release,</span><br><span class="line"></span><br><span class="line">     <span class="comment">// nvme_dev_ioctl()提供一种执行设备特定命令的方法。</span></span><br><span class="line">    .unlocked_ioctl = nvme_dev_ioctl,</span><br><span class="line"></span><br><span class="line">    .compat_ioctl = nvme_dev_ioctl,</span><br><span class="line"></span><br><span class="line">    <span class="comment">/* 这里的ioctl有两个unlocked_ioctl和compat_ioctl，如果这两个同时存在的话，优先调用unlocked_ioctl，对于compat_ioctl只有打来了CONFIG_COMPAT 才会调用compat_ioctl。obj-$(CONFIG_COMPAT) += compat.o compat_ioctl.o */</span></span><br><span class="line"></span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+<p>其中：</p>
+<ul>
+<li><p><code>nvme_dev_open</code>通过代表设备的inode来获取设备号，然后遍历<code>nvme_ctrl_list</code>（所有的nvme设备都会加入这个list）找到对应的nvme设备，然后做一系列检查，最后找到的nvme设备放到file-&gt;private_data区域。file指针也是参数传进来的。</p>
+</li>
+<li><p><code>nvme_dev_release</code>比较简单，就是用来释放open()函数中申请的资源。</p>
+</li>
+<li><code>nvme_dev_ioctl</code> 中实现了5种命令。其中就包括Admin、IO命令（有一点需要注意的是，<em>NVME_IOCTL_IO_CMD不支持</em>NVMe设备有多个namespace的情况）。除了这两种，还有<em>NVME_IOCTL_RESET</em>和<em>NVME_IOCTL_SUBSYS_RESET</em> 通过nvme的ops直接写register来Reset Ioctrl和Ioctrl_subsys。这个nvme的ops名字叫做”<strong><em>nvme_ctrl_ops</em></strong>“, 这个ops在nvme初始化中调用nvme_probe()时赋值为”<strong>nvme_pci_ctrl_ops</strong>“。。。。这里就没继续看了，毕竟只是做大概了解。</li>
+</ul>
+<h2 id="2-NVMe初始化"><a href="#2-NVMe初始化" class="headerlink" title="2.NVMe初始化"></a>2.NVMe初始化</h2><p>这次关注的是Pci.c，找到入口 <strong>module_init(nvme_init)</strong>：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">static</span> <span class="type">int</span> __init <span class="title function_">nvme_init</span><span class="params">(<span class="type">void</span>)</span></span><br><span class="line">&#123;</span><br><span class="line">    <span class="type">int</span> result;</span><br><span class="line">    <span class="comment">//1, 创建全局工作队列</span></span><br><span class="line">    nvme_workq = alloc_workqueue(<span class="string">&quot;nvme&quot;</span>, WQ_UNBOUND | WQ_MEM_RECLAIM, <span class="number">0</span>);</span><br><span class="line">    <span class="keyword">if</span> (!nvme_workq)</span><br><span class="line">    	<span class="keyword">return</span> -ENOMEM;</span><br><span class="line"></span><br><span class="line">    <span class="comment">//2, 注册NVMe驱动</span></span><br><span class="line">    result = pci_register_driver(&amp;nvme_driver); </span><br><span class="line">    <span class="keyword">if</span> (result)</span><br><span class="line">    	destroy_workqueue(nvme_workq);</span><br><span class="line"></span><br><span class="line">    <span class="keyword">return</span> result;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>主要分为两部分工作：创建全局工作队列和注册NVMe驱动。</p>
+<p>创建全局队列应该不用看。。。。</p>
+<p>注册过程是，<strong>调用kernel提供的pci_register_driver()函数将nvme_driver注册到PCI Bus</strong></p>
+<p>系统启动时，BIOS会枚举整个PCI Bus, 之后将扫描到的设备通过ACPI tables传给操作系统。当操作系统加载时，PCI Bus驱动则会根据此信息读取各个PCI设备的Header Config空间，从class code寄存器获得一个特征值。class code就是PCI bus用来选择哪个驱动加载设备的唯一根据。NVMe Spec定义NVMe设备的Class code=0x010802h, 如下图。<br><img src="/images/35/1680767899551.png" alt="1680767899551"></p>
+<p>根据code来看，nvme driver会将class code写入nvme_id_table,nvme_id_table中会有相应的属性。这块儿应该不用懂。 反正会有定义0x010802h 代表的NVMe设备逻辑类。</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">static</span> <span class="class"><span class="keyword">struct</span> <span class="title">pci_driver</span> <span class="title">nvme_driver</span> =</span> &#123;</span><br><span class="line"></span><br><span class="line">    .name = <span class="string">&quot;nvme&quot;</span>,</span><br><span class="line"></span><br><span class="line">    .id_table = nvme_id_table,</span><br><span class="line"></span><br><span class="line">    .probe = nvme_probe,</span><br><span class="line"></span><br><span class="line">    .remove = nvme_remove,</span><br><span class="line"></span><br><span class="line">    .shutdown = nvme_shutdown,</span><br><span class="line"></span><br><span class="line">    .driver = &#123;</span><br><span class="line">        .pm = &amp;nvme_dev_pm_ops,</span><br><span class="line">	 &#125;,</span><br><span class="line"></span><br><span class="line">    .sriov_configure = nvme_pci_sriov_configure,</span><br><span class="line"></span><br><span class="line">    .err_handler = &amp;nvme_err_handler,</span><br><span class="line"></span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+<p><strong>pci_register_driver()</strong>函数将<strong>nvme_driver</strong>注册到PCI Bus之后，PCI Bus就明白了这个驱动是给NVMe设备(Class code=0x010802h)用的。</p>
+<p>到这里，只是找到PCI Bus上面驱动与NVMe设备的对应关系。nvme_init执行完毕，返回后，nvme驱动就啥事不做了，直到pci总线枚举出了这个nvme设备，就开始调用<strong>nvme_probe()</strong>函数开始干活咯。</p>
+<h2 id="3-nvme-probe"><a href="#3-nvme-probe" class="headerlink" title="3.nvme_probe()"></a>3.nvme_probe()</h2><p>同样定义在pci.c中：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">static</span> <span class="type">int</span> <span class="title function_">nvme_probe</span><span class="params">(<span class="keyword">struct</span> pci_dev *pdev, <span class="type">const</span> <span class="keyword">struct</span> pci_device_id *id)</span></span><br><span class="line">&#123;</span><br><span class="line"></span><br><span class="line">    <span class="type">int</span> node, result = -ENOMEM;</span><br><span class="line">    <span class="class"><span class="keyword">struct</span> <span class="title">nvme_dev</span> *<span class="title">dev</span>;</span></span><br><span class="line"></span><br><span class="line">    <span class="comment">// 通过调用dev_to_node 得到这个pci_dev的numa节点，如果没有指定的话，默认用first_memory_node，也就是第一个numa节点. </span></span><br><span class="line">    node = dev_to_node(&amp;pdev-&gt;dev);</span><br><span class="line">    <span class="keyword">if</span> (node == NUMA_NO_NODE)</span><br><span class="line">    	set_dev_node(&amp;pdev-&gt;dev, first_memory_node);</span><br><span class="line">    <span class="comment">// 为nvme dev节点分配空间</span></span><br><span class="line">    dev = kzalloc_node(<span class="keyword">sizeof</span>(*dev), GFP_KERNEL, node);</span><br><span class="line">    <span class="keyword">if</span> (!dev)</span><br><span class="line">    	<span class="keyword">return</span> -ENOMEM;</span><br><span class="line">    <span class="comment">// 为每个cpu core分配queue。queues为每个core分配一个io queue，所有的core共享一个admin queue。这里的queue的概念，更严格的说，是一组submission queue和completion quque。</span></span><br><span class="line">    dev-&gt;queues = kzalloc_node((num_possible_cpus() + <span class="number">1</span>) * <span class="keyword">sizeof</span>(<span class="type">void</span> *),GFP_KERNEL, node); <span class="comment">//这里之所以多1，是因为admin-queue</span></span><br><span class="line"></span><br><span class="line">    <span class="keyword">if</span> (!dev-&gt;queues)</span><br><span class="line">    	<span class="keyword">goto</span> <span class="built_in">free</span>;</span><br><span class="line">	<span class="comment">//增加设备对象的引用计数</span></span><br><span class="line">    dev-&gt;dev = get_device(&amp;pdev-&gt;dev); </span><br><span class="line">	<span class="comment">//为设备设置私有数据指针 </span></span><br><span class="line">    pci_set_drvdata(pdev, dev); </span><br><span class="line"></span><br><span class="line">    <span class="comment">// 获得PCI Bar的虚拟地址</span></span><br><span class="line">    result = nvme_dev_map(dev);</span><br><span class="line"></span><br><span class="line">    <span class="keyword">if</span> (result)</span><br><span class="line">    	<span class="keyword">goto</span> <span class="built_in">free</span>;</span><br><span class="line"></span><br><span class="line">    <span class="comment">// 初始化两个work变量, 放在nvme_workq中执行</span></span><br><span class="line">    INIT_WORK(&amp;dev-&gt;reset_work, nvme_reset_work);</span><br><span class="line">    INIT_WORK(&amp;dev-&gt;remove_work, nvme_remove_dead_ctrl_work);</span><br><span class="line">    </span><br><span class="line">	<span class="comment">// 初始化定时器watchdog</span></span><br><span class="line">    setup_timer(&amp;dev-&gt;watchdog_timer, nvme_watchdog_timer, (<span class="type">unsigned</span> <span class="type">long</span>)dev); </span><br><span class="line">	<span class="comment">// 初始化互斥锁</span></span><br><span class="line">    mutex_init(&amp;dev-&gt;shutdown_lock); </span><br><span class="line">    <span class="comment">// 初始化完成量</span></span><br><span class="line">    init_completion(&amp;dev-&gt;ioq_wait);</span><br><span class="line"></span><br><span class="line">    <span class="comment">// 设置DMA需要的PRP内存池</span></span><br><span class="line">    result = nvme_setup_prp_pools(dev);</span><br><span class="line"></span><br><span class="line">    <span class="keyword">if</span> (result)</span><br><span class="line">    	<span class="keyword">goto</span> put_pci;</span><br><span class="line"></span><br><span class="line">    <span class="comment">// 初始化NVMe Controller结构</span></span><br><span class="line">    result = nvme_init_ctrl(&amp;dev-&gt;ctrl, &amp;pdev-&gt;dev, &amp;nvme_pci_ctrl_ops,id-&gt;driver_data);</span><br><span class="line"></span><br><span class="line">    <span class="keyword">if</span> (result)</span><br><span class="line">    	<span class="keyword">goto</span> release_pools;</span><br><span class="line">    </span><br><span class="line">    <span class="comment">// 打印日志</span></span><br><span class="line">    dev_info(dev-&gt;ctrl.device, <span class="string">&quot;pci function %s\n&quot;</span>, dev_name(&amp;pdev-&gt;dev));</span><br><span class="line">    <span class="comment">// 将reset_work放入nvme_workq工作队列</span></span><br><span class="line">    queue_work(nvme_workq, &amp;dev-&gt;reset_work);</span><br><span class="line">    <span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line"></span><br><span class="line">     release_pools:</span><br><span class="line">    	nvme_release_prp_pools(dev);</span><br><span class="line"></span><br><span class="line">     put_pci:</span><br><span class="line">        put_device(dev-&gt;dev);</span><br><span class="line">        nvme_dev_unmap(dev);</span><br><span class="line"></span><br><span class="line">     <span class="built_in">free</span>:</span><br><span class="line">        kfree(dev-&gt;queues);</span><br><span class="line">        kfree(dev);</span><br><span class="line"></span><br><span class="line">    <span class="keyword">return</span> result;</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br></pre></td></tr></table></figure>
+<p>总结：</p>
+<ul>
+<li>为dev，dev-&gt;queues分配空间。为每个cpu core分配一个。queues为每个core分配一个io queue，所有的core共享一个admin queue。这里的queue的概念，更严格的说，是一组submission queue和completion queue的集合。</li>
+<li><p>调用<strong>nvme_dev_map</strong>获得PCI Bar的虚拟地址。</p>
+</li>
+<li><p>初始化两个work变量，定时器，互斥锁，完成量。</p>
+</li>
+<li>调用<strong>nvme_setup_prp_pools</strong>设置DMA需要的PRP内存池。</li>
+<li>调用<strong>nvme_init_ctrl</strong>初始化NVMe Controller结构。</li>
+<li>通过workqueue调度dev-&gt;reset_work，也就是调度<strong>nvme_reset_work</strong>函数，来reset nvme controller。</li>
+</ul>
+<h3 id="3-1-nvme-dev-map"><a href="#3-1-nvme-dev-map" class="headerlink" title="3.1 nvme_dev_map"></a>3.1 <strong>nvme_dev_map</strong></h3><p>在 PCI 设备中，<strong>BAR（Base Address Register，基地址寄存器）</strong>用于指定设备希望映射到主内存中的内存量，并在<strong>设备枚举</strong>后保存映射内存块开始的（基）地址。一个设备最多可以拥有六个 32 位的 BAR 或将两个 BAR 组合成一个 64 位的 BAR。BAR 的值由系统软件（例如 BIOS 和操作系统内核）设置。<strong>当系统软件知道设备在地址空间方面的需求时，它将为该设备分配一个适当类型（IO、非预取式 MMIO 或预取式 MMIO）的可用地址范围。然后，系统软件将分配给设备的起始地址写入 BAR 寄存器。</strong></p>
+<p>一旦 BAR 的值确定了，其指定范围内的当前设备中的内部寄存器（或内部存储空间）就可以被访问了。当该设备确认某一个请求（Request）中的地址在自己的 BAR 的范围内，便会接受这请求。</p>
+<p>假设有一个 PCI 网络适配器，它需要 256 字节的内存来存储其寄存器。在设备枚举期间，系统软件（例如 BIOS）将查询该设备的 BAR 以确定其内存需求。然后，系统软件将为该设备分配一个 256 字节的内存块，并将该内存块的起始地址写入设备的 BAR。</p>
+<p>一旦 BAR 的值确定了，操作系统就可以通过读写该内存块中的地址来访问网络适配器的寄存器。例如，如果操作系统想要读取网络适配器的状态寄存器，它可以读取内存块中与状态寄存器对应的地址来获取该信息。</p>
+<p>而对于容量大的块设备，例如硬盘驱动器，通常不会将其所有空间都映射到内存中。相反，操作系统会使用其他技术来访问设备的数据。</p>
+<p>例如，在访问硬盘驱动器时，操作系统会使用 I/O 操作来读写硬盘驱动器的寄存器。这些寄存器用于指定要访问的扇区号、传输的数据量以及要执行的命令等信息。然后，硬盘驱动器会根据这些信息执行相应的操作，并通过 DMA（Direct Memory Access，直接内存访问）将数据传输到主内存中。</p>
+<p>因此，对于容量大的块设备，操作系统并不需要将其所有空间都映射到内存中，而是使用 I/O 操作和 DMA 来访问设备的数据。</p>
+<p><em>设备枚举是指计算机启动时，系统软件（例如 BIOS）扫描系统总线以识别连接到计算机上的所有设备的过程。在设备枚举期间，系统软件将读取每个设备的配置信息，包括设备 ID、厂商 ID 和 BAR 等信息。然后，系统软件将为每个设备分配资源，例如中断号、DMA 通道和内存地址空间。最后，系统软件将这些信息保存在设备的配置空间中，以便操作系统在启动时可以访问它们。</em>枚举设备就是调用 probe。</p>
+<p><em>BAR（Base Address Register，基地址寄存器）位于 PCI 设备的配置空间中。<strong>配置空间</strong>是一个设备内部的特殊存储区域，用于存储设备的配置信息，包括设备 ID、厂商 ID 和 BAR 等信息。系统软件（例如 BIOS 和操作系统内核）可以通过读写配置空间来获取和设置设备的配置信息。</em></p>
+<p>当系统软件为 PCI 设备分配内存地址空间时，它会将分配给设备的内存块的起始地址写入设备的 BAR。这样，操作系统就可以通过读写该内存块中的地址来访问设备的寄存器或内部存储空间。</p>
+<p>下图为pci设备配置空间示意图：</p>
+<p><img src="/images/35/1680780632361.png" alt="1680780632361"></p>
+<p><strong>nvme_dev_map</strong>的执行过程可以主要分为三步：</p>
+<p><strong>第一步</strong>：调用pci_select_bars，其返回值为mask。因为pci设备的header配置空间有6个32位的Bar寄存器(如下图)，所以mark中的每一位的值就代表其中一个Bar是否被置起。</p>
+<p><strong>第二步</strong>：调用pci_request_selected_regions，这个函数的一个参数就是之前调用pci_select_bars返回的mask值，作用就是把对应的这个几个bar保留起来，不让别人使用。</p>
+<p><strong>第三步：</strong>调用ioremap。在linux中我们无法直接访问物理地址，需要映射到虚拟地址，ioremap就是这个作用。映射完后，我们访问dev-&gt;bar就可以直接操作nvme设备上的寄存器了。但是代码中，并没有根据pci_select_bars的返回值来决定映射哪个bar，而是直接映射bar0，原因是nvme协议中强制规定了bar0就是内存映射的基址。<br><img src="/images/35/1680830380877.png" alt="1680830380877"></p>
+<h3 id="3-2-nvme-setup-prp-pools"><a href="#3-2-nvme-setup-prp-pools" class="headerlink" title="3.2 nvme_setup_prp_pools"></a>3.2 nvme_setup_prp_pools</h3><p>主要是创建了两个dma pool，后面就可以通过其他dma函数从dma pool中获得memory了。prp_small_pool里提供的是块大小为256字节的内存，prp_page_pool提供的是块大小为Page_Size(格式化时确定，例如4KB)的内存，主要是为了对于不一样长度的prp list来做优化。</p>
+<h3 id="3-3-nvme-init-ctrl"><a href="#3-3-nvme-init-ctrl" class="headerlink" title="3.3 nvme_init_ctrl"></a>3.3 nvme_init_ctrl</h3><p>nvme_init_ctrl的作用主要是调用device_create_with_groups函数创建一个名字叫nvme0的字符设备。这个nvme0中的0是通过nvme_set_instance获得的。这个过程中，通过ida_get_new获得唯一的索引值。</p>
+<h3 id="3-4-nvme-reset-work"><a href="#3-4-nvme-reset-work" class="headerlink" title="3.4 nvme_reset_work"></a>3.4 nvme_reset_work</h3><h2 id="4-nvme-reset-work"><a href="#4-nvme-reset-work" class="headerlink" title="4.nvme_reset_work"></a>4.nvme_reset_work</h2><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br><span class="line">102</span><br><span class="line">103</span><br><span class="line">104</span><br><span class="line">105</span><br><span class="line">106</span><br><span class="line">107</span><br><span class="line">108</span><br><span class="line">109</span><br><span class="line">110</span><br><span class="line">111</span><br><span class="line">112</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">static</span> <span class="type">void</span> <span class="title function_">nvme_reset_work</span><span class="params">(<span class="keyword">struct</span> work_struct *work)</span></span><br><span class="line">&#123;</span><br><span class="line">    <span class="class"><span class="keyword">struct</span> <span class="title">nvme_dev</span> *<span class="title">dev</span> =</span> container_of(work, <span class="keyword">struct</span> nvme_dev, reset_work);</span><br><span class="line"></span><br><span class="line">    <span class="type">int</span> result = -ENODEV;</span><br><span class="line"></span><br><span class="line">    <span class="comment">// 检查NVME_CTRL_RESETTING标志，来确保nvme_reset_work不会被重复进入.</span></span><br><span class="line">    <span class="keyword">if</span> (WARN_ON(dev-&gt;ctrl.state == NVME_CTRL_RESETTING))</span><br><span class="line">    	<span class="keyword">goto</span> out;</span><br><span class="line"></span><br><span class="line">    <span class="comment">// If we&#x27;re called to reset a live controller first shut it down before moving on.</span></span><br><span class="line">    <span class="keyword">if</span> (dev-&gt;ctrl.ctrl_config &amp; NVME_CC_ENABLE)</span><br><span class="line">    	nvme_dev_disable(dev, <span class="literal">false</span>);</span><br><span class="line"></span><br><span class="line">    <span class="keyword">if</span> (!nvme_change_ctrl_state(&amp;dev-&gt;ctrl, NVME_CTRL_RESETTING))</span><br><span class="line">    	<span class="keyword">goto</span> out;</span><br><span class="line">	</span><br><span class="line">    <span class="comment">/*</span></span><br><span class="line"><span class="comment">    nvme_pci_enable(dev)</span></span><br><span class="line"><span class="comment">    使能nvme设备的内存空间iomem，也就是之前映射的bar空间。</span></span><br><span class="line"><span class="comment">    设置设备具有获得总线的能力，即调用这个函数，使设备具备申请使用PCI总线的能力。</span></span><br><span class="line"><span class="comment">    设定这个nvme设备的DMA区域大小，64 bits或者32 bits</span></span><br><span class="line"><span class="comment">    为设备分配中断请求，INITx/MSI/MSI-X</span></span><br><span class="line"><span class="comment">    设置Doorbell地址</span></span><br><span class="line"><span class="comment">    。。。。应该不用细看了吧</span></span><br><span class="line"><span class="comment">    */</span></span><br><span class="line">    result = nvme_pci_enable(dev);</span><br><span class="line">    <span class="keyword">if</span> (result)</span><br><span class="line">    	<span class="keyword">goto</span> out;</span><br><span class="line">	</span><br><span class="line">    <span class="comment">/*</span></span><br><span class="line"><span class="comment">    创建Admin SQ/CQ的创建</span></span><br><span class="line"><span class="comment">    调用nvme_alloc_queue分配NVMe queue</span></span><br><span class="line"><span class="comment">    nvme_alloc_queue分配NVMe queue后，就要将nvme admin queue的属性以及已经分配的admin SQ/CQ内存地址写入寄存器。</span></span><br><span class="line"><span class="comment">        writel(aqa, dev-&gt;bar + NVME_REG_AQA);</span></span><br><span class="line"><span class="comment">        lo_hi_writeq(nvmeq-&gt;sq_dma_addr, dev-&gt;bar + NVME_REG_ASQ);</span></span><br><span class="line"><span class="comment">        lo_hi_writeq(nvmeq-&gt;cq_dma_addr, dev-&gt;bar + NVME_REG_ACQ);</span></span><br><span class="line"><span class="comment">    最后一步就是调用queue_request_irq申请中断。这个函数主要的工作是设置中断处理函数，默认情况下不使用线程化的中断处理，而是使用中断上下文的中断处理。</span></span><br><span class="line"><span class="comment">    */</span></span><br><span class="line">    result = nvme_configure_admin_queue(dev);</span><br><span class="line">    <span class="keyword">if</span> (result)</span><br><span class="line">    	<span class="keyword">goto</span> out;</span><br><span class="line"></span><br><span class="line">    nvme_init_queue(dev-&gt;queues[<span class="number">0</span>], <span class="number">0</span>);</span><br><span class="line">    result = nvme_alloc_admin_tags(dev);</span><br><span class="line">    <span class="keyword">if</span> (result)</span><br><span class="line">    	<span class="keyword">goto</span> out;</span><br><span class="line"></span><br><span class="line">    <span class="comment">/*</span></span><br><span class="line"><span class="comment">    调用nvme_identify_ctrl读取identify data.</span></span><br><span class="line"><span class="comment">    调用nvme_set_queue_limits设置queue write cache的大小.</span></span><br><span class="line"><span class="comment">    */</span></span><br><span class="line">    result = nvme_init_identify(&amp;dev-&gt;ctrl);</span><br><span class="line">    <span class="keyword">if</span> (result)</span><br><span class="line">    	<span class="keyword">goto</span> out;</span><br><span class="line"></span><br><span class="line">    <span class="comment">/*</span></span><br><span class="line"><span class="comment">    调用nvme_set_queue_count发送set feature cmd设置IO queues的数目；</span></span><br><span class="line"><span class="comment">    确定了IO queues的数目之后，调用nvme_creat_io_queues函数完成IO queues的创建。</span></span><br><span class="line"><span class="comment">    	先分配内存 在调用nvme_create_queue真正实现SQ/CQ的创建</span></span><br><span class="line"><span class="comment">    		nvme_create_queue函数先通过调用adapter_alloc_cq和adapter_alloc_sq创建CQ/SQ, 然后在调用queue_request_irq申请中断，最后调用nvme_init_queue初始化前面创建的CQ/SQ. </span></span><br><span class="line"><span class="comment">    */</span></span><br><span class="line">    result = nvme_setup_io_queues(dev);</span><br><span class="line">    <span class="keyword">if</span> (result)</span><br><span class="line">    	<span class="keyword">goto</span> out;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">if</span> (dev-&gt;online_queues &gt; <span class="number">1</span>)</span><br><span class="line">    	nvme_queue_async_events(&amp;dev-&gt;ctrl);</span><br><span class="line"></span><br><span class="line">    mod_timer(&amp;dev-&gt;watchdog_timer, round_jiffies(jiffies + HZ));</span><br><span class="line"></span><br><span class="line">    <span class="comment">// Keep the controller around but remove all namespaces if we don&#x27;t have any working I/O queue.</span></span><br><span class="line">    <span class="keyword">if</span> (dev-&gt;online_queues &lt; <span class="number">2</span>) </span><br><span class="line">    &#123;</span><br><span class="line">        dev_warn(dev-&gt;ctrl.device, <span class="string">&quot;IO queues not created\n&quot;</span>);</span><br><span class="line">        nvme_kill_queues(&amp;dev-&gt;ctrl);</span><br><span class="line">        nvme_remove_namespaces(&amp;dev-&gt;ctrl);</span><br><span class="line">    &#125; </span><br><span class="line">    <span class="keyword">else</span> </span><br><span class="line">    &#123;</span><br><span class="line">        <span class="comment">/*</span></span><br><span class="line"><span class="comment">        主要是调用了blk_mq_start_stopped_hw_queues和blk_mq_kick_requeue_list去启动mq-block层的hardware queues和request queues.</span></span><br><span class="line"><span class="comment">        */</span></span><br><span class="line">        nvme_start_queues(&amp;dev-&gt;ctrl);</span><br><span class="line">        <span class="comment">/*</span></span><br><span class="line"><span class="comment">        对tagset结构体初始化，接着调用blk_mq_alloc_tag_set分配tag set并与request queue关联</span></span><br><span class="line"><span class="comment">        */</span></span><br><span class="line">        nvme_dev_add(dev);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">if</span> (!nvme_change_ctrl_state(&amp;dev-&gt;ctrl, NVME_CTRL_LIVE)) </span><br><span class="line">    &#123;</span><br><span class="line">        dev_warn(dev-&gt;ctrl.device, <span class="string">&quot;failed to mark controller live\n&quot;</span>);</span><br><span class="line">        <span class="keyword">goto</span> out;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="comment">/*</span></span><br><span class="line"><span class="comment">    主要是调用了两个scan namespace的函数：nvme_scan_ns_list和nvme_scan_ns_sequential。 </span></span><br><span class="line"><span class="comment">    nvme_scan_ns_list，如果执行成功的话，返回0，因此不再执行nvme_scan_ns_sequential。  </span></span><br><span class="line"><span class="comment">    nvme_scan_ns_sequential的作用就是检查namespace是否合法，去掉不合法的namespace。</span></span><br><span class="line"><span class="comment">	在nvme_scan_work的最后，将所有找到的namespace通过list_sort(NULL, &amp;ctrl-&gt;namespaces, ns_cmp)来排序.</span></span><br><span class="line"><span class="comment">	nvme_scan_work 就是在nvme_reset_work已经发现nvme controller的情况下，再次对这个nvme controller下面的进行扫描，因为namespace最多可以两级级联，每个nvme controller下的name space都是放在ctrl-&gt;namespaces 这个链表中，且是按照name space id的大小排序。</span></span><br><span class="line"><span class="comment">    */</span></span><br><span class="line">    <span class="keyword">if</span> (dev-&gt;online_queues &gt; <span class="number">1</span>)</span><br><span class="line">    	nvme_queue_scan(&amp;dev-&gt;ctrl);</span><br><span class="line">    </span><br><span class="line">    <span class="keyword">return</span>;</span><br><span class="line"></span><br><span class="line">     out:</span><br><span class="line">     	nvme_remove_dead_ctrl(dev, result);</span><br><span class="line"></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p><strong><em>扩展:  线程化与中断上下文的概念(注: 此部分来自维基百科)</em></strong></p>
+<p><em>中断线程化是实现Linux实时性的一个重要步骤，在linux标准内核中，中断是最高优先级的执行单元，不管内核当时处理什么，只要有中断事件，系统将立即响应该事件并执行相应的中断处理代码，除非当时中断关闭。因此，如果系统有严重的网络或I/O负载，中断将非常频繁，后发生的实时任务将很难有机会运行，也就是说，毫无实时性可言。<strong>中断线程化之后，中断将作为内核线程运行而且赋予不同的实时优先级，实时任务可以有比中断线程更高的优先级，这样，实时任务就可以作为最高优先级的执行单元来运行，即使在严重负载下仍有实时性保证。</strong></em></p>
+<p><em>内核空间和用户空间是操作系统理论的基础之一，即内核功能模块运行在内核空间，而应用程序运行在用户空间。现代的CPU都具有不同的操作模式，代表不同的级别，不同的级别具有不同的功能，在较低的级别中将禁止某些操作。Linux系统设计时利用了这种硬件特性，使用了两个级别，最高级别和最低级别，内核运行在最高级别（内核态），这个级别可以进行所有操作，而应用程序运行在较低级别（用户态），在这个级别，处理器控制着对硬件的直接访问以及对内存的非授权访问。内核态和用户态有自己的内存映射，即自己的地址空间。</em></p>
+<p><em>正是有了不同运行状态的划分，才有了上下文的概念。用户空间的应用程序，如果想要请求系统服务，比如操作一个物理设备，或者映射一段设备空间的地址到用户空间，就必须通过系统调用来（操作系统提供给用户空间的接口函数）实现。通过系统调用，用户空间的应用程序就会进入内核空间，由内核代表该进程运行于内核空间，这就涉及到上下文的切换，用户空间和内核空间具有不同的地址映射，通用或专用的寄存器组。而用户空间的进程要传递很多变量、参数给内核，内核也要保存用户进程的一些寄存器、变量等，以便系统调用结束后回到用户空间继续执行。所谓的进程上下文，就是一个进程在执行的时候，CPU的所有寄存器中的值、进程的状态以及堆栈中的内容，当内核需要切换到另一个进程时，它需要保存当前进程的所有状态，即保存当前进程的进程上下文，以便再次执行该进程时，能够恢复切换时的状态，继续执行。</em></p>
+<p><em>同理，硬件通过触发信号，导致内核调用中断处理程序，进入内核空间。这个过程中，硬件的一些变量和参数也要传递给内核，内核通过这些参数进行中断处理，中断上下文就可以理解为硬件传递过来的这些参数和内核需要保存的一些环境，主要是被中断的进程的环境。</em></p>
+
+      
+    </div>
+    
+    
+    
+
+    
+
+    
+
+    
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/%E9%9A%8F%E4%BE%BF%E7%9C%8B%E7%9C%8B/" rel="tag"># 随便看看</a>
+          
+            <a href="/tags/NVMe/" rel="tag"># NVMe</a>
+          
+        </div>
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2023/04/05/34-%E4%BA%86%E8%A7%A3NVMe/" rel="next" title="了解NVMe">
+                <i class="fa fa-chevron-left"></i> 了解NVMe
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+
+  
+
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <section class="site-overview-wrap sidebar-panel">
+        <div class="site-overview">
+          <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+            
+              <img class="site-author-image" itemprop="image"
+                src="/images/my_avatar.png"
+                alt="" />
+            
+              <p class="site-author-name" itemprop="name"></p>
+              <p class="site-description motion-element" itemprop="description"></p>
+          </div>
+
+          <nav class="site-state motion-element">
+
+            
+              <div class="site-state-item site-state-posts">
+              
+                <a href="/">
+              
+                  <span class="site-state-item-count">35</span>
+                  <span class="site-state-item-name">日志</span>
+                </a>
+              </div>
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-categories">
+                <a href="/categories/index.html">
+                  <span class="site-state-item-count">2</span>
+                  <span class="site-state-item-name">分类</span>
+                </a>
+              </div>
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-tags">
+                <a href="/tags/index.html">
+                  <span class="site-state-item-count">11</span>
+                  <span class="site-state-item-name">标签</span>
+                </a>
+              </div>
+            
+
+          </nav>
+
+          
+
+          
+
+          
+          
+
+          
+          
+
+          
+
+        </div>
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link"><span class="nav-number">1.</span> <span class="nav-text"> </span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#1-%E6%A6%82%E8%BF%B0%E4%B8%8Envme-core-init%E5%87%BD%E6%95%B0%E8%A7%A3%E6%9E%90"><span class="nav-number">1.1.</span> <span class="nav-text">1.概述与nvme_core_init函数解析</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#2-NVMe%E5%88%9D%E5%A7%8B%E5%8C%96"><span class="nav-number">1.2.</span> <span class="nav-text">2.NVMe初始化</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#3-nvme-probe"><span class="nav-number">1.3.</span> <span class="nav-text">3.nvme_probe()</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#3-1-nvme-dev-map"><span class="nav-number">1.3.1.</span> <span class="nav-text">3.1 nvme_dev_map</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#3-2-nvme-setup-prp-pools"><span class="nav-number">1.3.2.</span> <span class="nav-text">3.2 nvme_setup_prp_pools</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#3-3-nvme-init-ctrl"><span class="nav-number">1.3.3.</span> <span class="nav-text">3.3 nvme_init_ctrl</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#3-4-nvme-reset-work"><span class="nav-number">1.3.4.</span> <span class="nav-text">3.4 nvme_reset_work</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#4-nvme-reset-work"><span class="nav-number">1.4.</span> <span class="nav-text">4.nvme_reset_work</span></a></li></ol></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+<div class="copyright">&copy; <span itemprop="copyrightYear">2023</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">Dawnlake</span>
+
+  
+</div>
+
+
+  <div class="powered-by">由 <a class="theme-link" target="_blank" href="https://hexo.io">Hexo</a> 强力驱动</div>
+
+
+
+  <span class="post-meta-divider">|</span>
+
+
+
+  <div class="theme-info">主题 &mdash; <a class="theme-link" target="_blank" href="https://github.com/iissnan/hexo-theme-next">NexT.Pisces</a> v5.1.4</div>
+
+
+
+
+        
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+    
+
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+  
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.4"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.4"></script>
+
+
+
+  
+  
+
+
+  <script type="text/javascript" src="/js/src/affix.js?v=5.1.4"></script>
+
+  <script type="text/javascript" src="/js/src/schemes/pisces.js?v=5.1.4"></script>
+
+
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.4"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+  
+
+  
+
+  
+  
+
+  
+  
+
+
+  
+
+  
+
+</body>
+</html>
