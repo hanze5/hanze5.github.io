@@ -254,6 +254,180 @@
   
   
   <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="http://hanze5.github.io/2021/06/03/17-Linux%E5%86%85%E6%A0%B8%E2%80%94%E2%80%94%E5%86%85%E6%A0%B8%E7%A9%BA%E9%97%B4%E4%B8%8E%E7%94%A8%E6%88%B7%E7%A9%BA%E9%97%B4%E7%9A%84%E6%95%B0%E6%8D%AE%E6%8B%B7%E8%B4%9D/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/images/my_avatar.png">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="也许不会有人进来吧">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+                
+                <a class="post-title-link" href="/2021/06/03/17-Linux%E5%86%85%E6%A0%B8%E2%80%94%E2%80%94%E5%86%85%E6%A0%B8%E7%A9%BA%E9%97%B4%E4%B8%8E%E7%94%A8%E6%88%B7%E7%A9%BA%E9%97%B4%E7%9A%84%E6%95%B0%E6%8D%AE%E6%8B%B7%E8%B4%9D/" itemprop="url">Linux内核——内核空间与用户空间的数据拷贝</a></h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2021-06-03T13:22:25+08:00">
+                2021-06-03
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E5%AD%A6%E6%97%A0%E6%AD%A2%E5%A2%83/" itemprop="url" rel="index">
+                    <span itemprop="name">学无止境</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+          
+
+          
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        
+          
+            <p>跟着简叔学的，可以B站搜索简说linux</p>
+<h2 id="1-32位系统内核空间和用户空间的默认大小"><a href="#1-32位系统内核空间和用户空间的默认大小" class="headerlink" title="1.32位系统内核空间和用户空间的默认大小"></a>1.32位系统内核空间和用户空间的默认大小</h2><p><img src="/images/17/1678066147846.png" alt="1678066147846"></p>
+<p>内核空间运行在高地址空间，用户空间在低地址空间。之所以要做这样的划分。出于安全考量，内核需要更高的权限，已屏蔽用户区的不安全操作。从软件设计思想来开，内核代码偏重于系统管理；用户空间的代码偏重于业务逻辑代码的实现。  注意这只是逻辑地址，并不是物理地址。这中间有一个映射的过程。</p>
+<p>陷入内核态一般有三种情况：</p>
+<p>​    <strong>系统调用，定时器中断，外设中断</strong>  处理完中断再返回用户空间的应用程序</p>
+<h2 id="2-x86段页式内存管理荷叶表映射机制"><a href="#2-x86段页式内存管理荷叶表映射机制" class="headerlink" title="2.x86段页式内存管理荷叶表映射机制"></a>2.x86段页式内存管理荷叶表映射机制</h2><p><a target="_blank" rel="noopener" href="https://www.bilibili.com/read/cv8129309?spm_id_from=333.999.0.0">linux内核页表映射机制：线性地址如何转为物理地址？ - 哔哩哔哩 (bilibili.com)</a></p>
+<p>两步走，逻辑地址转化成线性地址，再转化成物理地址。部分架构逻辑地址就是线性地址，基址+offset 找到线性地址空间，通过把基址设为0来实现。那么从线性地址转化成逻辑地址就是我们说的页表映射。。</p>
+<p><img src="/images/17/1678079204392.png" alt="1678079204392"></p>
+<p>不同进程有不同的页目录表，所以他们可以不冲突的访问相同的逻辑地址（在他们各自的视角里），因为他们的页目录表不一样。  线性地址 总共32位（页表目录索引找到页表10位，页表索引找到物理地址基址10位，偏移12位）</p>
+<h2 id="3-对之前写的hello驱动的读写函数进行简单修改"><a href="#3-对之前写的hello驱动的读写函数进行简单修改" class="headerlink" title="3.对之前写的hello驱动的读写函数进行简单修改"></a>3.对之前写的hello驱动的读写函数进行简单修改</h2><ol>
+<li><p>代码改动如下</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//</span></span><br><span class="line"><span class="type">ssize_t</span> <span class="title function_">hello_write</span><span class="params">(<span class="keyword">struct</span> file *f, <span class="type">const</span> <span class="type">char</span> __user *u, <span class="type">size_t</span> s, <span class="type">loff_t</span> *l)</span></span><br><span class="line">&#123;</span><br><span class="line">    printk(KERN_EMERG<span class="string">&quot;hello_write\r\n&quot;</span>);</span><br><span class="line">    <span class="type">int</span> writenlen = <span class="number">0</span>;</span><br><span class="line">    writenlen = BUFFER_MAX&gt;s?s:BUFFER_MAX;</span><br><span class="line">    <span class="keyword">if</span>(copy_from_user(buffer,u,writenlen))</span><br><span class="line">    &#123;</span><br><span class="line">        <span class="keyword">return</span> -EFAULT;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">return</span> writelen;</span><br><span class="line">&#125;</span><br><span class="line"><span class="type">ssize_t</span> <span class="title function_">hello_read</span><span class="params">(<span class="keyword">struct</span> file *f, <span class="type">char</span> __user *u, <span class="type">size_t</span> s, <span class="type">loff_t</span> *l)</span></span><br><span class="line">&#123;</span><br><span class="line">    printk(KERN_EMERG<span class="string">&quot;hello_read\r\n&quot;</span>);    </span><br><span class="line">    <span class="type">int</span> readlen;</span><br><span class="line">    readlen = BUFFER_MAX&gt;s?s:BUFFER_MAX;</span><br><span class="line">    <span class="keyword">if</span>(copy_to_user(u,buffer,readlen))</span><br><span class="line">    &#123;</span><br><span class="line">        <span class="keyword">return</span> -EFAULT;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">return</span> readlen;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>其中，<code>copy_from_user</code>与<code>copy_to_user</code>实现了用户空间和内核空间的数据拷贝。驱动程序肯定是在内核空间 <code>const char __user *u</code>则是用户空间的地址。所以看起来可能是反的，因为以前我们的视角是用户程序在用户空间。而且要注意，<code>copy_from_user</code>与<code>copy_to_user</code>他们的参数顺序哦。</p>
+<p>重新对驱动代码进行编译，插入。然后编译测试代码，进行测试，产生了段错误。</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">3</span><br><span class="line">open successe</span><br><span class="line">Segmentation fault</span><br></pre></td></tr></table></figure>
+<p>写入操作发生段错误,经过检查发现，原来驱动代码中，定义了内核空间的buffer指针，却没有开辟空间。</p>
+<p>将</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">char</span> * buffer；</span><br></pre></td></tr></table></figure>
+<p>替换为</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">char</span> buffer[BUFFER_MAX];</span><br></pre></td></tr></table></figure>
+<p>重新测试。</p>
+<p><img src="/images/17/1678070706739.png" alt="1678070706739"></p>
+<p>发现success拼写错了，无伤大雅无伤大雅。。。。。</p>
+<p>代码表示两个用户程序，读写内核空间数据。</p>
+</li>
+</ol>
+<p><img src="/images/17/1678070706739.png" alt="1678070706739">|<img src="/images/17/1678070706739.png" alt="1678070706739"><br>—- | —-</p>
+
+          
+        
+      
+    </div>
+    
+    
+    
+
+    
+
+    
+
+    
+
+    <footer class="post-footer">
+      
+
+      
+
+      
+
+      
+      
+        <div class="post-eof"></div>
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+      
+    
+      
+      
+        
+      
+      
+        
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
     <link itemprop="mainEntityOfPage" href="http://hanze5.github.io/2021/06/02/16-Linux%E5%86%85%E6%A0%B8%E2%80%94%E2%80%94%E5%A6%82%E4%BD%95%E5%B0%86%E9%A9%B1%E5%8A%A8%E4%BB%A3%E7%A0%81%E6%B7%BB%E5%8A%A0%E5%88%B0%E5%86%85%E6%A0%B8%E6%BA%90%E7%A0%81%E6%A0%91/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
@@ -955,7 +1129,7 @@
               
                 <a href="/">
               
-                  <span class="site-state-item-count">35</span>
+                  <span class="site-state-item-count">36</span>
                   <span class="site-state-item-name">日志</span>
                 </a>
               </div>

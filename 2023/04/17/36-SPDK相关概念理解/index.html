@@ -1,0 +1,780 @@
+<!DOCTYPE html>
+
+
+
+  
+
+
+<html class="theme-next pisces use-motion" lang="zh-Hans">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+<meta name="theme-color" content="#222">
+
+
+
+
+
+
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css" />
+
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=5.1.4" rel="stylesheet" type="text/css" />
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png?v=5.1.4">
+
+
+  <link rel="mask-icon" href="/images/logo.svg?v=5.1.4" color="#222">
+
+
+
+
+
+  <meta name="keywords" content="随便看看,SPDK," />
+
+
+
+
+
+
+
+
+
+
+<meta name="description" content="spdk是一个框架，而不是一个分布式系统，spdk的基石（官网用了bedrock 这个词）是用户态（user space）、轮询（polled-mode）、异步（asynchronous）、无锁（lockless）的NVMe驱动，其提供了零拷贝、高并发直接从用户态访问ssd的特性。其最初的目的是为了优化块存储落盘。但随着spdk的持续演进，大家发现spdk可以优化存储软件栈的各个方面。用户态、轮询">
+<meta property="og:type" content="article">
+<meta property="og:title" content="36-SPDK相关概念理解">
+<meta property="og:url" content="http://hanze5.github.io/2023/04/17/36-SPDK%E7%9B%B8%E5%85%B3%E6%A6%82%E5%BF%B5%E7%90%86%E8%A7%A3/index.html">
+<meta property="og:site_name" content="也许不会有人进来吧">
+<meta property="og:description" content="spdk是一个框架，而不是一个分布式系统，spdk的基石（官网用了bedrock 这个词）是用户态（user space）、轮询（polled-mode）、异步（asynchronous）、无锁（lockless）的NVMe驱动，其提供了零拷贝、高并发直接从用户态访问ssd的特性。其最初的目的是为了优化块存储落盘。但随着spdk的持续演进，大家发现spdk可以优化存储软件栈的各个方面。用户态、轮询">
+<meta property="og:locale">
+<meta property="og:image" content="http://hanze5.github.io/C:/Users/DawnLake/AppData/Roaming/Typora/typora-user-images/1681289021387.png">
+<meta property="article:published_time" content="2023-04-17T00:36:13.000Z">
+<meta property="article:modified_time" content="2023-04-17T00:38:20.385Z">
+<meta property="article:author" content="Dawnlake">
+<meta property="article:tag" content="随便看看">
+<meta property="article:tag" content="SPDK">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="http://hanze5.github.io/C:/Users/DawnLake/AppData/Roaming/Typora/typora-user-images/1681289021387.png">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '',
+    scheme: 'Pisces',
+    version: '5.1.4',
+    sidebar: {"position":"left","display":"post","offset":12,"b2t":false,"scrollpercent":false,"onmobile":false},
+    fancybox: true,
+    tabs: true,
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    duoshuo: {
+      userId: '0',
+      author: '博主'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="http://hanze5.github.io/2023/04/17/36-SPDK相关概念理解/"/>
+
+
+
+
+
+  <title>36-SPDK相关概念理解 | 也许不会有人进来吧</title>
+  
+
+
+
+
+
+
+
+
+<meta name="generator" content="Hexo 6.3.0"></head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/"  class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">也许不会有人进来吧</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+      
+        <p class="site-subtitle"></p>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br />
+            
+            首页
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br />
+            
+            标签
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-th"></i> <br />
+            
+            分类
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br />
+            
+            归档
+          </a>
+        </li>
+      
+
+      
+    </ul>
+  
+
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="http://hanze5.github.io/2023/04/17/36-SPDK%E7%9B%B8%E5%85%B3%E6%A6%82%E5%BF%B5%E7%90%86%E8%A7%A3/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/images/my_avatar.png">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="也许不会有人进来吧">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">36-SPDK相关概念理解</h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2023-04-17T08:36:13+08:00">
+                2023-04-17
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+
+          
+            
+          
+
+          
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <p>spdk是一个框架，而不是一个分布式系统，spdk的基石（官网用了bedrock 这个词）是用户态（<code>user space</code>）、轮询（<code>polled-mode</code>）、异步（<code>asynchronous</code>）、无锁（<code>lockless</code>）的NVMe驱动，其提供了<strong>零拷贝</strong>、高并发直接从用户态访问ssd的特性。其最初的目的是为了优化块存储落盘。但随着spdk的持续演进，大家发现spdk可以优化存储软件栈的各个方面。用户态、轮询、无锁和异步的技术来提高存储软件栈的效率。</p>
+<p>存储性能开发工具包 （SPDK） 提供了一组工具和库，用于编写高性能、可扩展的用户模式存储应用程序。它通过使用许多关键技术来实现高性能：</p>
+<ul>
+<li>将所有必要的驱动程序移动到用户空间，从而避免系统调用并启用来自应用程序的零副本访问。</li>
+<li>轮询硬件以获取完成，而不是依赖中断，从而降低总延迟和延迟差异。</li>
+<li>避免 I/O 路径中的所有锁，而是依赖消息传递。</li>
+</ul>
+<p>接下来细细理解这三个东西，然后在去了解延申的一些知识。</p>
+<h2 id="1-用户态"><a href="#1-用户态" class="headerlink" title="1.用户态"></a>1.用户态</h2><p>SPDK 通过绑定虚拟驱动程序使设备与操作系统内核解绑，然后利用 uio 或 vfio 中的功能将设备的 <a target="_blank" rel="noopener" href="https://en.wikipedia.org/wiki/PCI_configuration_space">PCI BAR</a> 映射到当前进程，从而允许驱动程序直接执行 <a target="_blank" rel="noopener" href="https://en.wikipedia.org/wiki/Memory-mapped_I/O">MMIO</a>。例如，SPDK NVMe 驱动程序映射 NVMe 设备的 BAR，然后按照 <a target="_blank" rel="noopener" href="http://nvmexpress.org/wp-content/uploads/NVM_Express_Revision_1.3.pdf">NVMe 规范</a>初始化设备、创建队列对并最终发送 I/O。</p>
+<h3 id="1-1-主机与IO设备相互之间的访问方式"><a href="#1-1-主机与IO设备相互之间的访问方式" class="headerlink" title="1.1 主机与IO设备相互之间的访问方式"></a>1.1 主机与IO设备相互之间的访问方式</h3><p><strong>其中MMIO是主机访问I/O设备的方式，而DMA则是设备访问主机内存的一种方式。而PCI BAR是MMIO方式的其中一种。</strong></p>
+<p><strong>PCI BAR解释</strong>： 就是用来判断主机想要访问的内存地址是主机自己的还是，IO设备的。BAR起始地址不可以在主机的内存地址空间内，因为这样就会造成地址的冲突。比如主机的内存地址空间和I/O设备的内存地址空间都是从0开始，主机的内存地址地址空间最大到0x0fffffff。那么如过想访问设备的内存就可以这样设置，将BAR设置为0x10000000. 然后访问0x10000010. 实际上就是访问设备内存的0x10000000. 当然，BAR的初始值设置并不是基地址而是告诉BIOS如何设置基地址，比如是否使用这个寄存器需要占用多大的地址空间等等信息。</p>
+<p><strong>DMA解释</strong>：DMA是基于PRP来实现的，设备控制器通过PRP来得知DMA的目的地址。假设要从NVMe控制器中写入16KB的数据到主机内存中，那么可以使用一个PRP List来描述这段数据的位置。PRP List是一个由多个PRP Entry组成的列表，用于描述连续或不连续的物理内存页。PRP List的第一个元素是一个PRP Entry，指向一个4KB的物理内存页，这个页中存放了后续的PRP Entry。PRP List的第二个元素是一个指向PRP List的指针，指向第一个物理内存页中的第一个PRP Entry。这样，NVMe控制器就可以通过这个指针来访问后续的PRP Entry了。</p>
+<p>假设第一个物理内存页的地址是0x1000，后续四个物理内存页的地址分别是0x2000，0x3000，0x4000，0x5000，那么PRP List可以表示为：<img src="/C:/Users\DawnLake\AppData\Roaming\Typora\typora-user-images\1681289021387.png" alt="1681289021387"></p>
+<p>这样，NVMe控制器就可以通过PRP List来访问主机内存中的16KB数据了。</p>
+<h3 id="1-2-零拷贝"><a href="#1-2-零拷贝" class="headerlink" title="1.2 零拷贝"></a>1.2 零拷贝</h3><p>SPDK的零拷贝是指<strong>SPDK提供了一种直接从用户空间访问NVMe SSD的方式，不需要经过内核或者数据缓冲区</strong>，从而避免了数据拷贝和上下文切换的开销。SPDK的零拷贝是基于SPDK的用户态、轮询、异步、无锁的NVMe驱动实现的。SPDK的NVMe驱动通过直接映射PCI BAR到本地进程并进行MMIO，来控制NVMe设备。I/O是异步提交的，通过队列对来进行，类似于Linux的libaio。SPDK的零拷贝可以提高数据传输的性能和效率，减少CPU和内存的消耗。</p>
+<p>SPDK首先会申请一片用户空间做DMA的目的地址。而<strong>上面说的映射映射的是寄存器与队列这些东西而不是真实的数据地址</strong>，这样主机访问设备寄存器以及SQ CQ这些就可以直接再用户空间访问而无需系统调用上下文切换，无需用户态内核态之间的切换。</p>
+<p>传统的NVMe io方式是指使用内核态的NVMe驱动来访问SSD设备的方式。这种方式也是通过内存映射空间来访问SSD设备的SQ和CQ，但是它需要经过内核空间和系统调用，<strong>而且使用中断来获取SSD设备的完成状态</strong>，然后通过系统调用陷入到内核态将数据从内核空间拷贝到用户空间。这样就会增加延迟和开销，降低性能。而且传统的NVMe io方式只支持一个管理队列和65535个命令队列，这在多核多线程的场景下可能不够用。</p>
+<p>因此，<strong>如果不使用SPDK的话，数据会经过内核空间。这是因为传统的NVMe io方式是使用内核态的NVMe驱动来访问SSD设备的</strong>，这样就需要通过系统调用来切换到内核态，然后通过内核空间来拷贝数据到用户态，再切换回用户态。这样就会增加数据传输的开销和延迟，降低性能。</p>
+<h2 id="2-轮询避免中断"><a href="#2-轮询避免中断" class="headerlink" title="2.轮询避免中断"></a>2.轮询避免中断</h2><p>该过程主要针对的是，主机询问CQ的过程。传统的方式是由NVMe控制器更新CQ尾然后通过中断的方式通知CPU。CPU此时需要进行上下文切换。主要通过定期调用<code>spdk_nvme_qpair_process_completions()</code> 函数来让 SPDK NVMe 驱动检查完成队列。</p>
+<ul>
+<li>具体来说，SPDK NVMe 驱动会读取下一个预期的完成槽位的阶段位，当它翻转时，就表示有一个新的完成结构。</li>
+<li><p>SPDK NVMe 驱动会根据完成结构中的 CID 值找到对应的跟踪器，然后找到对应的请求对象。</p>
+</li>
+<li><p>最后，请求对象中包含了用户最初提供的回调函数和上下文指针，SPDK NVMe 驱动会调用它们来完成命令。</p>
+</li>
+<li>SPDK NVMe 驱动会继续向前推进到下一个完成槽位，直到没有新的完成结构为止，然后写入完成队列头部的门铃寄存器，让设备知道可以使用完成队列槽位来生成新的完成结构，并返回。</li>
+</ul>
+<h2 id="3-无锁队列"><a href="#3-无锁队列" class="headerlink" title="3.无锁队列"></a>3.无锁队列</h2><ul>
+<li>SPDK用无锁队列来传递消息和I/O请求，从而避免I/O路径中的竞争和锁的开销</li>
+<li>SPDK用无锁队列来实现内存池，从而提高内存分配和释放的效率</li>
+<li>SPDK用无锁队列来实现NVMe驱动的命令队列和完成队列，从而提高NVMe设备的访问性能</li>
+</ul>
+<h2 id="4-线程和SQ尽量是是1：1的"><a href="#4-线程和SQ尽量是是1：1的" class="headerlink" title="4.线程和SQ尽量是是1：1的"></a>4.线程和SQ尽量是是1：1的</h2><p>根据搜索结果，线程和<strong>SQ</strong>是<strong>1:1</strong>有以下的一些原因：</p>
+<ul>
+<li>线程和SQ是1:1可以<strong>避免锁竞争</strong>，提高I/O的性能和并发性</li>
+<li>线程和SQ是1:1可以简化设计，减少复杂度和错误</li>
+<li>线程和SQ是1:1可以<strong>方便设置优先级或权重</strong>，实现不同的调度策略</li>
+</ul>
+<h2 id="5-MMU与IOMMU"><a href="#5-MMU与IOMMU" class="headerlink" title="5.MMU与IOMMU"></a>5.MMU与IOMMU</h2><p>MMU是内存管理单元，负责进程虚拟内存空间到物理内存空间的映射，以支持多进程的内存共享和保护。IOMMU是输入输出内存管理单元，负责进程虚拟内存空间到设备物理内存空间的映射，以支持设备的虚拟化和隔离。SMMU是系统内存管理单元，是IOMMU的一种，主要用于DMA设备的内存管理。MMU和IOMMU/SMMU的区别在于使用场景和功能细节。</p>
+<p>设备是否有自己的内存并不影响是否有IOMMU。<strong>IOMMU是一种硬件单元，用于将设备的IO虚拟地址映射到系统的物理地址</strong>，以支持设备的虚拟化和隔离。设备可以通过DMA访问系统内存，而无需CPU的参与。IOMMU可以控制设备对系统内存的访问权限和范围，以防止恶意或错误的DMA操作。因此，即使设备没有自己的内存，也可以使用IOMMU来管理设备的IO地址空间。</p>
+<p>设<strong>备的虚拟地址是指设备通过DMA访问系统内存时使用的地址，而不是设备自身的内存地址</strong>。设备的虚拟地址是由IOMMU分配和管理的，与CPU的虚拟地址类似，也需要通过页表来映射到物理地址。设备的虚拟地址可以提高设备访问内存的效率和安全性，因为设备可以访问不连续的物理内存，而无需CPU的干预。因此，设备没有自己的内存并不影响设备有自己的虚拟地址。</p>
+<p>类比理解，进程的虚拟空间保证不同进程不相互干扰，设备的虚拟空间保证不同设备不相互干扰。</p>
+<h2 id="6-消息传递与SPDK并发技术"><a href="#6-消息传递与SPDK并发技术" class="headerlink" title="6.消息传递与SPDK并发技术"></a>6.消息传递与SPDK并发技术</h2><h3 id="6-1SPDK并发介绍"><a href="#6-1SPDK并发介绍" class="headerlink" title="6.1SPDK并发介绍"></a>6.1SPDK并发介绍</h3><p>SPDK 的主要目标之一是通过<strong>添加硬件实现线性扩展</strong>。这在实践中可能意味着很多事情。例如，从一个 SSD 移动到两个 SSD 应该使每秒的 I/O 数量增加一倍。或者将 CPU 内核的数量加倍应该使可能的计算量翻倍。甚至将 NIC 数量增加一倍，网络吞吐量也会翻倍。为了实现这一点，软件的执行线程必须尽可能彼此独立。在实践中，这意味着<strong>避免软件锁甚至原子指令</strong>。</p>
+<p>传统并发技术：软件通过将一些共享数据放在堆上，用锁保护它，然后让所有执行线程仅在访问数据时获取锁来实现并发。此模型具有许多出色的属性</p>
+<ul>
+<li>将单线程程序转换为多线程程序很容易，因为不必从单线程版本更改数据模型。但数据周围添加锁。</li>
+<li>将程序编写为从上到下读取的同步命令性语句列表。</li>
+<li>调度程序可以中断线程，从而实现 CPU 资源的高效分时复用。</li>
+</ul>
+<p>但是当线程增加，锁争用就会增加。超过一定数量的争用锁，线程将花费大部分时间尝试获取锁，并且程序将不会从更多的 CPU 内核中受益</p>
+<p>SPDK采取了完全不同的方法。<strong>SPDK 不会将共享数据放置在所有线程在获取锁后就可以访问的全局位置，而是通常会将该数据分配给单个线程。当其他线程想要访问数据时，它们会将消息传递给所属线程以代表它们执行操作。</strong>这种策略是 <code>Erlang</code>的核心设计原则之一，也是 <code>Go</code>中的主要并发机制。SPDK 中的消息由函数指针和指向某个上下文的指针组成。消息使用<a target="_blank" rel="noopener" href="http://dpdk.org/doc/guides/prog_guide/ring_lib.html">无锁环</a>在线程之间传递。<strong>由于缓存效应，消息传递通常比想的要快得多。</strong>如果单个内核正在访问相同的数据，则该数据更有可能位于靠近该内核的缓存中。通常最有效的做法是让每个内核处理其本地缓存中的一小组数据，然后在完成后将一条小消息传递给下一个核心。这就是为什么让一个内核去做的原因。</p>
+<p>这样做的<strong>目的是为了避免锁竞争和数据不一致的问题，提高数据访问的效率</strong>。<strong>并发性并不一定会变低，因为其他的核心可以处理不同的数据或任务，或者等待消息队列中的消息</strong>。当然，这种方法也不是万能的，它需要根据具体的应用场景和数据特征来设计和优化。</p>
+<p>在更极端的情况下，即使消息传递也可能成本太高，每个线程都可能创建数据的本地副本。然后，线程将仅引用其本地副本。为了改变数据，线程将向每个线程发送一条消息，告诉它们在本地副本上执行更新。当数据不被经常改但被经常读，这非常有用。这当然会牺牲内存大小来换取计算效率，因此它只用于最关键的代码路径。</p>
+<h3 id="6-2-提供消息功能的组件"><a href="#6-2-提供消息功能的组件" class="headerlink" title="6.2 提供消息功能的组件"></a>6.2 提供消息功能的组件</h3><p>SPDK提供了几个层次的消息传递组件。SPDK中最基本的库，比如NVMe驱动，不会自己进行任何消息传递，而是在文档中列出了函数可以被调用的规则。但是，大多数的库都依赖于<strong>SPDK的线程抽象</strong>，位于<code>libspdk_thread.a</code>中。线程抽象提供了一个基本的消息传递框架，并定义了一些关键的原语。</p>
+<p>首先，<code>spdk_thread</code>是一个轻量级的、无栈的执行线程的抽象。一个低层次的框架可以通过调用<code>spdk_thread_poll()</code>来执行一个<code>spdk_thread</code>的一个时间片。低层次的框架可以在任何时候把一个<code>spdk_thread</code>在系统线程之间移动，只要<strong>保证在任何给定的时间只有一个系统线程在执行<code>spdk_thread_poll()</code></strong>。新的轻量级线程可以随时通过调用<code>spdk_thread_create()</code>来创建，并通过调用<code>spdk_thread_destroy()</code>来销毁。轻量级线程是SPDK中线程的基础抽象。</p>
+<p>然后，在<code>spdk_thread</code>之上又有一些额外的抽象。其中一个是<code>spdk_poller</code>，它是一个应该在给定线程上重复调用的函数的抽象。另一个是<code>spdk_msg_fn</code>，它是一个函数指针和一个上下文指针，可以通过<code>spdk_thread_send_msg()</code>发送给一个线程来执行。</p>
+<p>该库还定义了另外两个抽象：<code>spdk_io_device</code>和<code>spdk_io_channel</code>。在实现SPDK的过程中，我们注意到了不同库中出现了相同的模式。为了实现消息传递策略，代码会描述一些有全局状态的对象，以及与这些对象相关联的一些在线程中访问的上下文，以避免对全局状态加锁。这种模式在最低层次的提交I/O到块设备的地方最为明显。这些设备通常暴露多个队列，可以分配给线程，并且在提交I/O时不需要加锁。</p>
+<p><em>如果你把线程理解为一个可以并发执行的代码片段，那么SPDK线程也可以算是线程，只是它的实现方式和传统的系统线程不同。如果你把线程理解为一个有自己的栈和寄存器的执行上下文，那么SPDK线程就不是真正的线程，而是一种抽象的概念。</em></p>
+<p><em>其实也可以这样理解，SPDK线程就是一组可以在不同的系统线程上执行的函数，它们通过消息传递来通信和协作。这样可以避免锁竞争和数据不一致的问题，提高并发系统的性能和可扩展性。</em></p>
+<h3 id="6-3-SPDK-自旋锁"><a href="#6-3-SPDK-自旋锁" class="headerlink" title="6.3 SPDK 自旋锁"></a>6.3 SPDK 自旋锁</h3><p>有些情况下还是需要使用锁来保护共享数据。但是这些情况应该尽量减少，优先使用上面描述的消息传递接口。当需要使用锁时，SPDK应该使用自己定义的<code>spdk_spinlock</code>，而不是POSIX标准的锁。</p>
+<p>POSIX标准的锁，如<code>pthread_mutex_t</code>和<code>pthread_spinlock_t</code>，不能正确地处理SPDK轻量级线程之间的锁定。SPDK的<code>spdk_spinlock</code>在SPDK库和应用中是安全的。这种安全性来自于对锁持有时间的限制。</p>
+<h3 id="6-4-SPDK事件框架"><a href="#6-4-SPDK事件框架" class="headerlink" title="6.4 SPDK事件框架"></a>6.4 SPDK事件框架</h3><p>SPDK项目不想为所有的示例应用程序官方地选择一个异步的、基于事件的框架，而是想要支持尽可能多样化的框架。但是，应用程序当然需要一些实现了异步事件循环的东西才能运行，所以就有了位于lib/event中的事件框架。这个框架包括了一些东西，比如轮询和调度轻量级线程，安装信号处理器来干净地关闭，以及基本的命令行选项解析。只有成熟的应用程序才应该考虑直接集成更低层次的库。</p>
+
+      
+    </div>
+    
+    
+    
+
+    
+
+    
+
+    
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/%E9%9A%8F%E4%BE%BF%E7%9C%8B%E7%9C%8B/" rel="tag"># 随便看看</a>
+          
+            <a href="/tags/SPDK/" rel="tag"># SPDK</a>
+          
+        </div>
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2023/04/08/35-NVMe%E9%A9%B1%E5%8A%A8%E8%A6%81%E7%82%B9%EF%BC%88%E5%8F%A4%E7%8C%AB%E5%85%88%E7%94%9F%EF%BC%89/" rel="next" title="NVMe驱动要点（古猫先生）">
+                <i class="fa fa-chevron-left"></i> NVMe驱动要点（古猫先生）
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+
+  
+
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <section class="site-overview-wrap sidebar-panel">
+        <div class="site-overview">
+          <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+            
+              <img class="site-author-image" itemprop="image"
+                src="/images/my_avatar.png"
+                alt="" />
+            
+              <p class="site-author-name" itemprop="name"></p>
+              <p class="site-description motion-element" itemprop="description"></p>
+          </div>
+
+          <nav class="site-state motion-element">
+
+            
+              <div class="site-state-item site-state-posts">
+              
+                <a href="/">
+              
+                  <span class="site-state-item-count">36</span>
+                  <span class="site-state-item-name">日志</span>
+                </a>
+              </div>
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-categories">
+                <a href="/categories/index.html">
+                  <span class="site-state-item-count">2</span>
+                  <span class="site-state-item-name">分类</span>
+                </a>
+              </div>
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-tags">
+                <a href="/tags/index.html">
+                  <span class="site-state-item-count">11</span>
+                  <span class="site-state-item-name">标签</span>
+                </a>
+              </div>
+            
+
+          </nav>
+
+          
+
+          
+
+          
+          
+
+          
+          
+
+          
+
+        </div>
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#1-%E7%94%A8%E6%88%B7%E6%80%81"><span class="nav-number">1.</span> <span class="nav-text">1.用户态</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#1-1-%E4%B8%BB%E6%9C%BA%E4%B8%8EIO%E8%AE%BE%E5%A4%87%E7%9B%B8%E4%BA%92%E4%B9%8B%E9%97%B4%E7%9A%84%E8%AE%BF%E9%97%AE%E6%96%B9%E5%BC%8F"><span class="nav-number">1.1.</span> <span class="nav-text">1.1 主机与IO设备相互之间的访问方式</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#1-2-%E9%9B%B6%E6%8B%B7%E8%B4%9D"><span class="nav-number">1.2.</span> <span class="nav-text">1.2 零拷贝</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#2-%E8%BD%AE%E8%AF%A2%E9%81%BF%E5%85%8D%E4%B8%AD%E6%96%AD"><span class="nav-number">2.</span> <span class="nav-text">2.轮询避免中断</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#3-%E6%97%A0%E9%94%81%E9%98%9F%E5%88%97"><span class="nav-number">3.</span> <span class="nav-text">3.无锁队列</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#4-%E7%BA%BF%E7%A8%8B%E5%92%8CSQ%E5%B0%BD%E9%87%8F%E6%98%AF%E6%98%AF1%EF%BC%9A1%E7%9A%84"><span class="nav-number">4.</span> <span class="nav-text">4.线程和SQ尽量是是1：1的</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#5-MMU%E4%B8%8EIOMMU"><span class="nav-number">5.</span> <span class="nav-text">5.MMU与IOMMU</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#6-%E6%B6%88%E6%81%AF%E4%BC%A0%E9%80%92%E4%B8%8ESPDK%E5%B9%B6%E5%8F%91%E6%8A%80%E6%9C%AF"><span class="nav-number">6.</span> <span class="nav-text">6.消息传递与SPDK并发技术</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#6-1SPDK%E5%B9%B6%E5%8F%91%E4%BB%8B%E7%BB%8D"><span class="nav-number">6.1.</span> <span class="nav-text">6.1SPDK并发介绍</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#6-2-%E6%8F%90%E4%BE%9B%E6%B6%88%E6%81%AF%E5%8A%9F%E8%83%BD%E7%9A%84%E7%BB%84%E4%BB%B6"><span class="nav-number">6.2.</span> <span class="nav-text">6.2 提供消息功能的组件</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#6-3-SPDK-%E8%87%AA%E6%97%8B%E9%94%81"><span class="nav-number">6.3.</span> <span class="nav-text">6.3 SPDK 自旋锁</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#6-4-SPDK%E4%BA%8B%E4%BB%B6%E6%A1%86%E6%9E%B6"><span class="nav-number">6.4.</span> <span class="nav-text">6.4 SPDK事件框架</span></a></li></ol></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+<div class="copyright">&copy; <span itemprop="copyrightYear">2023</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">Dawnlake</span>
+
+  
+</div>
+
+
+  <div class="powered-by">由 <a class="theme-link" target="_blank" href="https://hexo.io">Hexo</a> 强力驱动</div>
+
+
+
+  <span class="post-meta-divider">|</span>
+
+
+
+  <div class="theme-info">主题 &mdash; <a class="theme-link" target="_blank" href="https://github.com/iissnan/hexo-theme-next">NexT.Pisces</a> v5.1.4</div>
+
+
+
+
+        
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+    
+
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+  
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.4"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.4"></script>
+
+
+
+  
+  
+
+
+  <script type="text/javascript" src="/js/src/affix.js?v=5.1.4"></script>
+
+  <script type="text/javascript" src="/js/src/schemes/pisces.js?v=5.1.4"></script>
+
+
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.4"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+  
+
+  
+
+  
+  
+
+  
+  
+
+
+  
+
+  
+
+</body>
+</html>
