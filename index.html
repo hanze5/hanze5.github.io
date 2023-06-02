@@ -254,6 +254,415 @@
   
   
   <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="http://hanze5.github.io/2023/06/02/37-ceph%E4%B8%8Espdk%E7%9A%84%E9%83%A8%E7%BD%B2%E4%BB%A5%E5%8F%8A%E6%80%A7%E8%83%BD%E6%B5%8B%E8%AF%95/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/images/my_avatar.png">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="也许不会有人进来吧">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+                
+                <a class="post-title-link" href="/2023/06/02/37-ceph%E4%B8%8Espdk%E7%9A%84%E9%83%A8%E7%BD%B2%E4%BB%A5%E5%8F%8A%E6%80%A7%E8%83%BD%E6%B5%8B%E8%AF%95/" itemprop="url">ceph与spdk的部署以及性能测试</a></h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2023-06-02T15:22:50+08:00">
+                2023-06-02
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E5%AD%A6%E6%97%A0%E6%AD%A2%E5%A2%83/" itemprop="url" rel="index">
+                    <span itemprop="name">学无止境</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+          
+
+          
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        
+          
+            <h1 id="裸盘-io"><a href="#裸盘-io" class="headerlink" title="裸盘 io"></a>裸盘 io</h1><figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">sync &amp;&amp; echo 3 | sudo tee /proc/sys/vm/drop_caches</span><br><span class="line"></span><br><span class="line">dd if=/dev/zero of=/dev/nvme0n1 bs=1M count=64</span><br><span class="line"></span><br><span class="line">sync &amp;&amp; echo 3 | sudo tee /proc/sys/vm/drop_caches</span><br><span class="line"></span><br><span class="line">dd if=/dev/nvme0n1 of=/dev/null bs=1M count=40960</span><br></pre></td></tr></table></figure>
+<p>结果</p>
+<div class="table-container">
+<table>
+<thead>
+<tr>
+<th></th>
+<th>读速率</th>
+<th>写速率</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>1.7 GB/s</td>
+<td>1.5 GB/s</td>
+</tr>
+<tr>
+<td>2</td>
+<td>1.7 GB/s</td>
+<td>1.5 GB/s</td>
+</tr>
+<tr>
+<td>3</td>
+<td>1.7 GB/s</td>
+<td>1.5 GB/s</td>
+</tr>
+<tr>
+<td>4</td>
+<td>1.7 GB/s</td>
+<td>1.5 GB/s</td>
+</tr>
+<tr>
+<td>5</td>
+<td>1.7 GB/s</td>
+<td>1.5 GB/s</td>
+</tr>
+<tr>
+<td>avg</td>
+<td>1.7 GB/s</td>
+<td>1.5GB/s</td>
+</tr>
+</tbody>
+</table>
+</div>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">ps -e -o %cpu,rss,cmd | grep xxx</span><br></pre></td></tr></table></figure>
+<h1 id="spdk-nvme-of"><a href="#spdk-nvme-of" class="headerlink" title="spdk nvme-of"></a>spdk nvme-of</h1><figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta prompt_"># </span><span class="language-bash">进入spdk目录</span></span><br><span class="line"><span class="meta prompt_">$ </span><span class="language-bash"><span class="built_in">cd</span> spdk</span></span><br><span class="line"><span class="meta prompt_"></span></span><br><span class="line"><span class="meta prompt_"># </span><span class="language-bash">运行脚本转让设备控制权给SPDK</span></span><br><span class="line"><span class="meta prompt_">$ </span><span class="language-bash">sudo scripts/setup.sh</span></span><br><span class="line">0000:03:00.0 (15ad 07f0): nvme -&gt; uio_pci_generic</span><br><span class="line"><span class="meta prompt_"></span></span><br><span class="line"><span class="meta prompt_"># </span><span class="language-bash">查看设备状态</span></span><br><span class="line"><span class="meta prompt_">$ </span><span class="language-bash">sudo scripts/setup.sh status</span></span><br><span class="line">Hugepages</span><br><span class="line">node     hugesize     free /  total</span><br><span class="line">node0   1048576kB        0 /      0</span><br><span class="line">node0      2048kB     1024 /   1024</span><br><span class="line"></span><br><span class="line">Type     BDF             Vendor Device NUMA    Driver           Device     Block devices</span><br><span class="line">NVMe     0000:01:00.0    126f   2263   0       uio_pci_generic  -          -</span><br><span class="line">NVMe     0000:02:00.0    10ec   5765   0       nvme             nvme1      nvme1n1</span><br><span class="line"><span class="meta prompt_"></span></span><br><span class="line"><span class="meta prompt_">#</span><span class="language-bash">启动 nvmf-tgf</span></span><br><span class="line"><span class="meta prompt_">$ </span><span class="language-bash">sudo build/bin/nvmf_tgt</span></span><br><span class="line"><span class="meta prompt_"></span></span><br><span class="line"><span class="meta prompt_">#</span><span class="language-bash">创建TCP传输</span></span><br><span class="line"><span class="meta prompt_">$ </span><span class="language-bash">sudo scripts/rpc.py nvmf_create_transport -t TCP -u 16384 -m 8 -c 8192</span></span><br><span class="line"><span class="meta prompt_"></span></span><br><span class="line"><span class="meta prompt_">#</span><span class="language-bash">创建 NVMe 块设备</span></span><br><span class="line"><span class="meta prompt_">$ </span><span class="language-bash">sudo scripts/rpc.py bdev_nvme_attach_controller -b NVMe1 -t PCIe -a 0000:01:00.0</span></span><br><span class="line"><span class="meta prompt_"></span></span><br><span class="line"><span class="meta prompt_"></span></span><br><span class="line"><span class="meta prompt_">#</span><span class="language-bash">将NVMe块设备分配给子系统</span></span><br><span class="line"><span class="meta prompt_"># </span><span class="language-bash">创建子系统</span></span><br><span class="line"><span class="meta prompt_">$ </span><span class="language-bash">sudo scripts/rpc.py nvmf_create_subsystem nqn.2016-06.io.spdk:cnode1 -a -s SPDK00000000000001 -d SPDK_Controller1</span></span><br><span class="line"><span class="meta prompt_"></span></span><br><span class="line"><span class="meta prompt_"># </span><span class="language-bash">将NVMe块设备分配给刚刚创建的子系统</span></span><br><span class="line"><span class="meta prompt_">$ </span><span class="language-bash">sudo scripts/rpc.py nvmf_subsystem_add_ns nqn.2016-06.io.spdk:cnode1 NVMe1n1</span></span><br><span class="line"><span class="meta prompt_"></span></span><br><span class="line"><span class="meta prompt_"># </span><span class="language-bash">为子系统添加TCP监听器</span></span><br><span class="line"><span class="meta prompt_">$ </span><span class="language-bash">sudo scripts/rpc.py nvmf_subsystem_add_listener nqn.2016-06.io.spdk:cnode1 -t TCP -a 192.168.12.85 -s 4420</span></span><br><span class="line"><span class="meta prompt_"></span></span><br><span class="line"><span class="meta prompt_"></span></span><br><span class="line"><span class="meta prompt_"></span></span><br><span class="line"><span class="meta prompt_">#</span><span class="language-bash">然后客户端这边</span></span><br><span class="line"><span class="meta prompt_">#</span><span class="language-bash">安装 nvme-cli</span></span><br><span class="line"><span class="meta prompt_">$ </span><span class="language-bash">apt install nvme-cli</span></span><br><span class="line"><span class="meta prompt_"></span></span><br><span class="line"><span class="meta prompt_">#</span><span class="language-bash">加载驱动程序</span></span><br><span class="line"><span class="meta prompt_">$ </span><span class="language-bash">sudo modprobe nvme-tcp</span></span><br><span class="line"><span class="meta prompt_"></span></span><br><span class="line"><span class="meta prompt_">#</span><span class="language-bash">发现 Target</span></span><br><span class="line"><span class="meta prompt_">$ </span><span class="language-bash">nvme discover -t tcp -a 192.168.12.85 -s 4420</span></span><br><span class="line"></span><br><span class="line">Discovery Log Number of Records 1, Generation counter 1</span><br><span class="line">=====Discovery Log Entry 0======</span><br><span class="line">trtype:  tcp</span><br><span class="line">adrfam:  ipv4</span><br><span class="line">subtype: nvme subsystem</span><br><span class="line">treq:    not required</span><br><span class="line">portid:  0</span><br><span class="line">trsvcid: 4420</span><br><span class="line">subnqn:  nqn.2016-06.io.spdk:cnode1</span><br><span class="line">traddr:  192.168.12.85</span><br><span class="line">sectype: none</span><br><span class="line"><span class="meta prompt_">#</span><span class="language-bash">连接Target</span></span><br><span class="line"><span class="meta prompt_">$ </span><span class="language-bash">nvme connect -t tcp -n <span class="string">&quot;nqn.2016-06.io.spdk:cnode1&quot;</span> -a 192.168.12.85 -s 4420</span></span><br><span class="line"><span class="meta prompt_">#</span><span class="language-bash">查看设备  最下边显示 SPDK_Controller1 的就是 然后</span></span><br><span class="line"><span class="meta prompt_">$ </span><span class="language-bash">nvme list</span></span><br><span class="line">Node             SN                   Model                                    Namespace Usage                      Format           FW Rev  </span><br><span class="line">---------------- -------------------- ---------------------------------------- --------- -------------------------- ---------------- --------</span><br><span class="line">/dev/nvme0n1     FXS500231001140      Fanxiang S500 512GB                      1         512.11  GB / 512.11  GB    512   B +  0 B   V0808A0 </span><br><span class="line">/dev/nvme1n1     2022122303702        Colorful CN600 500GB                     1         500.11  GB / 500.11  GB    512   B +  0 B   VC2S038D</span><br><span class="line">/dev/nvme2n1     SPDK00000000000001   SPDK_Controller1                         1         512.11  GB / 512.11  GB    512   B +  0 B   23.05   </span><br><span class="line"><span class="meta prompt_"></span></span><br><span class="line"><span class="meta prompt_">#</span><span class="language-bash">tartget端可可以通过这种方式测试cpu和内存占用</span></span><br><span class="line"><span class="meta prompt_">$ </span><span class="language-bash">scripts/spdk_top.py -s 192.168.12.85 -p 4420</span></span><br><span class="line"><span class="meta prompt_"></span></span><br><span class="line"><span class="meta prompt_">#</span><span class="language-bash">做完测试</span></span><br><span class="line">nvme disconnect-all</span><br><span class="line"><span class="meta prompt_"></span></span><br><span class="line"><span class="meta prompt_"></span></span><br><span class="line"><span class="meta prompt_"></span></span><br><span class="line"><span class="meta prompt_"># </span></span><br></pre></td></tr></table></figure>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">sync &amp;&amp; echo 3 | sudo tee /proc/sys/vm/drop_caches</span><br><span class="line"></span><br><span class="line">dd if=/dev/zero of=/dev/nvme2n1 bs=1M count=40960</span><br><span class="line"></span><br><span class="line">sync &amp;&amp; echo 3 | sudo tee /proc/sys/vm/drop_caches</span><br><span class="line"></span><br><span class="line">dd if=/dev/nvme2n1 of=/dev/null bs=1M count=40960</span><br></pre></td></tr></table></figure>
+<p>结果</p>
+<div class="table-container">
+<table>
+<thead>
+<tr>
+<th></th>
+<th>读速率</th>
+<th>写速率</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>112 MB/s</td>
+<td>97.4MB/s</td>
+</tr>
+<tr>
+<td>2</td>
+<td>112 MB/s</td>
+<td>103 MB/s</td>
+</tr>
+<tr>
+<td>3</td>
+<td>112 MB/s</td>
+<td>97.1MB/s</td>
+</tr>
+<tr>
+<td>4</td>
+<td>112 MB/s</td>
+<td>98.8MB/s</td>
+</tr>
+<tr>
+<td>5</td>
+<td>112 MB/s</td>
+<td>100 MB/s</td>
+</tr>
+<tr>
+<td>avg</td>
+<td>112 MB/s</td>
+<td>99.26 MB/s</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>使用iperf3工具测试两端的tcp传输速率  约为 114MB/s</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line">Connecting to host 192.168.12.85, port 5201</span><br><span class="line">[  5] local 192.168.12.78 port 54836 connected to 192.168.12.85 port 5201</span><br><span class="line">[ ID] Interval           Transfer     Bitrate         Retr  Cwnd</span><br><span class="line">[  5]   0.00-1.00   sec   110 MBytes   920 Mbits/sec   41    260 KBytes       </span><br><span class="line">[  5]   1.00-2.00   sec   109 MBytes   915 Mbits/sec   38    284 KBytes       </span><br><span class="line">[  5]   2.00-3.00   sec   109 MBytes   916 Mbits/sec   35    258 KBytes       </span><br><span class="line">[  5]   3.00-4.00   sec   109 MBytes   918 Mbits/sec   25    209 KBytes       </span><br><span class="line">[  5]   4.00-5.00   sec   109 MBytes   915 Mbits/sec   27    258 KBytes       </span><br><span class="line">[  5]   5.00-6.00   sec   109 MBytes   915 Mbits/sec   33    260 KBytes       </span><br><span class="line">[  5]   6.00-7.00   sec   109 MBytes   915 Mbits/sec   28    201 KBytes       </span><br><span class="line">[  5]   7.00-8.00   sec   109 MBytes   915 Mbits/sec   32    260 KBytes       </span><br><span class="line">[  5]   8.00-9.00   sec   109 MBytes   914 Mbits/sec   32    279 KBytes       </span><br><span class="line">[  5]   9.00-10.00  sec   109 MBytes   917 Mbits/sec   25    263 KBytes       </span><br><span class="line">- - - - - - - - - - - - - - - - - - - - - - - - -</span><br><span class="line">[ ID] Interval           Transfer     Bitrate         Retr</span><br><span class="line">[  5]   0.00-10.00  sec  1.07 GBytes   916 Mbits/sec  316             sender</span><br><span class="line">[  5]   0.00-10.04  sec  1.07 GBytes   912 Mbits/sec                  receiver</span><br></pre></td></tr></table></figure>
+<p>结论tcp带宽已占满，瓶颈在于网络带宽</p>
+<p>单台机器上的结果</p>
+<div class="table-container">
+<table>
+<thead>
+<tr>
+<th></th>
+<th>读速率</th>
+<th>写速率</th>
+<th>写内存占用</th>
+<th>写cpu占用</th>
+<th>读内存占用</th>
+<th>读cpu占用</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>1.6 GB/s</td>
+<td>1.5 GB/s</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>2</td>
+<td>1.6 GB/s</td>
+<td>1.5 GB/s</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>3</td>
+<td>1.6 GB/s</td>
+<td>1.5 GB/s</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>4</td>
+<td>1.6 GB/s</td>
+<td>1.5 GB/s</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>5</td>
+<td>1.6 GB/s</td>
+<td>1.5 GB/s</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>avg</td>
+<td>1.6 GB/s</td>
+<td>1.5 GB/s</td>
+<td>12832KB</td>
+<td>99.8%</td>
+<td>12832KB</td>
+<td>99.8%</td>
+</tr>
+</tbody>
+</table>
+</div>
+<h1 id="ceph"><a href="#ceph" class="headerlink" title="ceph"></a>ceph</h1><figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta prompt_">#</span><span class="language-bash">每个节点设置时钟同步</span></span><br><span class="line"><span class="meta prompt_">$ </span><span class="language-bash">systemctl start chronyd.service</span></span><br><span class="line"><span class="meta prompt_">$ </span><span class="language-bash">systemctl <span class="built_in">enable</span> chronyd.service</span></span><br><span class="line"><span class="meta prompt_"></span></span><br><span class="line"><span class="meta prompt_">#</span><span class="language-bash">每个节点关闭防火墙</span></span><br><span class="line"><span class="meta prompt_">$ </span><span class="language-bash">systemctl stop firewalld.service</span></span><br><span class="line"><span class="meta prompt_">$ </span><span class="language-bash">systemctl stop iptables,service</span></span><br><span class="line"><span class="meta prompt_">$ </span><span class="language-bash">systemctl <span class="built_in">disable</span> firewalld.service</span></span><br><span class="line"><span class="meta prompt_">$ </span><span class="language-bash">systemctl <span class="built_in">disable</span> iptables.service</span></span><br><span class="line"><span class="meta prompt_"></span></span><br><span class="line"><span class="meta prompt_">#</span><span class="language-bash">安装</span></span><br><span class="line">apt install cephadm ceph-deply</span><br><span class="line"><span class="meta prompt_"></span></span><br><span class="line"><span class="meta prompt_">#</span><span class="language-bash">部署</span></span><br><span class="line">mkdir ceph-cluster</span><br><span class="line">cd ceph-cluster/</span><br><span class="line">ceph-deploy new mon-node1</span><br><span class="line"><span class="meta prompt_"></span></span><br><span class="line"><span class="meta prompt_">#</span><span class="language-bash">修改ceph.conf 添加</span></span><br><span class="line">public_network = 192.168.12.0/24</span><br><span class="line">cluster_network = 192.168.12.0/24</span><br><span class="line"><span class="meta prompt_"></span></span><br><span class="line"><span class="meta prompt_">#</span><span class="language-bash">每个节点都安装一些东西</span></span><br><span class="line">apt install ceph radosgw </span><br><span class="line"><span class="meta prompt_"></span></span><br><span class="line"><span class="meta prompt_">#</span><span class="language-bash">激活monitor</span></span><br><span class="line">ceph-deploy mon create-initial</span><br><span class="line"><span class="meta prompt_"></span></span><br><span class="line"><span class="meta prompt_">#</span><span class="language-bash">把配置文件与admin密钥拷贝到 所有节点</span></span><br><span class="line">ceph-deploy admin mon-node1 osd-node0 osd-node1</span><br><span class="line"><span class="meta prompt_"></span></span><br><span class="line"><span class="meta prompt_">#</span><span class="language-bash">激活mgr</span></span><br><span class="line">ceph-deploy mgr create mon-node1</span><br><span class="line"><span class="meta prompt_"></span></span><br><span class="line"><span class="meta prompt_">#</span><span class="language-bash">查看状态</span></span><br><span class="line">ceph -s</span><br><span class="line">  cluster:</span><br><span class="line">    id:     d4c3e01a-b2af-4587-98ce-51cf01e2883d</span><br><span class="line">    health: HEALTH_WARN</span><br><span class="line">            mon is allowing insecure global_id reclaim</span><br><span class="line">            OSD count 0 &lt; osd_pool_default_size 3</span><br><span class="line"> </span><br><span class="line">  services:</span><br><span class="line">    mon: 1 daemons, quorum mon-node1 (age 5m)</span><br><span class="line">    mgr: mon-node1(active, since 61s)</span><br><span class="line">    osd: 0 osds: 0 up, 0 in</span><br><span class="line"> </span><br><span class="line">  data:</span><br><span class="line">    pools:   0 pools, 0 pgs</span><br><span class="line">    objects: 0 objects, 0 B</span><br><span class="line">    usage:   0 B used, 0 B / 0 B avail</span><br><span class="line">    pgs:    </span><br><span class="line"><span class="meta prompt_">#</span><span class="language-bash">执行下列命令可以消除第一个警告</span></span><br><span class="line">ceph config set mon mon_warn_on_insecure_global_id_reclaim true</span><br><span class="line">ceph config set mon mon_warn_on_insecure_global_id_reclaim_allowed true</span><br><span class="line">ceph config set mon auth_allow_insecure_global_id_reclaim false</span><br><span class="line"><span class="meta prompt_"></span></span><br><span class="line"><span class="meta prompt_">#</span><span class="language-bash">添加osd</span></span><br><span class="line">ceph-deploy disk zap mon-node1  /dev/nvme0n1</span><br><span class="line">ceph-deploy disk zap osd-node0  /dev/nvme0n1</span><br><span class="line">ceph-deploy disk zap osd-node1  /dev/nvme0n1</span><br><span class="line"></span><br><span class="line">ceph-deploy osd create mon-node1 --data /dev/nvme0n1</span><br><span class="line">ceph-deploy osd create osd-node0 --data /dev/nvme0n1</span><br><span class="line">ceph-deploy osd create osd-node1 --data /dev/nvme0n1</span><br><span class="line"><span class="meta prompt_"></span></span><br><span class="line"><span class="meta prompt_">#</span><span class="language-bash">再次查看状态</span></span><br><span class="line">ceph -s</span><br><span class="line">  cluster:</span><br><span class="line">    id:     d4c3e01a-b2af-4587-98ce-51cf01e2883d</span><br><span class="line">    health: HEALTH_OK</span><br><span class="line"> </span><br><span class="line">  services:</span><br><span class="line">    mon: 1 daemons, quorum mon-node1 (age 20m)</span><br><span class="line">    mgr: mon-node1(active, since 16m)</span><br><span class="line">    osd: 3 osds: 3 up (since 33s), 3 in (since 33s)</span><br><span class="line"> </span><br><span class="line">  task status:</span><br><span class="line"> </span><br><span class="line">  data:</span><br><span class="line">    pools:   1 pools, 1 pgs</span><br><span class="line">    objects: 0 objects, 0 B</span><br><span class="line">    usage:   3.0 GiB used, 1.4 TiB / 1.4 TiB avail</span><br><span class="line">    pgs:     1 active+clean</span><br><span class="line">    </span><br><span class="line"><span class="meta prompt_">#</span><span class="language-bash">对外提供块存储服务</span></span><br><span class="line"><span class="meta prompt_">#</span><span class="language-bash"></span></span><br><span class="line"><span class="language-bash">ceph osd pool create cephrbd 128 128</span></span><br><span class="line">rbd create image -s 10G --image-feature layering -p cephrbd</span><br><span class="line"><span class="meta prompt_"></span></span><br><span class="line"><span class="meta prompt_">#</span><span class="language-bash">客户端这边</span></span><br><span class="line">rbd map cephrbd/image</span><br><span class="line"><span class="meta prompt_">#</span><span class="language-bash">输出如下  这就是模拟出来的块设备 对其进行性能测试及资源使用测试</span></span><br><span class="line">/dev/rbd0</span><br><span class="line"></span><br><span class="line"></span><br></pre></td></tr></table></figure>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">sync &amp;&amp; echo 3 | sudo tee /proc/sys/vm/drop_caches</span><br><span class="line"></span><br><span class="line">dd if=/dev/zero of=/dev/rbd0 bs=1M count=4096</span><br><span class="line"></span><br><span class="line">sync &amp;&amp; echo 3 | sudo tee /proc/sys/vm/drop_caches</span><br><span class="line"></span><br><span class="line">dd if=/dev/rbd0 of=/dev/null bs=1M count=4096</span><br></pre></td></tr></table></figure>
+<p>读写速率</p>
+<div class="table-container">
+<table>
+<thead>
+<tr>
+<th></th>
+<th>读速率</th>
+<th>写速率</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>143 MB/s</td>
+<td>65.3 MB/s</td>
+</tr>
+<tr>
+<td>2</td>
+<td>144 MB/s</td>
+<td>70.7 MB/s</td>
+</tr>
+<tr>
+<td>3</td>
+<td>144 MB/s</td>
+<td>69.7 MB/s</td>
+</tr>
+<tr>
+<td>4</td>
+<td>144 MB/s</td>
+<td>72.5 MB/s</td>
+</tr>
+<tr>
+<td>5</td>
+<td>144 MB/s</td>
+<td>73.3 MB/s</td>
+</tr>
+<tr>
+<td>avg</td>
+<td>143.8 MB/s</td>
+<td>70.3MB/s</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>资源占用情况 </p>
+<p>ps -e -o %cpu,rss,cmd | grep ceph</p>
+<div class="table-container">
+<table>
+<thead>
+<tr>
+<th></th>
+<th>空载cpu</th>
+<th>空载内存</th>
+<th>读cpu</th>
+<th>读内存</th>
+<th>写cpu</th>
+<th>写内存</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>ceph-mon</td>
+<td>0.4%</td>
+<td>88096</td>
+<td>0.4%</td>
+<td>138132</td>
+<td>0.4%</td>
+<td>110284</td>
+</tr>
+<tr>
+<td>ceph-mgr</td>
+<td>0.2%</td>
+<td>197760</td>
+<td>0.2%</td>
+<td>199076</td>
+<td>0.2%</td>
+<td>198812</td>
+</tr>
+<tr>
+<td>ceph-osd</td>
+<td>0.3%</td>
+<td>69956</td>
+<td>3.4%</td>
+<td>594784</td>
+<td>3.1%</td>
+<td>353572</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>后面发现似乎好像和空载负载并没有关系    一直维持在  cpu 0.4%   0.2%  3.7%    内存也是几乎不变 的水平了</p>
+<p>合理推测应该是和数据量有关系  数据存的越多越杂才会有变化</p>
+<p>只对一个RBD块设备反复做dd可能就是会没什么变化  但是 dd之前和dd之后的变化 倒是可以参考出来</p>
+
+          
+        
+      
+    </div>
+    
+    
+    
+
+    
+
+    
+
+    
+
+    <footer class="post-footer">
+      
+
+      
+
+      
+
+      
+      
+        <div class="post-eof"></div>
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+      
+    
+      
+      
+        
+      
+      
+        
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
     <link itemprop="mainEntityOfPage" href="http://hanze5.github.io/2023/04/17/36-SPDK%E7%9B%B8%E5%85%B3%E6%A6%82%E5%BF%B5%E7%90%86%E8%A7%A3/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
@@ -295,6 +704,28 @@
             
           </span>
 
+          
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E5%AD%A6%E6%97%A0%E6%AD%A2%E5%A2%83/" itemprop="url" rel="index">
+                    <span itemprop="name">学无止境</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
           
 
           
@@ -2091,169 +2522,6 @@
 
       
     
-      
-      
-        
-      
-      
-        
-
-  
-
-  
-  
-  
-
-  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
-  
-  
-  
-  <div class="post-block">
-    <link itemprop="mainEntityOfPage" href="http://hanze5.github.io/2022/10/18/30-DPDK%E2%80%94%E2%80%94%E6%97%A0%E6%89%80%E7%8E%AF%E5%BD%A2%E9%98%9F%E5%88%97-%E5%86%85%E5%AD%98%E6%B1%A0-%E5%AE%9E%E7%8E%B0%E8%BF%9B%E7%A8%8B%E9%97%B4%E9%80%9A%E4%BF%A1/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="name" content="">
-      <meta itemprop="description" content="">
-      <meta itemprop="image" content="/images/my_avatar.png">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="也许不会有人进来吧">
-    </span>
-
-    
-      <header class="post-header">
-
-        
-        
-          <h1 class="post-title" itemprop="name headline">
-                
-                <a class="post-title-link" href="/2022/10/18/30-DPDK%E2%80%94%E2%80%94%E6%97%A0%E6%89%80%E7%8E%AF%E5%BD%A2%E9%98%9F%E5%88%97-%E5%86%85%E5%AD%98%E6%B1%A0-%E5%AE%9E%E7%8E%B0%E8%BF%9B%E7%A8%8B%E9%97%B4%E9%80%9A%E4%BF%A1/" itemprop="url">DPDK——无所环形队列+内存池 实现进程间通信</a></h1>
-        
-
-        <div class="post-meta">
-          <span class="post-time">
-            
-              <span class="post-meta-item-icon">
-                <i class="fa fa-calendar-o"></i>
-              </span>
-              
-                <span class="post-meta-item-text">发表于</span>
-              
-              <time title="创建于" itemprop="dateCreated datePublished" datetime="2022-10-18T20:35:11+08:00">
-                2022-10-18
-              </time>
-            
-
-            
-
-            
-          </span>
-
-          
-            <span class="post-category" >
-            
-              <span class="post-meta-divider">|</span>
-            
-              <span class="post-meta-item-icon">
-                <i class="fa fa-folder-o"></i>
-              </span>
-              
-                <span class="post-meta-item-text">分类于</span>
-              
-              
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/%E5%AD%A6%E6%97%A0%E6%AD%A2%E5%A2%83/" itemprop="url" rel="index">
-                    <span itemprop="name">学无止境</span>
-                  </a>
-                </span>
-
-                
-                
-              
-            </span>
-          
-
-          
-            
-          
-
-          
-          
-
-          
-
-          
-
-          
-
-        </div>
-      </header>
-    
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-      
-
-      
-        
-          
-            <h1 id><a href="#" class="headerlink" title=" "></a> </h1><h3 id="0-概括"><a href="#0-概括" class="headerlink" title="0.概括"></a>0.概括</h3><p>首先通信原理十分简单，先概括一下</p>
-<p>首先创建一个内存池，内存池中是一块一块内存，大小由我们指定。作为我们传递消息的单位。</p>
-<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">rte_mempool</span> *<span class="title">message_pool</span> =</span> rte_mempool_create(_MSG_POOL, pool_size,</span><br><span class="line">                                    STR_TOKEN_SIZE, pool_cache, priv_data_sz,</span><br><span class="line">                                    <span class="literal">NULL</span>, <span class="literal">NULL</span>, <span class="literal">NULL</span>, <span class="literal">NULL</span>,</span><br><span class="line">                                    rte_socket_id(), flags);</span><br></pre></td></tr></table></figure>
-<p>我们需要指定内存池的名称，大小，元素大小，其他的不太重要看看，就好。首先由一个进程创建好这个缓冲池之后，另一个缓冲池要查找到这个缓冲池。通过下面的方式，</p>
-<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">rte_mempool</span> *<span class="title">message_pool</span> <span class="title">message_pool</span> =</span> rte_mempool_lookup(_MSG_POOL);</span><br></pre></td></tr></table></figure>
-<p>也就是使用共享内存的方式进行通信，但是固定了每条信息的大小。我愿称之为，结合了共享内存与消息队列。</p>
-<h2 id="1-如何进行通信"><a href="#1-如何进行通信" class="headerlink" title="1.如何进行通信"></a>1.如何进行通信</h2><p>通过无所环形队列，存放消息在内存池中的指针。</p>
-<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">rte_ring</span> *<span class="title">send_ring</span> =</span> rte_ring_create(_PRI_2_SEC, ring_size, rte_socket_id(), flags);</span><br><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">rte_ring</span> *<span class="title">recv_ring</span> =</span> rte_ring_create(_SEC_2_PRI, ring_size, rte_socket_id(), flags);</span><br></pre></td></tr></table></figure>
-<p>上面就是创建了两个消息唤醒队列，里面用于存放，消息在内存池中的地址。需要指定名称和大小。那么通信的另一端如何找到呢。</p>
-<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">rte_ring</span> *<span class="title">recv_ring</span> =</span> rte_ring_lookup(_PRI_2_SEC);</span><br><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">rte_ring</span> *<span class="title">send_ring</span> =</span> rte_ring_lookup(_SEC_2_PRI);</span><br></pre></td></tr></table></figure>
-<p>可以看到也是通过名称来寻找。而且可以发现名称调换了位置。</p>
-<h3 id="1-1-发送消息"><a href="#1-1-发送消息" class="headerlink" title="1.1 发送消息"></a>1.1 发送消息</h3><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">void</span> *msg = <span class="literal">NULL</span>;</span><br><span class="line">rte_mempool_get(message_pool, &amp;msg);</span><br><span class="line"></span><br><span class="line"><span class="comment">//通过memcpy等方式将信息存放进msg</span></span><br><span class="line"></span><br><span class="line">rte_ring_enqueue(send_ring, msg)</span><br><span class="line"></span><br></pre></td></tr></table></figure>
-<p>先定义一个指针变量，然后去消息缓冲池中拿一块内存区域，起始地址赋给msg。然后将给msg指向的区域赋值过后。就把msg放进发送环形队列。</p>
-<h3 id="1-2-接收消息"><a href="#1-2-接收消息" class="headerlink" title="1.2 接收消息"></a>1.2 接收消息</h3><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">void</span> *msg;</span><br><span class="line">rte_ring_dequeue(recv_ring, &amp;msg)</span><br><span class="line"></span><br><span class="line"><span class="comment">//拿到msg  指向的内存就是消息实体    </span></span><br><span class="line">    </span><br><span class="line">rte_mempool_put(message_pool, msg);</span><br><span class="line"></span><br></pre></td></tr></table></figure>
-<p>先定义一个指针变量，从接收环形队列中拿到一个指针（如果有的话），然后这个指针指向的位置就是内存中的消息实体。拿到消息做处理之后。再把这个东西放回内存池。</p>
-<p>总结，其实原理感觉非常简单，主要需要注意的就是两个进程为什么可以通过字符串来找到环形队列和内存池。其实就是同一台机器运行的dpdk程序有着同一套运行时环境。这也就是为什么如果开启第二个dpdk程序时，要指定参数—proc-type secondary 的原因。</p>
-
-          
-        
-      
-    </div>
-    
-    
-    
-
-    
-
-    
-
-    
-
-    <footer class="post-footer">
-      
-
-      
-
-      
-
-      
-      
-        <div class="post-eof"></div>
-      
-    </footer>
-  </div>
-  
-  
-  
-  </article>
-
-
-      
-    
   </section>
 
   
@@ -2308,7 +2576,7 @@
               
                 <a href="/">
               
-                  <span class="site-state-item-count">36</span>
+                  <span class="site-state-item-count">37</span>
                   <span class="site-state-item-name">日志</span>
                 </a>
               </div>
@@ -2330,7 +2598,7 @@
               
               <div class="site-state-item site-state-tags">
                 <a href="/tags/index.html">
-                  <span class="site-state-item-count">11</span>
+                  <span class="site-state-item-count">12</span>
                   <span class="site-state-item-name">标签</span>
                 </a>
               </div>

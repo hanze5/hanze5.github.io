@@ -254,6 +254,238 @@
   
   
   <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="http://hanze5.github.io/2021/06/06/18-Linux%E5%86%85%E6%A0%B8%E2%80%94%E2%80%94%E4%BF%A1%E5%8F%B7%E9%87%8F/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/images/my_avatar.png">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="也许不会有人进来吧">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+                
+                <a class="post-title-link" href="/2021/06/06/18-Linux%E5%86%85%E6%A0%B8%E2%80%94%E2%80%94%E4%BF%A1%E5%8F%B7%E9%87%8F/" itemprop="url">Linux内核——信号量semaphore</a></h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2021-06-06T15:15:49+08:00">
+                2021-06-06
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E5%AD%A6%E6%97%A0%E6%AD%A2%E5%A2%83/" itemprop="url" rel="index">
+                    <span itemprop="name">学无止境</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+          
+
+          
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        
+          
+            <p>跟着简叔学的，可以B站搜索 <strong>简说linux</strong></p>
+<h2 id="多进程访问驱动设备带来的问题"><a href="#多进程访问驱动设备带来的问题" class="headerlink" title="多进程访问驱动设备带来的问题"></a>多进程访问驱动设备带来的问题</h2><p>在驱动程序中，有些设备只允许打开一次。那么可以在驱动中定义一个全局变量，判断当前使用数目。比如在某驱动程序的<strong>open函数</strong>中这样定义。当count==0说明没有使用，可以打开。理想状态下是左边的情况，但是cpu对进程的调度是随机的，所以不可避免的发生右边的情况。就会打开多次。</p>
+<!-- ![1678081076781](/images/18/1678081076781.png) | ![1678081150110](/images/18/1678081150110.png)
+
+ -->
+<div class="table-container">
+<table>
+<thead>
+<tr>
+<th><img src="/images/18/1678081076781.png" alt="1678081076781"></th>
+<th><img src="/images/18/1678081150110.png" alt="1678081150110"></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>为什么没有count—的操作？因为这是驱动的open函数。—肯定是在close函数里边。</p>
+<p>老生常谈，并发执行的单元（这里不说进程是因为还有线程，但是他们的问题是一样的）对共享资源（例子里面是count）的访问会引发竞争。访问共享资源的代码区叫做<code>临界区</code>，临界区需要某种内核同步方法来保护。</p>
+<h2 id="内核同步机制——信号量源码"><a href="#内核同步机制——信号量源码" class="headerlink" title="内核同步机制——信号量源码"></a>内核同步机制——信号量源码</h2><ol>
+<li><p>struct semaphore 结构体定义</p>
+<p>内核中信号量通过这样一的结构体<code>struct semaphore</code>来定义，定位到内核源码<code>/include/linux/semaphone.h</code>文件。可以查看到<code>struct semaphore</code>的定义</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/* Please don&#x27;t access any members of this structure directly */</span></span><br><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">semaphore</span> &#123;</span></span><br><span class="line">	<span class="type">raw_spinlock_t</span>		lock;      <span class="comment">//说明是以另一种同步机制自旋锁来实现的</span></span><br><span class="line">	<span class="type">unsigned</span> <span class="type">int</span>		count;     <span class="comment">//用以表示资源数量</span></span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">list_head</span>	<span class="title">wait_list</span>;</span>  <span class="comment">//双向链表</span></span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+<p><img src="/images/18/1678084503728.png" alt="1678084503728"></p>
+</li>
+<li><p>初始化函数定义</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#<span class="keyword">define</span> __SEMAPHORE_INITIALIZER(name, n)				\</span></span><br><span class="line"><span class="meta">&#123;									\</span></span><br><span class="line"><span class="meta">	.lock		= __RAW_SPIN_LOCK_UNLOCKED((name).lock),	\</span></span><br><span class="line"><span class="meta">	.count		= n,						\</span></span><br><span class="line"><span class="meta">	.wait_list	= LIST_HEAD_INIT((name).wait_list),		\</span></span><br><span class="line"><span class="meta">&#125;</span></span><br><span class="line"></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> DEFINE_SEMAPHORE(name)	\</span></span><br><span class="line"><span class="meta">	struct semaphore name = __SEMAPHORE_INITIALIZER(name, 1)</span></span><br><span class="line"></span><br><span class="line"><span class="type">static</span> <span class="keyword">inline</span> <span class="type">void</span> <span class="title function_">sema_init</span><span class="params">(<span class="keyword">struct</span> semaphore *sem, <span class="type">int</span> val)</span></span><br><span class="line">&#123;</span><br><span class="line">	<span class="type">static</span> <span class="class"><span class="keyword">struct</span> <span class="title">lock_class_key</span> __<span class="title">key</span>;</span></span><br><span class="line">	*sem = (<span class="keyword">struct</span> semaphore) __SEMAPHORE_INITIALIZER(*sem, val);</span><br><span class="line">	lockdep_init_map(&amp;sem-&gt;lock.dep_map, <span class="string">&quot;semaphore-&gt;lock&quot;</span>, &amp;__key, <span class="number">0</span>);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p><img src="/images/18/1678084786042.png" alt="1678084786042"></p>
+</li>
+<li><p>down操作，就是使用这个信号量资源。定义在内核源码根目录下的/kernel/locking/semaphore.c</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment"> * down - acquire the semaphore</span></span><br><span class="line"><span class="comment"> * @sem: the semaphore to be acquired</span></span><br><span class="line"><span class="comment"> *</span></span><br><span class="line"><span class="comment"> * Acquires the semaphore.  If no more tasks are allowed to acquire the</span></span><br><span class="line"><span class="comment"> * semaphore, calling this function will put the task to sleep until the</span></span><br><span class="line"><span class="comment"> * semaphore is released.</span></span><br><span class="line"><span class="comment"> *</span></span><br><span class="line"><span class="comment"> * Use of this function is deprecated, please use down_interruptible() or</span></span><br><span class="line"><span class="comment"> * down_killable() instead.</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="type">void</span> <span class="title function_">down</span><span class="params">(<span class="keyword">struct</span> semaphore *sem)</span></span><br><span class="line">&#123;</span><br><span class="line">	<span class="type">unsigned</span> <span class="type">long</span> flags;</span><br><span class="line"></span><br><span class="line">	raw_spin_lock_irqsave(&amp;sem-&gt;lock, flags);</span><br><span class="line">	<span class="keyword">if</span> (likely(sem-&gt;count &gt; <span class="number">0</span>))</span><br><span class="line">		sem-&gt;count--;</span><br><span class="line">	<span class="keyword">else</span></span><br><span class="line">		__down(sem);</span><br><span class="line">	raw_spin_unlock_irqrestore(&amp;sem-&gt;lock, flags);</span><br><span class="line">&#125;</span><br><span class="line">EXPORT_SYMBOL(down);</span><br></pre></td></tr></table></figure>
+<p><img src="/images/18/1678085608439.png" alt="1678085608439"></p>
+<p>相当于又用自旋锁，保护了自身的count这个资源是互斥访问的。但是这里代码简单说明具体的实现不在这里</p>
+<p>那么一步步ctrl+左键，找到了</p>
+</li>
+</ol>
+<p>   <img src="/images/18/1678085781987.png" alt="1678085781987"></p>
+<p>   系统中每个进程都会有一个task结构体，就像有一个pid一样与之相对应。当有进程使用了down之后，该进程的task就会被加入到信号量的wait_list里面。然后就会将自己设为睡眠状态，让cpu去执行其他进程。自旋锁是非常耗费cpu资源的，所以他保护的临界区资源不能睡眠。所以可以看到timeuot那句没有被保护。与cpu调度相关的，后面说。</p>
+<p>   当自己醒了之后再次查看自己申请的资源是不是可以访问了，不行就继续睡，行了就返回，跳出down。</p>
+<ol>
+<li><p>up操作，对临界资源访问结束，释放信号量和down长得差不多，直接找核心的。<img src="/images/18/1678086270368.png" alt="1678086270368"></p>
+<p>很好理解  如果信号量资源够了，那么就唤醒进程。</p>
+</li>
+</ol>
+<h2 id="信号量的使用"><a href="#信号量的使用" class="headerlink" title="信号量的使用"></a>信号量的使用</h2><p>​    在之前的hellodev驱动中，我们做这样的修改。</p>
+<ol>
+<li><p>首先定义全局变量，信号量和一个整型用于计数。整型这里就是共享资源。</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">semaphore</span> <span class="title">sema</span>；</span></span><br><span class="line"><span class="class"><span class="title">int</span> <span class="title">open_count</span>=</span><span class="number">0</span>;</span><br></pre></td></tr></table></figure>
+</li>
+<li><p>驱动的初始代码中对信号量进行初始化</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//信号量的初始化  初始化为1 表明共享资源只有一个</span></span><br><span class="line">sema_init(&amp;sema,<span class="number">1</span>);</span><br></pre></td></tr></table></figure>
+</li>
+<li><p>是临界区代码，开始时down获取信号量，结束时up释放信号量。第一个进程获取到所之后，第二个进程再次访问就会被阻塞，因为他发现这个信号量的值不再是1，而是0；能保证临界代码的访问是原子的。</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">int</span> <span class="title function_">hello_open</span><span class="params">(<span class="keyword">struct</span> inode *p, <span class="keyword">struct</span> file *f)</span></span><br><span class="line">&#123;</span><br><span class="line">    down(&amp;sema);</span><br><span class="line">    <span class="keyword">if</span>(open_count&gt;=<span class="number">1</span>)</span><br><span class="line">    &#123;</span><br><span class="line">        up(&amp;sema);</span><br><span class="line">        printk(KERN_EMERG<span class="string">&quot;device is busy,helloopen fall!!\r\n&quot;</span>);</span><br><span class="line">        <span class="keyword">return</span> -EBUSY; </span><br><span class="line">    &#125;</span><br><span class="line">    open_count++;</span><br><span class="line">    up(&amp;sema);</span><br><span class="line">    printk(KERN_EMERG<span class="string">&quot;hello_open ok~~~\r\n&quot;</span>);</span><br><span class="line">    <span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>通过这种方式可以保证，这部分区域的访问是原子的。如果说临界区的资源不是很复杂，那么建议还是使用原子变量，而不是使用信号量。下次说</p>
+</li>
+<li><p>相应的，在推出对驱动的访问时</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">int</span> <span class="title function_">hello_close</span><span class="params">(<span class="keyword">struct</span> inode *inode ,<span class="keyword">struct</span> file *filp)</span></span><br><span class="line">&#123;</span><br><span class="line">    <span class="keyword">if</span>(open_count!=<span class="number">1</span>)</span><br><span class="line">    &#123;</span><br><span class="line">        printk(KERN_INFO<span class="string">&quot;something wrong,hello_close fail&quot;</span>);</span><br><span class="line">        <span class="keyword">return</span> -EFAULT;</span><br><span class="line">    &#125;</span><br><span class="line">    open_count--;</span><br><span class="line">    printk(KERN_INFO<span class="string">&quot;hello_close ok&quot;</span>);</span><br><span class="line">    <span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>之前我们是没定义这个函数的，所以要在init的时候</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">gFile-&gt;release = hello_close;</span><br></pre></td></tr></table></figure>
+</li>
+</ol>
+<h2 id="测试"><a href="#测试" class="headerlink" title="测试"></a>测试</h2><ol>
+<li><p>测试程序中加入sleep() 使其打开驱动程序的时间长一点。</p>
+</li>
+<li><p>首先打开执行第一个进程<img src="/images/18/1678084102081.png" alt="1678084102081"></p>
+<p>可以看到写入成功并没有直接推出，与此同时我们新建一个终端在运行一次，<img src="/images/18/1678084174458.png" alt="1678084174458"></p>
+<p>Nice！！！！！！！</p>
+</li>
+</ol>
+<h2 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h2><ol>
+<li>信号量用于线程和进程之间的同步</li>
+<li>允许多个进程进入临界区代码执行</li>
+<li>进程获取不到信号量锁会陷入休眠，具体的进程相关姐都体task（代表当前。）会加入到信号量结构体维护的一个链表，并且进入休眠（cpu调度）。</li>
+<li>被信号量保护的临界区允许睡眠，但是信号量的实现中 自旋锁维护的临界区是不允许休眠的。</li>
+<li>基于进程调度器实现，UP和SMP无差异</li>
+<li><strong>不支持进程和中断之间的同步</strong>  需要用到自旋锁。</li>
+</ol>
+<h2 id="helloDev驱动已经更新了多次，再次附目前为止的完整代码"><a href="#helloDev驱动已经更新了多次，再次附目前为止的完整代码" class="headerlink" title="helloDev驱动已经更新了多次，再次附目前为止的完整代码"></a>helloDev驱动已经更新了多次，再次附目前为止的完整代码</h2><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br><span class="line">102</span><br><span class="line">103</span><br><span class="line">104</span><br><span class="line">105</span><br><span class="line">106</span><br><span class="line">107</span><br><span class="line">108</span><br><span class="line">109</span><br><span class="line">110</span><br><span class="line">111</span><br><span class="line">112</span><br><span class="line">113</span><br><span class="line">114</span><br><span class="line">115</span><br><span class="line">116</span><br><span class="line">117</span><br><span class="line">118</span><br><span class="line">119</span><br><span class="line">120</span><br><span class="line">121</span><br><span class="line">122</span><br><span class="line">123</span><br><span class="line">124</span><br><span class="line">125</span><br><span class="line">126</span><br><span class="line">127</span><br><span class="line">128</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//helloDev.c</span></span><br><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;linux/module.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;linux/moduleparam.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;linux/cdev.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;linux/fs.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;linux/wait.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;linux/poll.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;linux/sched.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;linux/slab.h&gt;</span></span></span><br><span class="line"></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> BUFFER_MAX    (64)</span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> OK            (0)</span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> ERROR         (-1)</span></span><br><span class="line"></span><br><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">cdev</span> *<span class="title">gDev</span>;</span></span><br><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">file_operations</span> *<span class="title">gFile</span>;</span></span><br><span class="line"><span class="type">dev_t</span>  devNum;</span><br><span class="line"><span class="type">unsigned</span> <span class="type">int</span> subDevNum = <span class="number">1</span>;</span><br><span class="line"><span class="type">int</span> reg_major  =  <span class="number">232</span>;    </span><br><span class="line"><span class="type">int</span> reg_minor =   <span class="number">0</span>;</span><br><span class="line"><span class="type">int</span> flag = <span class="number">0</span>;</span><br><span class="line"><span class="type">char</span> buffer[BUFFER_MAX];</span><br><span class="line"></span><br><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">semaphore</span> <span class="title">sema</span>;</span></span><br><span class="line"><span class="type">int</span> open_count=<span class="number">0</span>;</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="type">int</span> <span class="title function_">hello_open</span><span class="params">(<span class="keyword">struct</span> inode *p, <span class="keyword">struct</span> file *f)</span></span><br><span class="line">&#123;</span><br><span class="line">    down(&amp;sema);</span><br><span class="line">    <span class="keyword">if</span>(open_count&gt;=<span class="number">1</span>)</span><br><span class="line">    &#123;</span><br><span class="line">        up(&amp;sema);</span><br><span class="line">        printk(KERN_EMERG<span class="string">&quot;device is busy,helloopen fall!!\r\n&quot;</span>);</span><br><span class="line">        <span class="keyword">return</span> -EBUSY; </span><br><span class="line">    &#125;</span><br><span class="line">    open_count++;</span><br><span class="line">    up(&amp;sema);</span><br><span class="line">    printk(KERN_EMERG<span class="string">&quot;hello_open ok~~~\r\n&quot;</span>);</span><br><span class="line">    <span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="type">int</span> <span class="title function_">hello_close</span><span class="params">(<span class="keyword">struct</span> inode *inode ,<span class="keyword">struct</span> file *filp)</span></span><br><span class="line">&#123;</span><br><span class="line">    <span class="keyword">if</span>(open_count!=<span class="number">1</span>)</span><br><span class="line">    &#123;</span><br><span class="line">        printk(KERN_INFO<span class="string">&quot;something wrong,hello_close fail&quot;</span>);</span><br><span class="line">        <span class="keyword">return</span> -EFAULT;</span><br><span class="line">    &#125;</span><br><span class="line">    open_count--;</span><br><span class="line">    printk(KERN_INFO<span class="string">&quot;hello_close ok&quot;</span>);</span><br><span class="line">    <span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="type">ssize_t</span> <span class="title function_">hello_write</span><span class="params">(<span class="keyword">struct</span> file *f, <span class="type">const</span> <span class="type">char</span> __user *u, <span class="type">size_t</span> s, <span class="type">loff_t</span> *l)</span></span><br><span class="line">&#123;</span><br><span class="line">    printk(KERN_EMERG<span class="string">&quot;hello_write\r\n&quot;</span>);</span><br><span class="line">    <span class="type">int</span> writenlen = <span class="number">0</span>;</span><br><span class="line">    writenlen = BUFFER_MAX&gt;s?s:BUFFER_MAX;</span><br><span class="line">    <span class="keyword">if</span>(copy_from_user(buffer,u,writenlen))</span><br><span class="line">    &#123;</span><br><span class="line">        <span class="keyword">return</span> -EFAULT;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">return</span> writenlen;</span><br><span class="line">&#125;</span><br><span class="line"><span class="type">ssize_t</span> <span class="title function_">hello_read</span><span class="params">(<span class="keyword">struct</span> file *f, <span class="type">char</span> __user *u, <span class="type">size_t</span> s, <span class="type">loff_t</span> *l)</span></span><br><span class="line">&#123;</span><br><span class="line">    printk(KERN_EMERG<span class="string">&quot;hello_read\r\n&quot;</span>);    </span><br><span class="line">    <span class="type">int</span> readlen;</span><br><span class="line">    readlen = BUFFER_MAX&gt;s?s:BUFFER_MAX;</span><br><span class="line">    <span class="keyword">if</span>(copy_to_user(u,buffer,readlen))</span><br><span class="line">    &#123;</span><br><span class="line">        <span class="keyword">return</span> -EFAULT;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">return</span> readlen;</span><br><span class="line">&#125;</span><br><span class="line"><span class="type">int</span> <span class="title function_">hello_init</span><span class="params">(<span class="type">void</span>)</span></span><br><span class="line">&#123;</span><br><span class="line">    <span class="comment">//根据主次设备号生成一个devnum 主次设备号可以唯一标识</span></span><br><span class="line">    devNum = MKDEV(reg_major, reg_minor);</span><br><span class="line">    <span class="comment">//将设备号注册到内核 </span></span><br><span class="line">    <span class="keyword">if</span>(OK == register_chrdev_region(devNum, subDevNum, <span class="string">&quot;helloworld&quot;</span>))&#123;</span><br><span class="line">        printk(KERN_EMERG<span class="string">&quot;register_chrdev_region ok \n&quot;</span>); </span><br><span class="line">    &#125;<span class="keyword">else</span> &#123;</span><br><span class="line">    printk(KERN_EMERG<span class="string">&quot;register_chrdev_region error n&quot;</span>);</span><br><span class="line">        <span class="keyword">return</span> ERROR;</span><br><span class="line">    &#125;</span><br><span class="line">    printk(KERN_EMERG<span class="string">&quot; hello driver init \n&quot;</span>);</span><br><span class="line">    <span class="comment">// struct cdev 是内核中的字符设备</span></span><br><span class="line">    gDev = kzalloc(<span class="keyword">sizeof</span>(<span class="keyword">struct</span> cdev), GFP_KERNEL);</span><br><span class="line">    <span class="comment">//初始化一个file结构体 代表设备</span></span><br><span class="line">    gFile = kzalloc(<span class="keyword">sizeof</span>(<span class="keyword">struct</span> file_operations), GFP_KERNEL);</span><br><span class="line"></span><br><span class="line">    <span class="comment">//给file结构体中的函数操作赋值   右侧是函数指针 指明操作</span></span><br><span class="line">    gFile-&gt;open = hello_open;</span><br><span class="line">    gFile-&gt;read = hello_read;</span><br><span class="line">    gFile-&gt;write = hello_write;</span><br><span class="line"></span><br><span class="line">    gFile-&gt;owner = THIS_MODULE;</span><br><span class="line"></span><br><span class="line">    gFile-&gt;release = hello_close;</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"></span><br><span class="line">    <span class="comment">//内核中找到设备号 就能找到cdev 与 file_operations</span></span><br><span class="line">    <span class="comment">//建立gDev 与 gFile之间的联系 里边没看但是肯定有两个之间的互动就是了</span></span><br><span class="line">    cdev_init(gDev, gFile);</span><br><span class="line">    <span class="comment">//又建立了gDev 与 设备号的联系</span></span><br><span class="line">    cdev_add(gDev, devNum, <span class="number">3</span>);</span><br><span class="line"></span><br><span class="line">    <span class="comment">//信号量的初始化  初始化为1 表明共享资源只有一个</span></span><br><span class="line">    sema_init(&amp;sema,<span class="number">1</span>);</span><br><span class="line">    <span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">//驱动的卸载</span></span><br><span class="line"><span class="type">void</span> __exit <span class="title function_">hello_exit</span><span class="params">(<span class="type">void</span>)</span></span><br><span class="line">&#123;</span><br><span class="line">    cdev_del(gDev);</span><br><span class="line">    unregister_chrdev_region(devNum, subDevNum);</span><br><span class="line">    <span class="keyword">return</span>;</span><br><span class="line">&#125;</span><br><span class="line">module_init(hello_init);</span><br><span class="line">module_exit(hello_exit);</span><br><span class="line">MODULE_LICENSE(<span class="string">&quot;GPL&quot;</span>);</span><br><span class="line"></span><br></pre></td></tr></table></figure>
+<figure class="highlight makefile"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">#Makefile</span></span><br><span class="line"><span class="keyword">ifneq</span> (<span class="variable">$(KERNELRELEASE)</span>,)</span><br><span class="line">	obj-m := helloDev.o                        </span><br><span class="line"><span class="keyword">else</span></span><br><span class="line">	PWD := <span class="variable">$(<span class="built_in">shell</span> pwd)</span></span><br><span class="line">	<span class="comment"># KDIR:= /lib/modules/4.4.0-31-generic/build</span></span><br><span class="line">	<span class="comment"># KDIR:=/home/dawnlake/Downloads/linux-4.9.229</span></span><br><span class="line">KDIR := /lib/modules/`uname -r`/build</span><br><span class="line"><span class="section">all:</span></span><br><span class="line">	make -C <span class="variable">$(KDIR)</span> M=<span class="variable">$(PWD)</span></span><br><span class="line">	gcc -g read_test.c -o read_test</span><br><span class="line">	gcc -g write_test.c -o write_test</span><br><span class="line">	rmmod helloDev</span><br><span class="line">	insmod helloDev.ko</span><br><span class="line"><span class="section">clean:	</span></span><br><span class="line">	rm -rf *.o *.ko *.mod.c *.symvers *.c~ *~</span><br><span class="line"><span class="keyword">endif</span></span><br></pre></td></tr></table></figure>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//write_test.c</span></span><br><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;fcntl.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;stdio.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;string.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;sys/select.h&gt;</span></span></span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> DATA_NUM    (32)</span></span><br><span class="line"><span class="type">int</span> <span class="title function_">main</span><span class="params">(<span class="type">int</span> argc, <span class="type">char</span> *argv[])</span></span><br><span class="line">&#123;</span><br><span class="line">    <span class="type">int</span> fd, i;</span><br><span class="line">    <span class="type">int</span>  w_len;</span><br><span class="line">    fd_set fdset;</span><br><span class="line">    <span class="type">char</span> buf[DATA_NUM]=<span class="string">&quot;hello world&quot;</span>;</span><br><span class="line">    <span class="comment">// memset(buf,0,DATA_NUM);</span></span><br><span class="line">    fd = open(<span class="string">&quot;/dev/hello&quot;</span>, O_RDWR);</span><br><span class="line">	<span class="built_in">printf</span>(<span class="string">&quot;%d\r\n&quot;</span>,fd);</span><br><span class="line">    <span class="keyword">if</span>(<span class="number">-1</span> == fd) &#123;</span><br><span class="line">      	perror(<span class="string">&quot;open file error\r\n&quot;</span>);</span><br><span class="line">		<span class="keyword">return</span> <span class="number">-1</span>;</span><br><span class="line">    &#125;	</span><br><span class="line">	<span class="keyword">else</span> &#123;</span><br><span class="line">		<span class="built_in">printf</span>(<span class="string">&quot;open successe\r\n&quot;</span>);</span><br><span class="line">	&#125;</span><br><span class="line">    </span><br><span class="line">    w_len = write(fd,buf, DATA_NUM);</span><br><span class="line">    <span class="comment">// r_len = read(fd, buf, DATA_NUM);</span></span><br><span class="line">    <span class="keyword">if</span>(w_len==<span class="number">-1</span>)</span><br><span class="line">    &#123;</span><br><span class="line">        perror(<span class="string">&quot;write error\r\n&quot;</span>);</span><br><span class="line">        <span class="keyword">return</span> <span class="number">-1</span>;</span><br><span class="line">    &#125;</span><br><span class="line">    sleep(<span class="number">10</span>);</span><br><span class="line">    <span class="built_in">printf</span>(<span class="string">&quot;w_len = %d \r\n&quot;</span>, w_len);</span><br><span class="line">    close(fd);</span><br><span class="line"></span><br><span class="line">    <span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//read_test.c</span></span><br><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;fcntl.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;stdio.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;string.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;sys/select.h&gt;</span></span></span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> DATA_NUM    (64)</span></span><br><span class="line"><span class="type">int</span> <span class="title function_">main</span><span class="params">(<span class="type">int</span> argc, <span class="type">char</span> *argv[])</span></span><br><span class="line">&#123;</span><br><span class="line">    <span class="type">int</span> fd, i;</span><br><span class="line">    <span class="type">int</span> r_len;</span><br><span class="line">    fd_set fdset;</span><br><span class="line">    <span class="type">char</span> rbuf[DATA_NUM];</span><br><span class="line">    <span class="built_in">memset</span>(rbuf,<span class="number">0</span>,DATA_NUM);</span><br><span class="line">    fd = open(<span class="string">&quot;/dev/hello&quot;</span>, O_RDWR);</span><br><span class="line">	<span class="built_in">printf</span>(<span class="string">&quot;%d\r\n&quot;</span>,fd);</span><br><span class="line">    <span class="keyword">if</span>(<span class="number">-1</span> == fd) &#123;</span><br><span class="line">      	perror(<span class="string">&quot;open file error\r\n&quot;</span>);</span><br><span class="line">		<span class="keyword">return</span> <span class="number">-1</span>;</span><br><span class="line">    &#125;	</span><br><span class="line">	<span class="keyword">else</span> &#123;</span><br><span class="line">		<span class="built_in">printf</span>(<span class="string">&quot;open successe\r\n&quot;</span>);</span><br><span class="line">	&#125;</span><br><span class="line">    </span><br><span class="line">    <span class="comment">// w_len = write(fd,buf, DATA_NUM);</span></span><br><span class="line">    r_len = read(fd, rbuf, DATA_NUM);</span><br><span class="line">    <span class="keyword">if</span>(r_len==<span class="number">-1</span>)</span><br><span class="line">    &#123;</span><br><span class="line">        perror(<span class="string">&quot;read error\r\n&quot;</span>);</span><br><span class="line">        <span class="keyword">return</span> <span class="number">-1</span>;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="built_in">printf</span>(<span class="string">&quot;readlen = %d \r\n&quot;</span>,  r_len);</span><br><span class="line">    <span class="built_in">printf</span>(<span class="string">&quot;%s\n&quot;</span>,rbuf);</span><br><span class="line">    close(fd);</span><br><span class="line"></span><br><span class="line">    <span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+          
+        
+      
+    </div>
+    
+    
+    
+
+    
+
+    
+
+    
+
+    <footer class="post-footer">
+      
+
+      
+
+      
+
+      
+      
+        <div class="post-eof"></div>
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+      
+    
+      
+      
+        
+      
+      
+        
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
     <link itemprop="mainEntityOfPage" href="http://hanze5.github.io/2021/06/03/17-Linux%E5%86%85%E6%A0%B8%E2%80%94%E2%80%94%E5%86%85%E6%A0%B8%E7%A9%BA%E9%97%B4%E4%B8%8E%E7%94%A8%E6%88%B7%E7%A9%BA%E9%97%B4%E7%9A%84%E6%95%B0%E6%8D%AE%E6%8B%B7%E8%B4%9D/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
@@ -1129,7 +1361,7 @@
               
                 <a href="/">
               
-                  <span class="site-state-item-count">36</span>
+                  <span class="site-state-item-count">37</span>
                   <span class="site-state-item-name">日志</span>
                 </a>
               </div>
@@ -1151,7 +1383,7 @@
               
               <div class="site-state-item site-state-tags">
                 <a href="/tags/index.html">
-                  <span class="site-state-item-count">11</span>
+                  <span class="site-state-item-count">12</span>
                   <span class="site-state-item-name">标签</span>
                 </a>
               </div>
