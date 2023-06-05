@@ -79,19 +79,19 @@
 
 
 
-<meta name="description" content="跟着简叔学的，可以B站搜索 简说linux 与之前学的信号量相比，自旋锁是一种死等的机制。而信号量不会。只有一个执行单元获取锁并进入到临界区，其他的都给我死等。可以在中断上下文执行，因为是不睡眠的。中断上下文代码不允许睡眠，也不允许调用那些可能会引起睡眠的函数。这种死等的实现是不同的架构有不一样的方法。 自旋锁的实现 查看结构体定义struct spinlock (&#x2F;include&#x2F;linux&#x2F;s">
+<meta name="description" content="跟着简叔学的，可以B站搜索 简说linux 与之前学的信号量相比，自旋锁是一种死等的机制。而信号量不会。只有一个执行单元获取锁并进入到临界区，其他的都给我死等。可以在中断上下文执行，因为是不睡眠的。中断上下文代码不允许睡眠，也不允许调用那些可能会引起睡眠的函数。这种死等的实现是不同的架构有不一样的方法。">
 <meta property="og:type" content="article">
 <meta property="og:title" content="Linux内核——自旋锁 spinlock">
 <meta property="og:url" content="http://hanze5.github.io/2021/06/12/20-Linux%E5%86%85%E6%A0%B8%E2%80%94%E2%80%94%E8%87%AA%E6%97%8B%E9%94%81-spinlock/index.html">
 <meta property="og:site_name" content="也许不会有人进来吧">
-<meta property="og:description" content="跟着简叔学的，可以B站搜索 简说linux 与之前学的信号量相比，自旋锁是一种死等的机制。而信号量不会。只有一个执行单元获取锁并进入到临界区，其他的都给我死等。可以在中断上下文执行，因为是不睡眠的。中断上下文代码不允许睡眠，也不允许调用那些可能会引起睡眠的函数。这种死等的实现是不同的架构有不一样的方法。 自旋锁的实现 查看结构体定义struct spinlock (&#x2F;include&#x2F;linux&#x2F;s">
+<meta property="og:description" content="跟着简叔学的，可以B站搜索 简说linux 与之前学的信号量相比，自旋锁是一种死等的机制。而信号量不会。只有一个执行单元获取锁并进入到临界区，其他的都给我死等。可以在中断上下文执行，因为是不睡眠的。中断上下文代码不允许睡眠，也不允许调用那些可能会引起睡眠的函数。这种死等的实现是不同的架构有不一样的方法。">
 <meta property="og:locale">
 <meta property="og:image" content="http://hanze5.github.io/images/20/1678091181583.png">
 <meta property="og:image" content="http://hanze5.github.io/images/20/1678091233794.png">
 <meta property="og:image" content="http://hanze5.github.io/images/20/1678091414902.png">
 <meta property="og:image" content="http://hanze5.github.io/images/20/1678091817407.png">
 <meta property="article:published_time" content="2021-06-12T08:55:19.000Z">
-<meta property="article:modified_time" content="2023-06-05T07:45:30.487Z">
+<meta property="article:modified_time" content="2023-06-05T07:58:45.282Z">
 <meta property="article:author" content="Dawnlake">
 <meta property="article:tag" content="Linux内核">
 <meta name="twitter:card" content="summary">
@@ -349,6 +349,7 @@
       
         <p>跟着简叔学的，可以B站搜索 <strong>简说linux</strong></p>
 <p>与之前学的信号量相比，自旋锁是一种死等的机制。而信号量不会。只有一个执行单元获取锁并进入到临界区，其他的都给我死等。可以在中断上下文执行，因为是不睡眠的。中断上下文代码不允许睡眠，也不允许调用那些可能会引起睡眠的函数。这种死等的实现是不同的架构有不一样的方法。</p>
+<span id="more"></span>
 <h2 id="自旋锁的实现"><a href="#自旋锁的实现" class="headerlink" title="自旋锁的实现"></a>自旋锁的实现</h2><ol>
 <li><p>查看结构体定义struct spinlock (/include/linux/spinlock_types.h)<img src="/images/20/1678091181583.png" alt="1678091181583"></p>
 <p>然后再去看看，raw_spinlock</p>

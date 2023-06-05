@@ -92,7 +92,7 @@
 <meta property="og:image" content="http://hanze5.github.io/images/5/1677755128214.png">
 <meta property="og:image" content="http://hanze5.github.io/images/5/1677755166902.png">
 <meta property="article:published_time" content="2022-10-02T11:11:53.000Z">
-<meta property="article:modified_time" content="2023-06-05T07:46:19.434Z">
+<meta property="article:modified_time" content="2023-06-05T07:59:54.083Z">
 <meta property="article:author" content="Dawnlake">
 <meta property="article:tag" content="随便看看">
 <meta name="twitter:card" content="summary">
@@ -353,7 +353,7 @@
 <li>​    静态库在程序的链接阶段就被复制到了程序中，</li>
 <li>​    而动态库在链接阶段只是被记录的一些信息(如文件名)，而没有把动态库复制到程序中，而是在程序运行 阶段由系统动态加载到内存中供程序调用。</li>
 </ul>
-<p>库的好处：代码保密(c++程序即使被反编译也只能还原20%左右) 、方便部署和发布    </p>
+<p>库的好处：代码保密(c++程序即使被反编译也只能还原20%左右) 、方便部署和发布<br><span id="more"></span></p>
 <h2 id="静态库命名规则："><a href="#静态库命名规则：" class="headerlink" title="静态库命名规则："></a>静态库命名规则：</h2><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">linux：libxxx.a</span><br><span class="line">	lib:固定前缀</span><br><span class="line">	xxx:库的名字</span><br><span class="line">	 .a:固定后缀</span><br><span class="line">windows：libxxx.lib</span><br></pre></td></tr></table></figure>
 <h2 id="静态库的制作"><a href="#静态库的制作" class="headerlink" title="静态库的制作"></a>静态库的制作</h2><p>​    gcc获得.o文件</p>
 <p>​    将.o文件打包，使用ar工具（archive)</p>

@@ -99,7 +99,7 @@
 <meta property="og:image" content="http://hanze5.github.io/images/22/1678106829368.png">
 <meta property="og:image" content="http://hanze5.github.io/images/22/1678106877955.png">
 <meta property="article:published_time" content="2022-07-13T00:05:12.000Z">
-<meta property="article:modified_time" content="2023-06-05T07:45:21.254Z">
+<meta property="article:modified_time" content="2023-06-05T07:58:38.369Z">
 <meta property="article:author" content="Dawnlake">
 <meta property="article:tag" content="Linux内核">
 <meta name="twitter:card" content="summary">
@@ -363,7 +363,7 @@
 <li>注意:系统中每个页框块的第一个页框的物理地址是该块大小的整数倍。例如:大小为16个页框的块，其起始地址是16*2^12的倍数。</li>
 </ul>
 <p><img src="/images/22/1678103470108.png" alt="1678103470108"> </p>
-<p>我要申请4k 就去找0里摘取一个；8k就找。</p>
+<p>我要申请4k 就去找0里摘取一个；8k就找。<br><span id="more"></span></p>
 <h2 id="页框操作"><a href="#页框操作" class="headerlink" title="页框操作"></a>页框操作</h2><p>分配2^order个连续的物理页，并返回一个指针，指向第一个页的page结构体</p>
 <figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">static</span> <span class="keyword">inline</span> <span class="keyword">struct</span> page * <span class="title function_">alloc_pages</span><span class="params">(<span class="type">gfp_t</span> gfp_mask, <span class="type">unsigned</span> <span class="type">int</span> order)</span></span><br></pre></td></tr></table></figure>
 <p>返回page页面所映射的的虚拟地址</p>

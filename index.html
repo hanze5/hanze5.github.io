@@ -346,10 +346,54 @@
 
       
         
-          通过dd指令以及ps命令比较读写速率以及资源占用
+          <h1 id="裸盘-io"><a href="#裸盘-io" class="headerlink" title="裸盘 io"></a>裸盘 io</h1><figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">sync &amp;&amp; echo 3 | sudo tee /proc/sys/vm/drop_caches</span><br><span class="line"></span><br><span class="line">dd if=/dev/zero of=/dev/nvme0n1 bs=1M count=64</span><br><span class="line"></span><br><span class="line">sync &amp;&amp; echo 3 | sudo tee /proc/sys/vm/drop_caches</span><br><span class="line"></span><br><span class="line">dd if=/dev/nvme0n1 of=/dev/null bs=1M count=40960</span><br></pre></td></tr></table></figure>
+<p>结果</p>
+<div class="table-container">
+<table>
+<thead>
+<tr>
+<th></th>
+<th>读速率</th>
+<th>写速率</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>1.7 GB/s</td>
+<td>1.5 GB/s</td>
+</tr>
+<tr>
+<td>2</td>
+<td>1.7 GB/s</td>
+<td>1.5 GB/s</td>
+</tr>
+<tr>
+<td>3</td>
+<td>1.7 GB/s</td>
+<td>1.5 GB/s</td>
+</tr>
+<tr>
+<td>4</td>
+<td>1.7 GB/s</td>
+<td>1.5 GB/s</td>
+</tr>
+<tr>
+<td>5</td>
+<td>1.7 GB/s</td>
+<td>1.5 GB/s</td>
+</tr>
+<tr>
+<td>avg</td>
+<td>1.7 GB/s</td>
+<td>1.5GB/s</td>
+</tr>
+</tbody>
+</table>
+</div>
           <!--noindex-->
           <div class="post-button text-center">
-            <a class="btn" href="/2023/06/02/37-ceph%E4%B8%8Espdk%E7%9A%84%E9%83%A8%E7%BD%B2%E4%BB%A5%E5%8F%8A%E6%80%A7%E8%83%BD%E6%B5%8B%E8%AF%95/">
+            <a class="btn" href="/2023/06/02/37-ceph%E4%B8%8Espdk%E7%9A%84%E9%83%A8%E7%BD%B2%E4%BB%A5%E5%8F%8A%E6%80%A7%E8%83%BD%E6%B5%8B%E8%AF%95/#more" rel="contents">
               阅读全文 &raquo;
             </a>
           </div>
@@ -425,7 +469,7 @@
         
           <h1 class="post-title" itemprop="name headline">
                 
-                <a class="post-title-link" href="/2023/04/17/36-SPDK%E7%9B%B8%E5%85%B3%E6%A6%82%E5%BF%B5%E7%90%86%E8%A7%A3/" itemprop="url">36-SPDK相关概念理解</a></h1>
+                <a class="post-title-link" href="/2023/04/17/36-SPDK%E7%9B%B8%E5%85%B3%E6%A6%82%E5%BF%B5%E7%90%86%E8%A7%A3/" itemprop="url">SPDK相关概念理解</a></h1>
         
 
         <div class="post-meta">
@@ -498,10 +542,17 @@
 
       
         
-          源自spdk官方文档
+          <p>spdk是一个框架，而不是一个分布式系统，spdk的基石（官网用了bedrock 这个词）是用户态（<code>user space</code>）、轮询（<code>polled-mode</code>）、异步（<code>asynchronous</code>）、无锁（<code>lockless</code>）的NVMe驱动，其提供了<strong>零拷贝</strong>、高并发直接从用户态访问ssd的特性。其最初的目的是为了优化块存储落盘。但随着spdk的持续演进，大家发现spdk可以优化存储软件栈的各个方面。用户态、轮询、无锁和异步的技术来提高存储软件栈的效率。</p>
+<p>存储性能开发工具包 （SPDK） 提供了一组工具和库，用于编写高性能、可扩展的用户模式存储应用程序。它通过使用许多关键技术来实现高性能：</p>
+<ul>
+<li>将所有必要的驱动程序移动到用户空间，从而避免系统调用并启用来自应用程序的零副本访问。</li>
+<li>轮询硬件以获取完成，而不是依赖中断，从而降低总延迟和延迟差异。</li>
+<li>避免 I/O 路径中的所有锁，而是依赖消息传递。</li>
+</ul>
+<p>接下来细细理解这三个东西，然后在去了解延申的一些知识。<br></p>
           <!--noindex-->
           <div class="post-button text-center">
-            <a class="btn" href="/2023/04/17/36-SPDK%E7%9B%B8%E5%85%B3%E6%A6%82%E5%BF%B5%E7%90%86%E8%A7%A3/">
+            <a class="btn" href="/2023/04/17/36-SPDK%E7%9B%B8%E5%85%B3%E6%A6%82%E5%BF%B5%E7%90%86%E8%A7%A3/#more" rel="contents">
               阅读全文 &raquo;
             </a>
           </div>
@@ -650,78 +701,16 @@
 
       
         
-          
-            <h1 id><a href="#" class="headerlink" title=" "></a> </h1><p>来源：<a target="_blank" rel="noopener" href="https://blog.csdn.net/zhuzongpeng/category_12008684.html">NVME驱动_古猫先生的博客-CSDN博客</a></p>
+          <h1 id><a href="#" class="headerlink" title=" "></a> </h1><p>来源：<a target="_blank" rel="noopener" href="https://blog.csdn.net/zhuzongpeng/category_12008684.html">NVME驱动_古猫先生的博客-CSDN博客</a></p>
 <p>主要是留存资料方便查看。其实做ZNSSSD研究读驱动没有太大必要。</p>
-<p>古猫先生所阅读的NVMe从Kconfig和Makefile来看，了解NVMe over PCIe相关的知识点，主要关注三个文件：core.c, pci.c, scsi.c.</p>
-<h2 id="1-概述与nvme-core-init函数解析"><a href="#1-概述与nvme-core-init函数解析" class="headerlink" title="1.概述与nvme_core_init函数解析"></a>1.概述与nvme_core_init函数解析</h2><p>打开core.c文件，找到程序入口<strong>module_init(nvme_core_init)</strong>,</p>
-<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">int</span> __init <span class="title function_">nvme_core_init</span><span class="params">(<span class="type">void</span>)</span></span><br><span class="line">&#123;</span><br><span class="line"></span><br><span class="line">    <span class="type">int</span> result;</span><br><span class="line"></span><br><span class="line">    <span class="comment">//1. 注册字符设备&quot;nvme&quot;</span></span><br><span class="line">    result = __register_chrdev(nvme_char_major, <span class="number">0</span>, NVME_MINORS, <span class="string">&quot;nvme&quot;</span>, &amp;nvme_dev_fops);</span><br><span class="line"></span><br><span class="line">    <span class="keyword">if</span> (result &lt; <span class="number">0</span>)</span><br><span class="line">    	<span class="keyword">return</span> result;</span><br><span class="line">    <span class="keyword">else</span> <span class="keyword">if</span> (result &gt; <span class="number">0</span>)</span><br><span class="line">    	nvme_char_major = result;</span><br><span class="line"></span><br><span class="line">    <span class="comment">//2. 新建一个nvme class，拥有者(Owner)是为THIS_MODULE</span></span><br><span class="line">    nvme_class = class_create(THIS_MODULE, <span class="string">&quot;nvme&quot;</span>);</span><br><span class="line"></span><br><span class="line">    <span class="comment">//如果有Error发生，删除字符设备nvme</span></span><br><span class="line">    <span class="keyword">if</span> (IS_ERR(nvme_class)) </span><br><span class="line">    &#123;</span><br><span class="line">        result = PTR_ERR(nvme_class);</span><br><span class="line">        <span class="keyword">goto</span> unregister_chrdev;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line"></span><br><span class="line">     unregister_chrdev:</span><br><span class="line">    __unregister_chrdev(nvme_char_major, <span class="number">0</span>, NVME_MINORS, <span class="string">&quot;nvme&quot;</span>);</span><br><span class="line">    <span class="keyword">return</span> result;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-<p>从上面的code来看，nvme_core_init主要做了两件事：</p>
-<ol>
-<li>调用__register_chrdev函数，<strong>注册一个名为”nvme”的字符设备.</strong></li>
-<li>调用class_create函数，<strong>动态创建设备的逻辑类</strong>，并完成部分字段的初始化，然后将其添加到内核中。<strong>创建的逻辑类位于/sys/class/</strong>.</li>
-</ol>
-<p>在注册字符设备时，涉及到了设备号的知识点：</p>
-<p>一个字符设备或者块设备都有一个主设备号（Major）和次设备号（Minor）。主设备号用来表示一个特定的驱动程序，次设备号用来表示使用该驱动程序的各个设备。比如，我们在Linux系统上挂了两块NVMe SSD. 那么主设备号就可以自动分配一个数字(比如8），次设备号分别为1和2.</p>
-<p>例如，在32位机子中，设备号共32位，高12位表示主设备号，低20位表示次设备号。<br><strong>注册字符设备之后，可以通过open，ioctrl，release接口对其进行操作</strong>。nvme字符设备的文件操作结构体<code>nvme_dev_fops</code>定义如下:</p>
-<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">static</span> <span class="type">const</span> <span class="class"><span class="keyword">struct</span> <span class="title">file_operations</span> <span class="title">nvme_dev_fops</span> =</span> &#123;</span><br><span class="line"></span><br><span class="line">    .owner = THIS_MODULE,</span><br><span class="line"></span><br><span class="line">     <span class="comment">// open()用来打开一个设备，在该函数中可以对设备进行初始化。</span></span><br><span class="line">    .open = nvme_dev_open, </span><br><span class="line"></span><br><span class="line">     <span class="comment">// release()用来释放open()函数中申请的资源。</span></span><br><span class="line">    .release = nvme_dev_release,</span><br><span class="line"></span><br><span class="line">     <span class="comment">// nvme_dev_ioctl()提供一种执行设备特定命令的方法。</span></span><br><span class="line">    .unlocked_ioctl = nvme_dev_ioctl,</span><br><span class="line"></span><br><span class="line">    .compat_ioctl = nvme_dev_ioctl,</span><br><span class="line"></span><br><span class="line">    <span class="comment">/* 这里的ioctl有两个unlocked_ioctl和compat_ioctl，如果这两个同时存在的话，优先调用unlocked_ioctl，对于compat_ioctl只有打来了CONFIG_COMPAT 才会调用compat_ioctl。obj-$(CONFIG_COMPAT) += compat.o compat_ioctl.o */</span></span><br><span class="line"></span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
-<p>其中：</p>
-<ul>
-<li><p><code>nvme_dev_open</code>通过代表设备的inode来获取设备号，然后遍历<code>nvme_ctrl_list</code>（所有的nvme设备都会加入这个list）找到对应的nvme设备，然后做一系列检查，最后找到的nvme设备放到file-&gt;private_data区域。file指针也是参数传进来的。</p>
-</li>
-<li><p><code>nvme_dev_release</code>比较简单，就是用来释放open()函数中申请的资源。</p>
-</li>
-<li><code>nvme_dev_ioctl</code> 中实现了5种命令。其中就包括Admin、IO命令（有一点需要注意的是，<em>NVME_IOCTL_IO_CMD不支持</em>NVMe设备有多个namespace的情况）。除了这两种，还有<em>NVME_IOCTL_RESET</em>和<em>NVME_IOCTL_SUBSYS_RESET</em> 通过nvme的ops直接写register来Reset Ioctrl和Ioctrl_subsys。这个nvme的ops名字叫做”<strong><em>nvme_ctrl_ops</em></strong>“, 这个ops在nvme初始化中调用nvme_probe()时赋值为”<strong>nvme_pci_ctrl_ops</strong>“。。。。这里就没继续看了，毕竟只是做大概了解。</li>
-</ul>
-<h2 id="2-NVMe初始化"><a href="#2-NVMe初始化" class="headerlink" title="2.NVMe初始化"></a>2.NVMe初始化</h2><p>这次关注的是Pci.c，找到入口 <strong>module_init(nvme_init)</strong>：</p>
-<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">static</span> <span class="type">int</span> __init <span class="title function_">nvme_init</span><span class="params">(<span class="type">void</span>)</span></span><br><span class="line">&#123;</span><br><span class="line">    <span class="type">int</span> result;</span><br><span class="line">    <span class="comment">//1, 创建全局工作队列</span></span><br><span class="line">    nvme_workq = alloc_workqueue(<span class="string">&quot;nvme&quot;</span>, WQ_UNBOUND | WQ_MEM_RECLAIM, <span class="number">0</span>);</span><br><span class="line">    <span class="keyword">if</span> (!nvme_workq)</span><br><span class="line">    	<span class="keyword">return</span> -ENOMEM;</span><br><span class="line"></span><br><span class="line">    <span class="comment">//2, 注册NVMe驱动</span></span><br><span class="line">    result = pci_register_driver(&amp;nvme_driver); </span><br><span class="line">    <span class="keyword">if</span> (result)</span><br><span class="line">    	destroy_workqueue(nvme_workq);</span><br><span class="line"></span><br><span class="line">    <span class="keyword">return</span> result;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-<p>主要分为两部分工作：创建全局工作队列和注册NVMe驱动。</p>
-<p>创建全局队列应该不用看。。。。</p>
-<p>注册过程是，<strong>调用kernel提供的pci_register_driver()函数将nvme_driver注册到PCI Bus</strong></p>
-<p>系统启动时，BIOS会枚举整个PCI Bus, 之后将扫描到的设备通过ACPI tables传给操作系统。当操作系统加载时，PCI Bus驱动则会根据此信息读取各个PCI设备的Header Config空间，从class code寄存器获得一个特征值。class code就是PCI bus用来选择哪个驱动加载设备的唯一根据。NVMe Spec定义NVMe设备的Class code=0x010802h, 如下图。<br><img src="/images/35/1680767899551.png" alt="1680767899551"></p>
-<p>根据code来看，nvme driver会将class code写入nvme_id_table,nvme_id_table中会有相应的属性。这块儿应该不用懂。 反正会有定义0x010802h 代表的NVMe设备逻辑类。</p>
-<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">static</span> <span class="class"><span class="keyword">struct</span> <span class="title">pci_driver</span> <span class="title">nvme_driver</span> =</span> &#123;</span><br><span class="line"></span><br><span class="line">    .name = <span class="string">&quot;nvme&quot;</span>,</span><br><span class="line"></span><br><span class="line">    .id_table = nvme_id_table,</span><br><span class="line"></span><br><span class="line">    .probe = nvme_probe,</span><br><span class="line"></span><br><span class="line">    .remove = nvme_remove,</span><br><span class="line"></span><br><span class="line">    .shutdown = nvme_shutdown,</span><br><span class="line"></span><br><span class="line">    .driver = &#123;</span><br><span class="line">        .pm = &amp;nvme_dev_pm_ops,</span><br><span class="line">	 &#125;,</span><br><span class="line"></span><br><span class="line">    .sriov_configure = nvme_pci_sriov_configure,</span><br><span class="line"></span><br><span class="line">    .err_handler = &amp;nvme_err_handler,</span><br><span class="line"></span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
-<p><strong>pci_register_driver()</strong>函数将<strong>nvme_driver</strong>注册到PCI Bus之后，PCI Bus就明白了这个驱动是给NVMe设备(Class code=0x010802h)用的。</p>
-<p>到这里，只是找到PCI Bus上面驱动与NVMe设备的对应关系。nvme_init执行完毕，返回后，nvme驱动就啥事不做了，直到pci总线枚举出了这个nvme设备，就开始调用<strong>nvme_probe()</strong>函数开始干活咯。</p>
-<h2 id="3-nvme-probe"><a href="#3-nvme-probe" class="headerlink" title="3.nvme_probe()"></a>3.nvme_probe()</h2><p>同样定义在pci.c中：</p>
-<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">static</span> <span class="type">int</span> <span class="title function_">nvme_probe</span><span class="params">(<span class="keyword">struct</span> pci_dev *pdev, <span class="type">const</span> <span class="keyword">struct</span> pci_device_id *id)</span></span><br><span class="line">&#123;</span><br><span class="line"></span><br><span class="line">    <span class="type">int</span> node, result = -ENOMEM;</span><br><span class="line">    <span class="class"><span class="keyword">struct</span> <span class="title">nvme_dev</span> *<span class="title">dev</span>;</span></span><br><span class="line"></span><br><span class="line">    <span class="comment">// 通过调用dev_to_node 得到这个pci_dev的numa节点，如果没有指定的话，默认用first_memory_node，也就是第一个numa节点. </span></span><br><span class="line">    node = dev_to_node(&amp;pdev-&gt;dev);</span><br><span class="line">    <span class="keyword">if</span> (node == NUMA_NO_NODE)</span><br><span class="line">    	set_dev_node(&amp;pdev-&gt;dev, first_memory_node);</span><br><span class="line">    <span class="comment">// 为nvme dev节点分配空间</span></span><br><span class="line">    dev = kzalloc_node(<span class="keyword">sizeof</span>(*dev), GFP_KERNEL, node);</span><br><span class="line">    <span class="keyword">if</span> (!dev)</span><br><span class="line">    	<span class="keyword">return</span> -ENOMEM;</span><br><span class="line">    <span class="comment">// 为每个cpu core分配queue。queues为每个core分配一个io queue，所有的core共享一个admin queue。这里的queue的概念，更严格的说，是一组submission queue和completion quque。</span></span><br><span class="line">    dev-&gt;queues = kzalloc_node((num_possible_cpus() + <span class="number">1</span>) * <span class="keyword">sizeof</span>(<span class="type">void</span> *),GFP_KERNEL, node); <span class="comment">//这里之所以多1，是因为admin-queue</span></span><br><span class="line"></span><br><span class="line">    <span class="keyword">if</span> (!dev-&gt;queues)</span><br><span class="line">    	<span class="keyword">goto</span> <span class="built_in">free</span>;</span><br><span class="line">	<span class="comment">//增加设备对象的引用计数</span></span><br><span class="line">    dev-&gt;dev = get_device(&amp;pdev-&gt;dev); </span><br><span class="line">	<span class="comment">//为设备设置私有数据指针 </span></span><br><span class="line">    pci_set_drvdata(pdev, dev); </span><br><span class="line"></span><br><span class="line">    <span class="comment">// 获得PCI Bar的虚拟地址</span></span><br><span class="line">    result = nvme_dev_map(dev);</span><br><span class="line"></span><br><span class="line">    <span class="keyword">if</span> (result)</span><br><span class="line">    	<span class="keyword">goto</span> <span class="built_in">free</span>;</span><br><span class="line"></span><br><span class="line">    <span class="comment">// 初始化两个work变量, 放在nvme_workq中执行</span></span><br><span class="line">    INIT_WORK(&amp;dev-&gt;reset_work, nvme_reset_work);</span><br><span class="line">    INIT_WORK(&amp;dev-&gt;remove_work, nvme_remove_dead_ctrl_work);</span><br><span class="line">    </span><br><span class="line">	<span class="comment">// 初始化定时器watchdog</span></span><br><span class="line">    setup_timer(&amp;dev-&gt;watchdog_timer, nvme_watchdog_timer, (<span class="type">unsigned</span> <span class="type">long</span>)dev); </span><br><span class="line">	<span class="comment">// 初始化互斥锁</span></span><br><span class="line">    mutex_init(&amp;dev-&gt;shutdown_lock); </span><br><span class="line">    <span class="comment">// 初始化完成量</span></span><br><span class="line">    init_completion(&amp;dev-&gt;ioq_wait);</span><br><span class="line"></span><br><span class="line">    <span class="comment">// 设置DMA需要的PRP内存池</span></span><br><span class="line">    result = nvme_setup_prp_pools(dev);</span><br><span class="line"></span><br><span class="line">    <span class="keyword">if</span> (result)</span><br><span class="line">    	<span class="keyword">goto</span> put_pci;</span><br><span class="line"></span><br><span class="line">    <span class="comment">// 初始化NVMe Controller结构</span></span><br><span class="line">    result = nvme_init_ctrl(&amp;dev-&gt;ctrl, &amp;pdev-&gt;dev, &amp;nvme_pci_ctrl_ops,id-&gt;driver_data);</span><br><span class="line"></span><br><span class="line">    <span class="keyword">if</span> (result)</span><br><span class="line">    	<span class="keyword">goto</span> release_pools;</span><br><span class="line">    </span><br><span class="line">    <span class="comment">// 打印日志</span></span><br><span class="line">    dev_info(dev-&gt;ctrl.device, <span class="string">&quot;pci function %s\n&quot;</span>, dev_name(&amp;pdev-&gt;dev));</span><br><span class="line">    <span class="comment">// 将reset_work放入nvme_workq工作队列</span></span><br><span class="line">    queue_work(nvme_workq, &amp;dev-&gt;reset_work);</span><br><span class="line">    <span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line"></span><br><span class="line">     release_pools:</span><br><span class="line">    	nvme_release_prp_pools(dev);</span><br><span class="line"></span><br><span class="line">     put_pci:</span><br><span class="line">        put_device(dev-&gt;dev);</span><br><span class="line">        nvme_dev_unmap(dev);</span><br><span class="line"></span><br><span class="line">     <span class="built_in">free</span>:</span><br><span class="line">        kfree(dev-&gt;queues);</span><br><span class="line">        kfree(dev);</span><br><span class="line"></span><br><span class="line">    <span class="keyword">return</span> result;</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br></pre></td></tr></table></figure>
-<p>总结：</p>
-<ul>
-<li>为dev，dev-&gt;queues分配空间。为每个cpu core分配一个。queues为每个core分配一个io queue，所有的core共享一个admin queue。这里的queue的概念，更严格的说，是一组submission queue和completion queue的集合。</li>
-<li><p>调用<strong>nvme_dev_map</strong>获得PCI Bar的虚拟地址。</p>
-</li>
-<li><p>初始化两个work变量，定时器，互斥锁，完成量。</p>
-</li>
-<li>调用<strong>nvme_setup_prp_pools</strong>设置DMA需要的PRP内存池。</li>
-<li>调用<strong>nvme_init_ctrl</strong>初始化NVMe Controller结构。</li>
-<li>通过workqueue调度dev-&gt;reset_work，也就是调度<strong>nvme_reset_work</strong>函数，来reset nvme controller。</li>
-</ul>
-<h3 id="3-1-nvme-dev-map"><a href="#3-1-nvme-dev-map" class="headerlink" title="3.1 nvme_dev_map"></a>3.1 <strong>nvme_dev_map</strong></h3><p>在 PCI 设备中，<strong>BAR（Base Address Register，基地址寄存器）</strong>用于指定设备希望映射到主内存中的内存量，并在<strong>设备枚举</strong>后保存映射内存块开始的（基）地址。一个设备最多可以拥有六个 32 位的 BAR 或将两个 BAR 组合成一个 64 位的 BAR。BAR 的值由系统软件（例如 BIOS 和操作系统内核）设置。<strong>当系统软件知道设备在地址空间方面的需求时，它将为该设备分配一个适当类型（IO、非预取式 MMIO 或预取式 MMIO）的可用地址范围。然后，系统软件将分配给设备的起始地址写入 BAR 寄存器。</strong></p>
-<p>一旦 BAR 的值确定了，其指定范围内的当前设备中的内部寄存器（或内部存储空间）就可以被访问了。当该设备确认某一个请求（Request）中的地址在自己的 BAR 的范围内，便会接受这请求。</p>
-<p>假设有一个 PCI 网络适配器，它需要 256 字节的内存来存储其寄存器。在设备枚举期间，系统软件（例如 BIOS）将查询该设备的 BAR 以确定其内存需求。然后，系统软件将为该设备分配一个 256 字节的内存块，并将该内存块的起始地址写入设备的 BAR。</p>
-<p>一旦 BAR 的值确定了，操作系统就可以通过读写该内存块中的地址来访问网络适配器的寄存器。例如，如果操作系统想要读取网络适配器的状态寄存器，它可以读取内存块中与状态寄存器对应的地址来获取该信息。</p>
-<p>而对于容量大的块设备，例如硬盘驱动器，通常不会将其所有空间都映射到内存中。相反，操作系统会使用其他技术来访问设备的数据。</p>
-<p>例如，在访问硬盘驱动器时，操作系统会使用 I/O 操作来读写硬盘驱动器的寄存器。这些寄存器用于指定要访问的扇区号、传输的数据量以及要执行的命令等信息。然后，硬盘驱动器会根据这些信息执行相应的操作，并通过 DMA（Direct Memory Access，直接内存访问）将数据传输到主内存中。</p>
-<p>因此，对于容量大的块设备，操作系统并不需要将其所有空间都映射到内存中，而是使用 I/O 操作和 DMA 来访问设备的数据。</p>
-<p><em>设备枚举是指计算机启动时，系统软件（例如 BIOS）扫描系统总线以识别连接到计算机上的所有设备的过程。在设备枚举期间，系统软件将读取每个设备的配置信息，包括设备 ID、厂商 ID 和 BAR 等信息。然后，系统软件将为每个设备分配资源，例如中断号、DMA 通道和内存地址空间。最后，系统软件将这些信息保存在设备的配置空间中，以便操作系统在启动时可以访问它们。</em>枚举设备就是调用 probe。</p>
-<p><em>BAR（Base Address Register，基地址寄存器）位于 PCI 设备的配置空间中。<strong>配置空间</strong>是一个设备内部的特殊存储区域，用于存储设备的配置信息，包括设备 ID、厂商 ID 和 BAR 等信息。系统软件（例如 BIOS 和操作系统内核）可以通过读写配置空间来获取和设置设备的配置信息。</em></p>
-<p>当系统软件为 PCI 设备分配内存地址空间时，它会将分配给设备的内存块的起始地址写入设备的 BAR。这样，操作系统就可以通过读写该内存块中的地址来访问设备的寄存器或内部存储空间。</p>
-<p>下图为pci设备配置空间示意图：</p>
-<p><img src="/images/35/1680780632361.png" alt="1680780632361"></p>
-<p><strong>nvme_dev_map</strong>的执行过程可以主要分为三步：</p>
-<p><strong>第一步</strong>：调用pci_select_bars，其返回值为mask。因为pci设备的header配置空间有6个32位的Bar寄存器(如下图)，所以mark中的每一位的值就代表其中一个Bar是否被置起。</p>
-<p><strong>第二步</strong>：调用pci_request_selected_regions，这个函数的一个参数就是之前调用pci_select_bars返回的mask值，作用就是把对应的这个几个bar保留起来，不让别人使用。</p>
-<p><strong>第三步：</strong>调用ioremap。在linux中我们无法直接访问物理地址，需要映射到虚拟地址，ioremap就是这个作用。映射完后，我们访问dev-&gt;bar就可以直接操作nvme设备上的寄存器了。但是代码中，并没有根据pci_select_bars的返回值来决定映射哪个bar，而是直接映射bar0，原因是nvme协议中强制规定了bar0就是内存映射的基址。<br><img src="/images/35/1680830380877.png" alt="1680830380877"></p>
-<h3 id="3-2-nvme-setup-prp-pools"><a href="#3-2-nvme-setup-prp-pools" class="headerlink" title="3.2 nvme_setup_prp_pools"></a>3.2 nvme_setup_prp_pools</h3><p>主要是创建了两个dma pool，后面就可以通过其他dma函数从dma pool中获得memory了。prp_small_pool里提供的是块大小为256字节的内存，prp_page_pool提供的是块大小为Page_Size(格式化时确定，例如4KB)的内存，主要是为了对于不一样长度的prp list来做优化。</p>
-<h3 id="3-3-nvme-init-ctrl"><a href="#3-3-nvme-init-ctrl" class="headerlink" title="3.3 nvme_init_ctrl"></a>3.3 nvme_init_ctrl</h3><p>nvme_init_ctrl的作用主要是调用device_create_with_groups函数创建一个名字叫nvme0的字符设备。这个nvme0中的0是通过nvme_set_instance获得的。这个过程中，通过ida_get_new获得唯一的索引值。</p>
-<h3 id="3-4-nvme-reset-work"><a href="#3-4-nvme-reset-work" class="headerlink" title="3.4 nvme_reset_work"></a>3.4 nvme_reset_work</h3><h2 id="4-nvme-reset-work"><a href="#4-nvme-reset-work" class="headerlink" title="4.nvme_reset_work"></a>4.nvme_reset_work</h2><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br><span class="line">102</span><br><span class="line">103</span><br><span class="line">104</span><br><span class="line">105</span><br><span class="line">106</span><br><span class="line">107</span><br><span class="line">108</span><br><span class="line">109</span><br><span class="line">110</span><br><span class="line">111</span><br><span class="line">112</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">static</span> <span class="type">void</span> <span class="title function_">nvme_reset_work</span><span class="params">(<span class="keyword">struct</span> work_struct *work)</span></span><br><span class="line">&#123;</span><br><span class="line">    <span class="class"><span class="keyword">struct</span> <span class="title">nvme_dev</span> *<span class="title">dev</span> =</span> container_of(work, <span class="keyword">struct</span> nvme_dev, reset_work);</span><br><span class="line"></span><br><span class="line">    <span class="type">int</span> result = -ENODEV;</span><br><span class="line"></span><br><span class="line">    <span class="comment">// 检查NVME_CTRL_RESETTING标志，来确保nvme_reset_work不会被重复进入.</span></span><br><span class="line">    <span class="keyword">if</span> (WARN_ON(dev-&gt;ctrl.state == NVME_CTRL_RESETTING))</span><br><span class="line">    	<span class="keyword">goto</span> out;</span><br><span class="line"></span><br><span class="line">    <span class="comment">// If we&#x27;re called to reset a live controller first shut it down before moving on.</span></span><br><span class="line">    <span class="keyword">if</span> (dev-&gt;ctrl.ctrl_config &amp; NVME_CC_ENABLE)</span><br><span class="line">    	nvme_dev_disable(dev, <span class="literal">false</span>);</span><br><span class="line"></span><br><span class="line">    <span class="keyword">if</span> (!nvme_change_ctrl_state(&amp;dev-&gt;ctrl, NVME_CTRL_RESETTING))</span><br><span class="line">    	<span class="keyword">goto</span> out;</span><br><span class="line">	</span><br><span class="line">    <span class="comment">/*</span></span><br><span class="line"><span class="comment">    nvme_pci_enable(dev)</span></span><br><span class="line"><span class="comment">    使能nvme设备的内存空间iomem，也就是之前映射的bar空间。</span></span><br><span class="line"><span class="comment">    设置设备具有获得总线的能力，即调用这个函数，使设备具备申请使用PCI总线的能力。</span></span><br><span class="line"><span class="comment">    设定这个nvme设备的DMA区域大小，64 bits或者32 bits</span></span><br><span class="line"><span class="comment">    为设备分配中断请求，INITx/MSI/MSI-X</span></span><br><span class="line"><span class="comment">    设置Doorbell地址</span></span><br><span class="line"><span class="comment">    。。。。应该不用细看了吧</span></span><br><span class="line"><span class="comment">    */</span></span><br><span class="line">    result = nvme_pci_enable(dev);</span><br><span class="line">    <span class="keyword">if</span> (result)</span><br><span class="line">    	<span class="keyword">goto</span> out;</span><br><span class="line">	</span><br><span class="line">    <span class="comment">/*</span></span><br><span class="line"><span class="comment">    创建Admin SQ/CQ的创建</span></span><br><span class="line"><span class="comment">    调用nvme_alloc_queue分配NVMe queue</span></span><br><span class="line"><span class="comment">    nvme_alloc_queue分配NVMe queue后，就要将nvme admin queue的属性以及已经分配的admin SQ/CQ内存地址写入寄存器。</span></span><br><span class="line"><span class="comment">        writel(aqa, dev-&gt;bar + NVME_REG_AQA);</span></span><br><span class="line"><span class="comment">        lo_hi_writeq(nvmeq-&gt;sq_dma_addr, dev-&gt;bar + NVME_REG_ASQ);</span></span><br><span class="line"><span class="comment">        lo_hi_writeq(nvmeq-&gt;cq_dma_addr, dev-&gt;bar + NVME_REG_ACQ);</span></span><br><span class="line"><span class="comment">    最后一步就是调用queue_request_irq申请中断。这个函数主要的工作是设置中断处理函数，默认情况下不使用线程化的中断处理，而是使用中断上下文的中断处理。</span></span><br><span class="line"><span class="comment">    */</span></span><br><span class="line">    result = nvme_configure_admin_queue(dev);</span><br><span class="line">    <span class="keyword">if</span> (result)</span><br><span class="line">    	<span class="keyword">goto</span> out;</span><br><span class="line"></span><br><span class="line">    nvme_init_queue(dev-&gt;queues[<span class="number">0</span>], <span class="number">0</span>);</span><br><span class="line">    result = nvme_alloc_admin_tags(dev);</span><br><span class="line">    <span class="keyword">if</span> (result)</span><br><span class="line">    	<span class="keyword">goto</span> out;</span><br><span class="line"></span><br><span class="line">    <span class="comment">/*</span></span><br><span class="line"><span class="comment">    调用nvme_identify_ctrl读取identify data.</span></span><br><span class="line"><span class="comment">    调用nvme_set_queue_limits设置queue write cache的大小.</span></span><br><span class="line"><span class="comment">    */</span></span><br><span class="line">    result = nvme_init_identify(&amp;dev-&gt;ctrl);</span><br><span class="line">    <span class="keyword">if</span> (result)</span><br><span class="line">    	<span class="keyword">goto</span> out;</span><br><span class="line"></span><br><span class="line">    <span class="comment">/*</span></span><br><span class="line"><span class="comment">    调用nvme_set_queue_count发送set feature cmd设置IO queues的数目；</span></span><br><span class="line"><span class="comment">    确定了IO queues的数目之后，调用nvme_creat_io_queues函数完成IO queues的创建。</span></span><br><span class="line"><span class="comment">    	先分配内存 在调用nvme_create_queue真正实现SQ/CQ的创建</span></span><br><span class="line"><span class="comment">    		nvme_create_queue函数先通过调用adapter_alloc_cq和adapter_alloc_sq创建CQ/SQ, 然后在调用queue_request_irq申请中断，最后调用nvme_init_queue初始化前面创建的CQ/SQ. </span></span><br><span class="line"><span class="comment">    */</span></span><br><span class="line">    result = nvme_setup_io_queues(dev);</span><br><span class="line">    <span class="keyword">if</span> (result)</span><br><span class="line">    	<span class="keyword">goto</span> out;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">if</span> (dev-&gt;online_queues &gt; <span class="number">1</span>)</span><br><span class="line">    	nvme_queue_async_events(&amp;dev-&gt;ctrl);</span><br><span class="line"></span><br><span class="line">    mod_timer(&amp;dev-&gt;watchdog_timer, round_jiffies(jiffies + HZ));</span><br><span class="line"></span><br><span class="line">    <span class="comment">// Keep the controller around but remove all namespaces if we don&#x27;t have any working I/O queue.</span></span><br><span class="line">    <span class="keyword">if</span> (dev-&gt;online_queues &lt; <span class="number">2</span>) </span><br><span class="line">    &#123;</span><br><span class="line">        dev_warn(dev-&gt;ctrl.device, <span class="string">&quot;IO queues not created\n&quot;</span>);</span><br><span class="line">        nvme_kill_queues(&amp;dev-&gt;ctrl);</span><br><span class="line">        nvme_remove_namespaces(&amp;dev-&gt;ctrl);</span><br><span class="line">    &#125; </span><br><span class="line">    <span class="keyword">else</span> </span><br><span class="line">    &#123;</span><br><span class="line">        <span class="comment">/*</span></span><br><span class="line"><span class="comment">        主要是调用了blk_mq_start_stopped_hw_queues和blk_mq_kick_requeue_list去启动mq-block层的hardware queues和request queues.</span></span><br><span class="line"><span class="comment">        */</span></span><br><span class="line">        nvme_start_queues(&amp;dev-&gt;ctrl);</span><br><span class="line">        <span class="comment">/*</span></span><br><span class="line"><span class="comment">        对tagset结构体初始化，接着调用blk_mq_alloc_tag_set分配tag set并与request queue关联</span></span><br><span class="line"><span class="comment">        */</span></span><br><span class="line">        nvme_dev_add(dev);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">if</span> (!nvme_change_ctrl_state(&amp;dev-&gt;ctrl, NVME_CTRL_LIVE)) </span><br><span class="line">    &#123;</span><br><span class="line">        dev_warn(dev-&gt;ctrl.device, <span class="string">&quot;failed to mark controller live\n&quot;</span>);</span><br><span class="line">        <span class="keyword">goto</span> out;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="comment">/*</span></span><br><span class="line"><span class="comment">    主要是调用了两个scan namespace的函数：nvme_scan_ns_list和nvme_scan_ns_sequential。 </span></span><br><span class="line"><span class="comment">    nvme_scan_ns_list，如果执行成功的话，返回0，因此不再执行nvme_scan_ns_sequential。  </span></span><br><span class="line"><span class="comment">    nvme_scan_ns_sequential的作用就是检查namespace是否合法，去掉不合法的namespace。</span></span><br><span class="line"><span class="comment">	在nvme_scan_work的最后，将所有找到的namespace通过list_sort(NULL, &amp;ctrl-&gt;namespaces, ns_cmp)来排序.</span></span><br><span class="line"><span class="comment">	nvme_scan_work 就是在nvme_reset_work已经发现nvme controller的情况下，再次对这个nvme controller下面的进行扫描，因为namespace最多可以两级级联，每个nvme controller下的name space都是放在ctrl-&gt;namespaces 这个链表中，且是按照name space id的大小排序。</span></span><br><span class="line"><span class="comment">    */</span></span><br><span class="line">    <span class="keyword">if</span> (dev-&gt;online_queues &gt; <span class="number">1</span>)</span><br><span class="line">    	nvme_queue_scan(&amp;dev-&gt;ctrl);</span><br><span class="line">    </span><br><span class="line">    <span class="keyword">return</span>;</span><br><span class="line"></span><br><span class="line">     out:</span><br><span class="line">     	nvme_remove_dead_ctrl(dev, result);</span><br><span class="line"></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-<p><strong><em>扩展:  线程化与中断上下文的概念(注: 此部分来自维基百科)</em></strong></p>
-<p><em>中断线程化是实现Linux实时性的一个重要步骤，在linux标准内核中，中断是最高优先级的执行单元，不管内核当时处理什么，只要有中断事件，系统将立即响应该事件并执行相应的中断处理代码，除非当时中断关闭。因此，如果系统有严重的网络或I/O负载，中断将非常频繁，后发生的实时任务将很难有机会运行，也就是说，毫无实时性可言。<strong>中断线程化之后，中断将作为内核线程运行而且赋予不同的实时优先级，实时任务可以有比中断线程更高的优先级，这样，实时任务就可以作为最高优先级的执行单元来运行，即使在严重负载下仍有实时性保证。</strong></em></p>
-<p><em>内核空间和用户空间是操作系统理论的基础之一，即内核功能模块运行在内核空间，而应用程序运行在用户空间。现代的CPU都具有不同的操作模式，代表不同的级别，不同的级别具有不同的功能，在较低的级别中将禁止某些操作。Linux系统设计时利用了这种硬件特性，使用了两个级别，最高级别和最低级别，内核运行在最高级别（内核态），这个级别可以进行所有操作，而应用程序运行在较低级别（用户态），在这个级别，处理器控制着对硬件的直接访问以及对内存的非授权访问。内核态和用户态有自己的内存映射，即自己的地址空间。</em></p>
-<p><em>正是有了不同运行状态的划分，才有了上下文的概念。用户空间的应用程序，如果想要请求系统服务，比如操作一个物理设备，或者映射一段设备空间的地址到用户空间，就必须通过系统调用来（操作系统提供给用户空间的接口函数）实现。通过系统调用，用户空间的应用程序就会进入内核空间，由内核代表该进程运行于内核空间，这就涉及到上下文的切换，用户空间和内核空间具有不同的地址映射，通用或专用的寄存器组。而用户空间的进程要传递很多变量、参数给内核，内核也要保存用户进程的一些寄存器、变量等，以便系统调用结束后回到用户空间继续执行。所谓的进程上下文，就是一个进程在执行的时候，CPU的所有寄存器中的值、进程的状态以及堆栈中的内容，当内核需要切换到另一个进程时，它需要保存当前进程的所有状态，即保存当前进程的进程上下文，以便再次执行该进程时，能够恢复切换时的状态，继续执行。</em></p>
-<p><em>同理，硬件通过触发信号，导致内核调用中断处理程序，进入内核空间。这个过程中，硬件的一些变量和参数也要传递给内核，内核通过这些参数进行中断处理，中断上下文就可以理解为硬件传递过来的这些参数和内核需要保存的一些环境，主要是被中断的进程的环境。</em></p>
-
-          
+<p>古猫先生所阅读的NVMe从Kconfig和Makefile来看，了解NVMe over PCIe相关的知识点，主要关注三个文件：core.c, pci.c, scsi.c.<br></p>
+          <!--noindex-->
+          <div class="post-button text-center">
+            <a class="btn" href="/2023/04/08/35-NVMe%E9%A9%B1%E5%8A%A8%E8%A6%81%E7%82%B9%EF%BC%88%E5%8F%A4%E7%8C%AB%E5%85%88%E7%94%9F%EF%BC%89/#more" rel="contents">
+              阅读全文 &raquo;
+            </a>
+          </div>
+          <!--/noindex-->
         
       
     </div>
@@ -866,230 +855,15 @@
 
       
         
-          
-            <h1 id><a href="#" class="headerlink" title=" "></a> </h1><p>感觉不了解一下NVMe，Femu的代码阅读起来还想确实有点困难。使用FEMU模拟NVMe设备，是需要了解这个协议的。完全参考蛋蛋读NVMe,讲的十分清晰。</p>
-<h2 id="1-host-如何使用-NVMe协议与SSD通信"><a href="#1-host-如何使用-NVMe协议与SSD通信" class="headerlink" title="1.host 如何使用 NVMe协议与SSD通信"></a>1.host 如何使用 NVMe协议与SSD通信</h2><p>来源：<a target="_blank" rel="noopener" href="https://www.ssdfans.com/?p=8137">蛋蛋读NVMe之一 (ssdfans.com)</a></p>
-<p>PCIe（Peripheral Component Interconnect Express）是一种高速串行总线标准，用于连接计算机内部的各种硬件设备。下图为PCIe系统的简单架构图，图中的NVMe Subsystem一般就是SSD。SSD作为一个PCIe Endpoint通过PCIe连着Root Complex （RC）, 然后RC连接着CPU和内存。Root Complex是PCIe系统中引入的概念，它将CPU、内存子系统和PCIe子系连接起来。Root Complex是PCIe总线的根节点，将PCIe设备与CPU/Memory连接到一起，与其余PCIe设备（包括Switch）连接的端口称为RootPort。</p>
-<p><em>”我们可以认为RC就是CPU的代言人，助理，或者小蜜。作为系统中最高层，CPU说：我很忙的，你SSD有什么事情先跟我小蜜说！尽管如此，SSD的地位还是较过去提升了一级，过去SSD别说直接接触霸道总裁，就是连小蜜的面都见不到，SSD和小蜜之间还隔着一座南桥呢。滚蛋吧，南桥君！“——蛋蛋</em></p>
-<p><img src="/images/34/1680570283993.png" alt="1680570283993"></p>
-<p>NVMe有两种命令，一种叫<strong><code>Admin Command</code></strong>，用以Host管理和控制SSD；另外一种就是<strong><code>I/O Command</code></strong>，用以Host和SSD之间数据的传输。</p>
-<p>有了这两种命令还需要，通信的重要三个组件：<strong><code>Submission Queue （SQ）</code></strong>，<strong><code>Completion Queue（CQ）</code></strong>和<strong><code>Doorbell Register</code></strong> （DB）。 SQ和CQ位于Host的内存中，DB则位于SSD的控制器内部。</p>
-<p>当Host要发送命令时，先把准备好的命令放在SQ中，然后通知SSD来取；通知的方式就是，通过SSD端的DB寄存器，通知SSD可以来取命令；CQ也是位于Host内存中，一个命令执行完成，成功或失败，SSD总会往CQ中写入命令完成状态。</p>
-<p>总结步骤:</p>
-<p><img src="file:///C:\Users\DawnLake\AppData\Roaming\Tencent\Users\1479320516\QQ\WinTemp\RichOle\J~KT0{A$`5WIEF_OJTOG[GS.png" alt="img"></p>
-<ol>
-<li>Host写命令到内存中的SQ；</li>
-<li>Host写SSD控制器的DB，通知SSD取指；</li>
-<li>SSD控制器收到通知，于是从内存中的SQ取指；</li>
-<li>SSD控制器执行指令；</li>
-<li>指令执行完成，SSD控制器往内存中的CQ写指令执行结果；</li>
-<li>然后SSD控制器产生MSI中断通知Host指令完成；</li>
-<li>Host收到MSI中断，处理CQ，查看指令完成状态；</li>
-<li>Host处理完CQ中的指令执行结果，通过DB回复SSD：指令执行结果已处理！</li>
-</ol>
-<h2 id="2-SQ-CQ和DB-详解"><a href="#2-SQ-CQ和DB-详解" class="headerlink" title="2. SQ,CQ和DB 详解"></a>2. SQ,CQ和DB 详解</h2><p>来源：<a target="_blank" rel="noopener" href="https://www.ssdfans.com/?p=8139">蛋蛋读NVMe之二 (ssdfans.com)</a></p>
-<p><img src="file:///C:\Users\DawnLake\AppData\Roaming\Tencent\Users\1479320516\QQ\WinTemp\RichOle\X34FLE~Y6%XKUJ@9@~6KG`C.png" alt="img"></p>
-<p>SQ与CQ并不一定是一对一的关系。而之前说的NVMe有两种命令，从而也有两种SQ与CQ。一种是Admin，另外一种是I/O，前者放Admin命令，用以Host管理控制SSD，后者放置I/O命令，用以Host与SSD之间传输数据，不可以混着放。系统中只有一对Admin SQ/CQ，I/O SQ/CQ却可以很多，多达65535（64K减去一个SQ/CQ）。Host端每个Core可以有一个或者多个SQ，但只有一个CQ。设置多个core可以利用多线程满足性能需求，一个线程独享一个SQ，且可以为SQ设置不同的优先级，重要的SQ指令优先被执行。</p>
-<p>实际系统中用多少个SQ，取决于系统配置和性能需求，可灵活设置I/O SQ个数。</p>
-<p>作为队列，每个SQ和CQ都有一定的深度：对Admin SQ/CQ来说，其深度可以是2-4096（4K）；对I/O SQ/CQ，深度可以是2-65536(64K)。队列深度也是可以配置的。 这也是NVMe相较与其他协议更屌的地方。AHCI只有一个命令队列，且队列深度是固定的32。  </p>
-<p>还有重要的一点：每个SQ放入的是命令条目，无论是Admin还是I/O命令，每个命令条目大小都是64字节；每个CQ放入的是命令完成状态信息条目，每个条目大小是16字节。</p>
-<p>再进行一波小总结：</p>
-<ol>
-<li><p><strong>SQ用以Host发命令，CQ用以SSD回命令完成状态</strong></p>
-</li>
-<li><p><strong>SQ/CQ可以在Host的内存中，也可以在SSD中，但一般在Host 内存中（所有系列文章都是基于SQ/CQ在Host内存中讲的）;</strong></p>
-</li>
-<li><p><strong>两种类型的SQ/CQ：Admin和I/O，前者发送Admin命令，后者发送I/O命令;</strong></p>
-</li>
-<li><p><strong>系统中只能有一对Admin SQ/CQ，但可以有很多对I/O SQ/CQ;</strong></p>
-</li>
-<li><p><strong>I/O SQ与CQ可以是一对一的关系，也可以是一对多的关系；</strong></p>
-</li>
-<li><p><strong>I/O SQ是可以赋予不同优先级的；</strong></p>
-</li>
-<li><p><strong>I/O SQ/CQ深度可达64K，Admin SQ/CQ深达4K；</strong></p>
-</li>
-<li><p><strong>I/O SQ/CQ的广度和深度都可以灵活配置；</strong></p>
-</li>
-<li><p><strong>每条命令大小是64字节，每条命令完成状态是16字节；</strong></p>
-</li>
-</ol>
-<p>SQ与CQ都是是环形队列，DB而就是用来记录一个SQ或者CQ的Head和Tail。<strong>每个SQ或者CQ，都有两个对应的DB: Head DB和Tail DB</strong>。DB是在SSD端的寄存器，记录SQ和CQ的头和尾的位置。这样SQ头尾之间的就是待处理的命令，SSD通过该SQ的两个DB获取这个信息。Host存放命令到SQ后就会更新SSD端的DB寄存器。 SSD controller 把这三个指令取到之后，会更新DB。</p>
-<p>同样的，当 SSD执行完命令，会将消息放入CQ，并更新CQ尾的DB寄存器，然后通过MSI中断通知host已经执行完host的命令了。host取出CQ中的完成信息进行处理，并更新CQ的头。<strong>生产者修改尾，消费者修改头。</strong></p>
-<p>细细琢磨可能发现一些小漏洞，Host只能写DB，而不能读DB，且只能写SQ尾和写CQ头。那它如何知晓SQ头与CQ尾。Host发了取指通知后，它并不清楚SSD什么时候去取命令，取了多少命令。答：<strong>SSD往CQ中写入命令状态信息，就包含了这几条</strong>。</p>
-<p>小总结：</p>
-<ol>
-<li><strong>DB在SSD Controller端，是寄存器</strong></li>
-<li><strong>DB记录着SQ和CQ的Head和Tail</strong></li>
-<li><strong>每个SQ或者CQ有两个DB: Head DB 和Tail DB</strong></li>
-<li><strong>Host只能写DB，不能读DB</strong></li>
-<li><strong>Host通过SSD往CQ中写入的命令完成状态获取Head或者Tail</strong></li>
-</ol>
-<h2 id="3-数据怎么传递的"><a href="#3-数据怎么传递的" class="headerlink" title="3.数据怎么传递的"></a>3.数据怎么传递的</h2><p>来源：<a target="_blank" rel="noopener" href="https://www.ssdfans.com/?p=8141">蛋蛋读NVMe之三 (ssdfans.com)</a></p>
-<p>数据传递无非两种方向，host内存 &lt;==&gt; SSD。</p>
-<p><img src="file:///C:\Users\DawnLake\AppData\Roaming\Tencent\Users\1479320516\QQ\WinTemp\RichOle\5Q{UQ_Z]TV0ZG(G{NWCFJ" alt="img">F.png)</p>
-<p>Host如果想往SSD上写入用户数据，需要告诉SSD<strong>写入什么数据，写入多少数据</strong>，以及<strong>数据源在内存中的什么位置</strong>，这些信息包含在Host向SSD发送的<strong>Write命令</strong>中。每笔用户数据对应着一个叫做LBA（Logical Block Address）的东西，<strong>Write命令通过指定LBA来告诉SSD写入的是什么数据</strong>。对NVMe/PCIe来说，SSD收到Write命令后，通过PCIe去Host的内存数据所在位置读取数据，然后把这些数据写入到闪存中，<strong>同时得到LBA与闪存位置的映射关系</strong>。</p>
-<p>Host如果想读取SSD上的用户数据，同样需要<strong>告诉SSD需要什么数据，需要多少数据</strong>，以及<strong>数据最后需要放到Host内存的哪个位置上去</strong>，这些信息包含在Host向SSD发送的<strong>Read命令</strong>中。SSD<strong>根据LBA，查找映射表</strong>，找到对应闪存物理位置，然后读取闪存获得数据。数据从闪存读上来以后，对NVMe/PCIe来说，SSD会通过PCIe把数据写入到Host指定的内存中。这样就完成了Host对SSD的读访问。<em>（SSD的映射表是用来记录逻辑块地址（LBA）和物理块地址（PBA）之间的对应关系的，它是SSD固件的核心部分。SSD工作时，它的绝大部分映射表是存储在FLASH里面，还有一部分存储在片上RAM上。这样做的目的是为了提高性能和减少对FLASH的磨损。当SSD断电时，会把映射表写回到FLASH中，以防止数据丢失。）</em></p>
-<p><em>再说明一下 Root Complex是PCIe总线系统中的一个概念，它将CPU、内存子系统和PCIe子系连接起来。它负责将CPU的访问事务转换为PCIe总线上的访问事务，同时也要解析下游PCIe设备上报的报文，并根据报文内容，将信息或者数据通知CPU。内存和SSD的数据交换需要通过Root Complex作为桥梁，因为Root Complex可以将存储域地址空间转换为PCIe域地址空间。</em></p>
-<p>无论是写入还是读取，Host都是发送命令的一方，并不负责数据的主动传输。其中Host关注的是逻辑地址，SSD需要通过逻辑地址找到真正的数据存放位置。Host也有两种方式来告诉SSD数据所在内存位置，一是PRP (Physical Region Page )，二是SGL (Scatter/Gather )。</p>
-<h3 id="3-1-PRP-Physical-Region-Page"><a href="#3-1-PRP-Physical-Region-Page" class="headerlink" title="3.1 PRP (Physical Region Page)"></a>3.1 PRP (Physical Region Page)</h3><p>NVMe把Host的内存划分为一个一个页（Page），页的大小可以是4KB,8KB,16KB… 128MB。好像一般都是4KB。</p>
-<p><img src="/images/34/1680608024474.png" alt="1680608024474"></p>
-<p>PRP Entry本质就是一个64位内存物理地址，只不过把这个物理地址分成两部分：页起始地址和页内偏移。最后两bit是0，说明PRP表示的物理地址只能四字节对齐访问。页内偏移可以是0，也可以是个非零的值。</p>
-<p><img src="/images/34/1680608127938.png" alt="1680608127938"></p>
-<p>PRP Entry描述的是一段连续的物理内存的起始地址。如果需要描述若干个不连续的物理内存呢？那就需要若干个PRP Entry。把若干个PRP Entry链接起来，就成了PRP List。</p>
-<p><img src="/images/34/1680608903047.png" alt="1680608903047"></p>
-<p>PRP List中的每个PRP Entry的偏移量都必须是0，PRP List中的每个PRP Entry都是描述一个物理页。它们不允许有相同的物理页，不然SSD往同一个物理页写入几次的数据，导致先写入的数据被覆盖。</p>
-<p>每个NVMe命令中有两个域：PRP1和PRP2，Host就是通过这两个域告诉SSD数据在内存中的位置或者数据需要写入的地址。</p>
-<p><img src="/images/34/1680609114540.png" alt="1680609114540"></p>
-<p>PRP1和PRP2有可能指向数据所在位置，也可能指向PRP List。类似C语言中的指针概念，PRP1和PRP2可能是指针，也可能是指针的指针，还有可能是指针的指针的指针。根据不同的命令，SSD总能一层一层的剥下包装，找到数据在内存的真正物理地址。（个人理解应该是多级页表类似的东西）</p>
-<p>下面是一个PRP1指向PRP List的示例：</p>
-<p><img src="/images/34/1680609873982.png" alt="1680609873982"></p>
-<p>PRP1指向一个PRP List，PRP List位于Page 200，页内偏移50的位置。SSD确定PRP1是个指向PRP List的指针后，就会去Host内存中（Page 200，Offset 50）把PRP List取过来。获得PRP List后，就获得数据的真正物理地址，SSD然后就会往这些物理地址读入或者写入数据。</p>
-<h3 id="3-2-SGL-Scatter-Gather"><a href="#3-2-SGL-Scatter-Gather" class="headerlink" title="3.2 SGL (Scatter/Gather )"></a>3.2 SGL (Scatter/Gather )</h3><p>对Admin命令来说，它只用PRP告诉SSD内存物理地址；对I/O 命令来说，除了用PRP，Host还可以用SGL的方式来告诉SSD数据在内存中写入或者读取的物理地址。</p>
-<p><img src="/images/34/1680609985979.png" alt="1680609985979"></p>
-<p>Host在命令中会告诉SSD采用何种方式。具体来说，如果<strong>命令当中DW0[15：14]是0，就是PRP的方式，否则就是SGL的方式。</strong></p>
-<p>SGL是一个数据结构，用以描述一段数据空间，这个空间可以是数据源所在的空间，也可以是数据目标空间。SGL(Scatter Gather List)首先是个List，是个链表，由一个或者多个<code>SGL Segment</code>组成，而每个<code>SGL Segment</code>又由一个或者多个<code>SGL Descriptor</code>组成。<code>SGL Descriptor</code>是SGL最基本的单元，它描述了一段连续的物理内存空间：起始地址+空间大小。</p>
-<p>每个SGL Descriptor大小是16字节。一块内存空间，可以用来放用户数据，也可以用来放<code>SGL Segment</code>，根据这段空间的不同用途，<code>SGL Descriptor</code>也分几种类型。</p>
-<p><img src="/images/34/1680610218236.png" alt="1680610218236"></p>
-<p>有4种SGL Descriptor，一种是<strong>Data Block</strong>，这个好理解，就是描述的这段空间是用户数据空间；一种是<strong>Segment描述符</strong>。SGL是由SGL Segment组成的链表。既然是链表，前面一个Segment就需要有个指针指向下一个Segment，这个指针就是SGL Segment描述符，它描述的是它下个Segment所在的空间。特别地，对链表当中倒数第二个Segment，它的SGL Segment描述符我们把它叫做SGL Last Segment描述符。它本质还是SGL Segment描述符，描述的还是SGL Segment所在的空间。为什么需要把倒数第二个SGL Segment描述符单独的定义成一种类型呢？我认为是让SSD在解析SGL的时候，碰到SGL Last Segment描述符，就知道链表快到头了，后面只有一个Segement了；最后一种，<strong>SGL Bit Bucket</strong>，它只对Host读有用，用以告诉SSD，你往这个内存写入的东西我是不要的。好吧，不要，就不传了。</p>
-<div class="table-container">
-<table>
-<thead>
-<tr>
-<th><img src="/images/34/1680610737566.png" alt="1680610737566"></th>
-<th><img src="/images/34/1680611590697.png" alt="1680611590697"></th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td></td>
-</tr>
-</tbody>
-</table>
-</div>
-<p>假设Host需要往SSD中读取13KB的数据，其中真正只需要11KB数据，这11KB的数据需要放到3个大小不同的内存中，分别是：3KB,4KB和4KB。</p>
-<p>PRP与SGL的区别是：一段数据空间，对PRP来说，它只能映射到一个个物理页，而对SGL来说，它可以映射到任意大小的连续物理空间。有点像内存管理的分页与分段，果然计算机思想到哪都能用。</p>
-<p><img src="/images/34/1680610810836.png" alt="1680610810836"></p>
-<h2 id="4-NVMe与PCIe传输层交互"><a href="#4-NVMe与PCIe传输层交互" class="headerlink" title="4.NVMe与PCIe传输层交互"></a>4.NVMe与PCIe传输层交互</h2><p>来源：<a target="_blank" rel="noopener" href="https://www.ssdfans.com/?p=8146">蛋蛋读NVMe之四 (ssdfans.com)</a>这部分感觉对个人研究意义不大 所以就直接搬运了。方便以后看</p>
-<p><img src="/images/34/1680613119866.png" alt="1680613119866"></p>
-<p>任何一种计算机协议，它都是采用这种分层结构的。下层总是为上层服务的。有些协议，上图所有的层次都有定义和实现，而有些协议，只定义了其中的几层。然而，要让一种协议能工作，它需要一个完整的协议栈，PCIe定义了下三层，NVMe定义了最上层，两者一拍即合，构成一个完整的Host与SSD通讯的协议。</p>
-<p>PCIe与NVMe最直接接触的是传输层。在NVMe层，我们能看到的是64字节的命令，16字节的命令返回状态，以及跟命令相关的数据。而在PCIe的传输层，我们能看到的是TLP （Transaction Layer Packet）。还是跟快递做类比，你要寄东西，可能是手机，可能是电脑，不管是什么，你交给快递小哥，他总是把你要寄的东西打包，快递员看到的就是包裹，他根本不关心你里面的内容。PCIe传输层作为NVMe最直接的服务者，不管你NVMe发给我的是命令，还是命令状态，还是用户数据，我统统帮你放进包裹，打包后交给下一层，让数据链路层继续处理。</p>
-<p>PCIe传输层传输的是TLP，它就是个包裹，一般由包头和数据组成，当然也有可能只有包头没有数据。NVMe传下来的数据都是放在TLP的数据部分的（Payload）。为实现不同的目的，TLP可分为以下几种类型：</p>
-<ol>
-<li>Configuration Read/Write</li>
-<li>I/O Read/Write</li>
-<li>Memory Read/write</li>
-<li>Message</li>
-<li>Completion</li>
-</ol>
-<p>注意，这个Completion跟NVMe层的Completion不是同一个东西，他们处在不同层。在NVMe命令处理过程中，PCIe传输层基本只用Memory read/write TLP来为NVMe服务，其他TLP我们不用管。</p>
-<p>一图看懂NVMe命令处理流程</p>
-<p><img src="/images/34/1680654337786.png" alt="1680654337786"></p>
-<p><strong>首先，Host准备了一个Read命令给SSD</strong></p>
-<p><img src="/images/34/1680654364515.png" alt="1680654364515"></p>
-<p>基本意思就是，这是个读指令，Host需要从起始LBA 0x20E0448(SLBA)上读取128个DWORD (512字节)的数据，读到哪里去呢？PRP1给出内存地址是0x14ACCB000。这个命令放在编号为3的SQ里 (SQID = 3)，CQ编号也是3 (CQID = 3)。</p>
-<p><strong>第二步就是：Host通过写SQ的Tail DB，通知SSD来取命令</strong>。</p>
-<p><img src="/images/34/1680654756554.png" alt="1680654756554"></p>
-<p>上图中，上层是NVMe层，下层是PCIe的传输层，这一层我们看到的是TLP。Host想往SQ Tail DB中写入的值是5。PCIe是通过一个<strong>Memory Write TLP</strong>来实现Host写CQ的Tail DB的。</p>
-<p>一个Host，下面可能连接着若干个Endpoint，该SSD只是其中的一个Endpoint而已，那有个问题，Host怎么能准确更新该SSD Controller中的Tail DB寄存器呢？怎么寻址？其实，在上电的过程中，每个Endpoint的内部空间都会通过内存映射(memory map)的方式映射到Host的内存中，SSD Controller当中的寄存器会被映射到Host的内存，当然也包括 Tail DB寄存器。Host在用Memory Write写的时候，Address只需设置该寄存器在Host内存中映射的地址，就能准确写入到该寄存器。以上图为例，该Tail DB寄存器应该映射在Host内存地址F7C11018，所以Host写DB，只需指定这个物理地址，就能准确无误的写入到对应的寄存器中去。应该注意的是：<strong>Host并不是往自己内存的那个物理地址写入东西，而是用那个物理地址作为寻址用</strong>，往SSD方向写。否则就太神奇了，往自己内存写东西就能改变SSD中的寄存器值，那不是量子效应吗？我们的东西还没有那么玄乎。</p>
-<p><strong>第三步：SSD收到通知，去Host端的SQ中取指。</strong></p>
-<p><img src="/images/34/1680655490881.png" alt="1680655490881"></p>
-<p>PCIe是通过发一个<strong>Memory Read TLP</strong>到Host的SQ中取指的。可以看到，PCIe需要往Host内存中读取16个DWORD的数据。为什么是16 DWORD数据，因为每个NVMe命令的大小是64个字节。从上图中，我们可以推断SQ 3当前的Head指向的内存地址是0x101A41100？怎么推断来的？因为SSD总是从Host 的SQ的Head取指的，而上图中，Address就是0x101A41100，所以我们有此推断。</p>
-<p>在上图中，SSD往Host发送了一个Memory Read的请求，Host通过Completion的方式把命令数据返回给SSD。和前面的Memory Write不同，Memory Read中是不含数据，只是个请求，数据的传输需要对方发个Completion。像这种需要对方返回状态的TLP请求，我们叫它Non-Posted请求。怎么理解呢？Post，有”邮政”的意思，就像你寄信一样，你往邮箱中一扔，对方能不能收到，就看快递员的素养了，反正你是把信发出去了。像Memory Write这种，就是Posted请求，数据传给对方，至于对方有没有处理，我们不在乎；而像Memory Read这种请求，它就必须是Non-Posted了，因为如果对方不响应（不返回数据）给我，Memory Read就是失败的。所以，每个Memory read请求都有相应的Completion。</p>
-<p><strong>第四步：SSD执行读命令，把数据从闪存中读到缓存中，然后把数据传给Host。</strong></p>
-<p>数据从闪存中读到缓存中，这个是SSD内部的操作，跟PCIe和NVMe没有任何关系，因此，我们捕捉不到SSD的这个行为。我们在PCIe接口上，我们只能捕捉到SSD把数据传给Host的过程。</p>
-<p><img src="/images/34/1680655572199.png" alt="1680655572199"></p>
-<p>从上图中可以看出，SSD是通过<strong>Memory write TLP</strong> 把Host命令所需的128个DWORD数据写入到Host命令所要求的内存中去。SSD每次写入32个DWORD，一共写了4次。正如之前所说，我们没有看到Completion，合理。</p>
-<p><strong>第五步就是：SSD往Host的CQ中返回状态</strong></p>
-<p>SSD一旦把数据返回给Host，SSD认为命令以及处理完毕，</p>
-<p><img src="/images/34/1680655693047.png" alt="1680655693047"></p>
-<p>从上图中可以看出，SSD是通过<strong>Memory write TLP</strong> 把16个字节的命令完成状态信息写入到Host的CQ中。</p>
-<p><strong>第六步就是：SSD采用中断的方式告诉Host去处理CQ</strong></p>
-<p>SSD往Host的CQ中写入后</p>
-<p><img src="/images/34/1680656338713.png" alt="1680656338713"></p>
-<p>SSD中断Host，NVMe/PCIe有四种方式：Pin-based interrupt, single message MSI,multiple message MSI,和MSI-X。关于中断，具体的可以参看spec 第171页，有详细介绍，有兴趣的可以去看看。从上图中，这个例子中使用的是MSI-X中断方式。跟传统的中断不一样，它不是通过硬件引脚的方式，而是把中断信息和正常的数据信息一样，PCIe打包把中断信息告知Host。上图告诉我们，SSD还是通过<strong>Memory Write TLP</strong>把中断信息告知Host，这个中断信息长度是1DWORD。</p>
-<p>第七步就是：<strong>Host处理相应的CQ。</strong>Host收到中断后，Host处理相应的CQ。这步是在Host端内部发生的事情，在PCIe线上我们捕捉不到这个处理过程。</p>
-<p>最后一步，Host处理完相应的CQ后，<strong>需要更新SSD端的CQ Head DB,告知SSD CQ处理完毕。</strong></p>
-<p><img src="/images/34/1680656536788.png" alt="1680656536788"></p>
-<p>跟前面一样，Host还是通过<strong>Memory Write TLP</strong>更新SSD端的CQ Head DB。</p>
-<h2 id="5-NVMe中端到端数据保护功能"><a href="#5-NVMe中端到端数据保护功能" class="headerlink" title="5.NVMe中端到端数据保护功能"></a>5.NVMe中端到端数据保护功能</h2><p>来源：<a target="_blank" rel="noopener" href="http://www.ssdfans.com/?p=8148">蛋蛋读NVMe之五 (ssdfans.com)</a></p>
-<p>Host与SSD之间，数据传输的最小单元是逻辑块（Logical Block,LB），每个逻辑块大小可以是512/520/1024/2048/4096字节等，Host在格式化SSD的时候，逻辑块大小就确定了，以后两者就按这个逻辑块大小进行数据交互。</p>
-<p>数据从Host到NVM（Non-Volatile Memory，目前一般是闪存，后面我就用闪存来代表NVM），首先要经过PCIe传输到SSD的Controller，然后Controller把数据写入到闪存；反过来，Host想从闪存上读取数据，首先SSD Controller从闪存上获得数据，然后经过PCIe把数据传送给Host。</p>
-<p><img src="/images/34/1680657295119.png" alt="1680657295119"></p>
-<p>Host与SSD之间，数据在PCIe上传输的时候，由于信道噪声的存在（说白了就是存在干扰），可能导致数据出错；另外，在SSD内部，Controller与闪存之间，数据也可能发生错误。路途凶险。为确保Host与闪存之间数据的完整性，即Host写入到闪存的数据与最初Host写的数据一致，以及Host读到的数据与最初从闪存上读上来的数据一致，NVMe提供了一个端到端数据保护功能。</p>
-<p>除了逻辑块数据本身，NVMe还允许每个逻辑块带个助理，叫做元数据（Meta Data）。这个助理的职责，NVMe虽然没有明确的要求，但如果数据需要保护，NVMe要求这个助理必须能充当保镖的角色。</p>
-<p>元数据有两种存在方式，一种是作为逻辑块数据的扩展，和逻辑块数据放一起存放，这是贴身保镖：</p>
-<p><img src="/images/34/1680657794179.png" alt="1680657794179"></p>
-<p>另外一种方式就是逻辑块数据放在一起，元数据单独放在别处。虽不是贴身保护，但保镖在附近时刻注意着主人的安全，属非贴身保镖：</p>
-<p><img src="/images/34/1680658047226.png" alt="1680658047226"></p>
-<p>贴身保护与否，我们不关心形式，我们只关心元数据是如何保护逻辑块数据的。NVMe要求每个逻辑块数据的保镖配备下面这把武器:</p>
-<p><img src="/images/34/1680659045782.png" alt="1680659045782"></p>
-<p>其中的”Guard”是16比特的CRC （Cyclic Redundancy Check），它是逻辑块数据算出来的；”Application Tag”和”Reference Tag”包含该数据块的逻辑地址（LBA）等信息。CRC校验能够检测出数据是否有错，后者则是保证数据不会出现张冠李戴的问题。</p>
-<p>佩了保镖的数据看起来就是下面这个样子（以512字节的数据块为例）：</p>
-<p><img src="/images/34/1680659118271.png" alt="1680659118271"></p>
-<p>在Host与SSD数据传输过程中，NVMe可以让每个逻辑块数据都带上保镖，也可以让他们不带保镖，也可以在某个治安差的地方把保镖带上，然后在治安环境好的地方不用保镖。</p>
-<p><strong>Host往SSD写入数据，不带保镖的情况：</strong></p>
-<p><img src="/images/34/1680659147592.png" alt="1680659147592"></p>
-<p>如果是无关紧要的数据，完全没有必要进行端到端的保护，毕竟数据保护需要传输额外的数据 （每个逻辑数据块需要至少额外8字节的数据保护信息，有效带宽减少），还需要SSD做额外的数据完整性校验（耗时，性能变差），最关键的是PCIe通道上，其数据天然就能受到保护。</p>
-<p>对每个TLP来说，其中有个Digest域，就是对HDR和Data进行数据保护的，本质就是CRC。这个Digest是可选的。如果使能了Digest，数据在PCIe上传输是毫无风险的，因为有便衣警察保护，在NVMe层完全没有必要进行额外的数据保护。</p>
-<p>当然，它不能发现数据张冠李戴的问题。</p>
-<p><strong>Host往SSD写入数据，全程带上保镖的情况</strong>：</p>
-<p><img src="/images/34/1680659340015.png" alt="1680659340015"></p>
-<p>红色<strong>PI</strong>，Protection Information。</p>
-<p>Host数据通过PCIe传输到SSD Controller之间，按理来说数据已经受到PCIe的保护，但PCIe保镖也有可能不在情况，那就是TLP中Digest域可能不存在，这是PCIe允许的。这个时候，如果要保证在PCIe上数据传输的可靠性，就需要NVMe自带保镖。数据到达SSD Controller时，SSD Controller会重新计算逻辑块数据的CRC，与保镖的CRC比较，如果两者匹配，说明数据传输是没有问题的；否则，数据就是有问题的，这个时候，SSD Controller就会给Host报错。</p>
-<p>除了CRC校验，还要检测有没有张冠李戴的问题，通过检测Reference Tag 和Application Tag，看看这个没有CRC问题的数据是不是该笔Host写命令对应的数据，如果不匹配，同样需要向Host报错。</p>
-<p>如果数据检测没有问题，SSD Controller会把逻辑块数据和PI一同写入闪存中。这个PI一同写入到闪存中有什么意义呢？在读的时候有意义。</p>
-<p><img src="/images/34/1680659978487.png" alt="1680659978487"></p>
-<p>SSD Controller读闪存的时候，会对读上来的数据进行CRC校验，如果写入的时候带有PI，这个时候就能检测出读上来的数据是否正确，从而决定这个数据要不要传给Host。有人要说，对闪存来说，数据不是受ECC保护吗？为什么还要额外进行数据校验？没错，写入到闪存中的数据是受ECC保护，这个没有问题，但在SSD内部，数据从Controller到闪存之间，一般都要经过DRAM或者SRAM，在之前SSD Controller写入到闪存，或者这个时候从闪存读数据到SSD Controller，可能就会发生比特翻转之类的小概率事件，从而导致数据不正确。如果在NVMe层再做个CRC保护，这类数据错误就能被发现了。</p>
-<p>除了数据在SSD内发生反转，由于固件问题，或者别的原因，还是会出现数据张冠李戴的问题：数据虽然没有CRC错误，但是它不是我们想要的数据。因此，还需要做Reference Tag和Application Tag检测。</p>
-<p>SSD Controller通过PCIe把数据传给Host，Host端也会对数据进行校验，看SSD返回过来的数据是否有错。</p>
-<p><strong>Host往SSD写入数据，半程带保镖的情况</strong>：</p>
-<p><img src="/images/34/1680660184516.png" alt="1680660184516"></p>
-<p>这种情况，Host与Controller端之间是没有数据保护，因为PCIe已经能提供数据完整性保证了（TLP中的Digest使能）。但在SSD内部，Controller到闪存之间，由于乱七八糟的原因（数据反转，LBA数据不匹配），存在数据错误的可能，NVMe要求SSD Controller在把数据写入到闪存前，计算好数据的PI，然后把数据和PI一同写入到闪存。</p>
-<p>SSD Controller读闪存的时候，会对读上来的数据进行PI校验，如果没有问题，剥除PI，然后把逻辑块数据返回给Host；如果校验失败，说明数据存在问题，SSD需要向Host报错。如下图所示：</p>
-<p><img src="/images/34/1680660680739.png" alt="1680660680739"></p>
-<p>数据端到端保护是NVMe的一个特色，其本质就是在数据块当中加入CRC和数据块对应的LBA等冗余信息，SSD Controller或者Host端利用这个这些信息进行数据校验，然后根据校验结果执行相应的操作。加入这些检错信息的好处是能让Host与SSD Controller及时发现数据错误，副作用就是：</p>
-<ol>
-<li>每个数据块需要额外的至少8字节的数据保护信息，有效带宽减少：数据块大小越小，带宽影响越大。</li>
-<li>SSD Controller需要做数据校验，影响性能。</li>
-</ol>
-<h1 id="6-NVMe的命名空间"><a href="#6-NVMe的命名空间" class="headerlink" title="6.NVMe的命名空间"></a>6.NVMe的命名空间</h1><p>来源：<a target="_blank" rel="noopener" href="http://www.ssdfans.com/?p=8157">蛋蛋读NVMe之六 (ssdfans.com)</a></p>
-<p><img src="/images/34/1680661034564.png" alt="1680661034564"></p>
-<p>上图中红圈圈起来的是一个NVMe子系统，通常来说就是SSD。一个NVMe SSD主要由<strong>SSD Controller</strong>，<strong>闪存空间</strong>和<strong>PCIe接口</strong>组成。如果把闪存空间划分成若干个独立的逻辑空间，每个空间逻辑块地址（LBA）范围是0到N-1 (N是逻辑空间大小)，这样划分出来的每一个逻辑空间我们就叫做NS。对SATA SSD来说，一个闪存空间只对应着一个逻辑空间，与之不同的是，NVMe SSD可以是一个闪存空间对应多个逻辑空间。</p>
-<p>每个NS都有一个名称与ID，如同每个人都有名字和身份证号码，ID是独一无二的，系统就是通过 NS的ID来区分不同的NS。</p>
-<p><img src="/images/34/1680661191271.png" alt="1680661191271"></p>
-<p>如上图例子，整个闪存空间划分成2个NS，名字分别是NS A和NS B，对应的NS ID分别是1和2。如果NS A大小是M （以逻辑块大小为单位），NS B大小是N，则他们的逻辑地址空间分别是0到M-1和0到N-1。Host读写SSD，都是要在命令中指定读写的是哪个NS中的逻辑块。原因很简单，如果不指定NS，对同一个LBA来说，假设就是LBA 0，SSD根本就不知道去读或者写哪里，因为有两个逻辑空间，每个逻辑空间都有LBA 0。</p>
-<p>一个NVMe命令一共64字节，其中第4到第7个Byte指定了要访问的NS。</p>
-<p><img src="/images/34/1680661290794.png" alt="1680661290794"></p>
-<p>对每个NS来说，都有一个4KB大小的数据结构来描述它</p>
-<p><img src="/images/34/1680663023189.png" alt="1680663023189"></p>
-<p>该数据结构描述了该NS的大小，整个空间已经写了多少，每个LBA的大小，以及端到端数据保护相关设置，该NS是否属于某个Controller还是几个Controller可以共享，等等。</p>
-<p>NS由Host创建和管理，每个创建好的NS，从Host操作系统角度看来，就是一个独立的磁盘，用户可在每个NS做分区等操作。</p>
-<p><img src="/images/34/1680663042816.png" alt="1680663042816"></p>
-<p>上例中，整个闪存空间划分成两个NS，NS A和NS B，操作系统看到两个完全独立的磁盘。我的天呀，太神奇了，我买一个SSD，居然得到两个磁盘，赚大发了。</p>
-<p>每个NS是独立的，逻辑块大小可以不同，端到端数据保护配置也可以不同：你可以让一个NS使用保镖，另一个NS不使用保镖，再一个NS半程使用保镖（见《<a target="_blank" rel="noopener" href="http://www.ssdfans.com/?p=1282">蛋蛋读NVMe之五</a>》）。</p>
-<p>其实，NS更多的是应用在企业级，可以根据客户不同需求创建不同特征的NS，也就是在一个SSD上创建出若干个不同功能特征的磁盘（NS）供不同客户使用。</p>
-<p>NS的另外一个重要使用场合是：SR-IOV。</p>
-<p>什么是SR-IOV？ 英文全称为 Single Root- I/O Virtualization，SR-IOV技术允许在虚拟机之间高效共享PCIe设备，并且它是在硬件中实现的，可以获得能够与本机性能媲美的I/O 性能。单个I/O 资源（单个SSD）可由许多虚拟机共享。共享的设备将提供专用的资源，并且还使用共享的通用资源。这样，每个虚拟机都可访问唯一的资源。</p>
-<p><img src="/images/34/1680663067817.png" alt="1680663067817"></p>
-<p>如上图所示，该SSD作为PCIe的一个Endpoint，实现了一个物理功能 (Physical Function ,PF)，有4个虚拟功能（Virtual Function，VF）关联该PF。每个VF，都有自己独享的NS，还有公共的NS （NS E)。此功能使得虚拟功能可以共享物理设备，并在没有 CPU 和虚拟机管理程序软件开销的情况下执行 I/O。关于SR-IOV更多知识，请自行百度或者谷歌。这里我们只需知道NVMe中的NS有用武之地就可以。</p>
-<p>对一个NVMe子系统来说，除了包含若干个NS，还可以由若干个 SSD Controller。注意，这里不是说一个SSD Controller有多个CPU，而是说一个SSD有几个实现了NVMe功能的Controller。</p>
-<p><img src="/images/34/1680663088125.png" alt="1680663088125"></p>
-<p>如上图例子，一个NVMe子系统包含了两个Controller，分别实现不同功能（也可以是相同功能）。整个闪存空间分成3个NS，其中NS A由Controller 0（左边）独享，NS C由Controller 1（右边）独享，而NS B是两者共享。独享的意思是说只有与之关联的Controller才能访问该NS，别的Controller是不能对之访问的，上图中Controller 0是不能对NS C进行读写操作的，同样，Controller 1也不能访问 NS A；共享的意思是说，该NS（这里是NS B）是可以被两个Controller共同 访问的。对共享NS，由于几个Controller都可以对它进行访问，所以要求每个Controller对该NS的访问都是原子操作，从而避免同步问题。</p>
-<p>事实上，一个NVMe子系统，除了可以有若干个NS，除了可以有若干个Controller，还可以有若干个PCIe接口。</p>
-<p><img src="/images/34/1680663130886.png" alt="1680663130886"></p>
-<p>与前面的架构不一样，上图的架构是每一个Controller有自己的PCIe接口，而不是两者共享一个。Dual Port，哈哈，在SATA SSD上没有见过吧。这两个接口，往上有可能连着同一个主机，也可能连着不同的主机。现在能提供 Dual PCIe Port的SSD 接口只有SFF-8639 ，也叫U.2，它支持标准的NVMe协议和Dual-Port，号称SSD接口明日之星。</p>
-<p><img src="/images/34/1680680846539.png" alt="1680680846539"></p>
-<p>下图是两个PCIe接口连着一个主机的情况：</p>
-<p><img src="/images/34/1680681617859.png" alt="1680681617859"></p>
-<p>为什么要这么玩？</p>
-<p>我认为，一方面，Host访问SSD，可以双管齐下，性能可能更好点。不过对访问NS B来说，同一时刻只能被一个Controller访问，双管齐下又如何。考虑到还可以同时操作NS A 和 NS C，性能或多或少的有所提升。</p>
-<p>我觉得，更重要的是，这种双接口冗余设计，可以提升系统可靠性。假设 PCIe A接口出现问题，这个时候Host可以通过 PCIe B无缝衔接，继续对NS B进行访问。当然了，NS A是无法访问了。</p>
-<p>如果Host突然死机怎么办？据小道消息，阿法狗输给李世石那盘，就是阿法狗死机了，然后重启再战，结果超时认输。哈哈，开个玩笑。在一些很苛刻的场景下，是不允许Host宕机的。但是，是电脑总有死机的时候，怎么办？最直接有效的办法还是采用冗余容错策略：SSD有两个Controller，有两个PCIe接口，那么我主机也弄个双主机：一个主机挂了，另一个主机接管任务，继续执行，你就慢慢重启吧。</p>
-<p><img src="/images/34/1680681697873.png" alt="1680681697873"></p>
-<p>蛋蛋似乎就更新了六部分。</p>
-
-          
+          <h1 id><a href="#" class="headerlink" title=" "></a> </h1><p>感觉不了解一下NVMe，Femu的代码阅读起来还想确实有点困难。使用FEMU模拟NVMe设备，是需要了解这个协议的。完全参考蛋蛋读NVMe,讲的十分清晰。</p>
+<h2 id="1-host-如何使用-NVMe协议与SSD通信"><a href="#1-host-如何使用-NVMe协议与SSD通信" class="headerlink" title="1.host 如何使用 NVMe协议与SSD通信"></a>1.host 如何使用 NVMe协议与SSD通信</h2><p>来源：<a target="_blank" rel="noopener" href="https://www.ssdfans.com/?p=8137">蛋蛋读NVMe之一 (ssdfans.com)</a><br></p>
+          <!--noindex-->
+          <div class="post-button text-center">
+            <a class="btn" href="/2023/04/05/34-%E4%BA%86%E8%A7%A3NVMe/#more" rel="contents">
+              阅读全文 &raquo;
+            </a>
+          </div>
+          <!--/noindex-->
         
       
     </div>
@@ -1234,18 +1008,16 @@
 
       
         
-          
-            <p>FEMU是弗吉尼亚理工学院的<strong>Huaicheng LI</strong>教授团队开发的一款SSD模拟器。基于QEMU，所以模拟出来的SSD设备可以被qemu使用。FEMU可用于模拟多种SSD，个人研究更关注ZNS SSD ，所以找到了相关部分的代码。</p>
+          <p>FEMU是弗吉尼亚理工学院的<strong>Huaicheng LI</strong>教授团队开发的一款SSD模拟器。基于QEMU，所以模拟出来的SSD设备可以被qemu使用。FEMU可用于模拟多种SSD，个人研究更关注ZNS SSD ，所以找到了相关部分的代码。</p>
 <p>代码路径：FEMU/hw/femu/zns</p>
-<p>该路径中有两个文件：</p>
-<p><img src="/images/33/1680349189919.png" alt="1680349189919"></p>
-<h2 id="0-需要明确的一些概念"><a href="#0-需要明确的一些概念" class="headerlink" title="0.需要明确的一些概念"></a>0.需要明确的一些概念</h2><ul>
-<li><strong>Namespace</strong>是NVMe SSD中的一个概念，它是将闪存空间划分成若干个独立的逻辑空间，每个空间逻辑块的地址范围为0到N-1（N是逻辑空间大小），这样划分的每个逻辑空间叫做Namespace。每个Namespace都有一个名称和ID，系统是通过NS的ID来区分不同的NS。</li>
-<li><strong>Zone</strong>，NVMe Zoned Namespaces是NVMe规范中的一套新命令集，该命令集暴露了一套接口（zoned block storage interface）给主机，该接口将其容量划分为多个Zone，在每个Zone内允许随机读，但只允许顺序写。每个Zone都有一段LBA (Logical Block Address, 逻辑地址空间)区间，这段区间只能顺序写，而且如果要覆盖写，则必须显示的进行一次擦除操作。在这套命令集中，NS由zone组成。似乎官方文档中并没有明确的说明同一NS中的zone大小必须一致。</li>
-</ul>
-<h2 id="1-头文件zns-h"><a href="#1-头文件zns-h" class="headerlink" title="1. 头文件zns.h"></a>1. 头文件zns.h</h2><p>该文件包含了许多与NVMe Zoned 命名空间的相关定义和结构。其中有很多结构的名称全面都加了一个宏<code>QEMU_PACKED</code>。该宏定义用于指定结构体的对齐方式。在使用QEMU时可以使用这个宏来指定结构体的对齐方式。</p>
-<h2 id="2-源文件zns-c"><a href="#2-源文件zns-c" class="headerlink" title="2. 源文件zns.c"></a>2. 源文件zns.c</h2>
-          
+<p>该路径中有两个文件：<br></p>
+          <!--noindex-->
+          <div class="post-button text-center">
+            <a class="btn" href="/2023/04/01/33-FEMU%E6%BA%90%E7%A0%81%E9%98%85%E8%AF%BB%E2%80%94%E2%80%94ZNS%EF%BC%881%EF%BC%89/#more" rel="contents">
+              阅读全文 &raquo;
+            </a>
+          </div>
+          <!--/noindex-->
         
       
     </div>
@@ -1390,30 +1162,16 @@
 
       
         
-          
-            <h2 id="1-什么是云存储"><a href="#1-什么是云存储" class="headerlink" title="1.什么是云存储"></a>1.什么是云存储</h2><p>云存储的出现为数据存储提供了一条更加便捷的道路。于使用者而言，他们可以通过互联网技术，无视时间、地方和装置的限制，连接到“云”上方便地存取数据，从而满足用户渴望利用IT资源即时按需访问业务的需求。</p>
+          <h2 id="1-什么是云存储"><a href="#1-什么是云存储" class="headerlink" title="1.什么是云存储"></a>1.什么是云存储</h2><p>云存储的出现为数据存储提供了一条更加便捷的道路。于使用者而言，他们可以通过互联网技术，无视时间、地方和装置的限制，连接到“云”上方便地存取数据，从而满足用户渴望利用IT资源即时按需访问业务的需求。</p>
 <p><img src="/images/32/1680266317937.png" alt="1680266317937"></p>
-<p>简单来讲，个人感觉只要，存储服务是远端存储设备提供的，就都可以称作是云存储。 用户无需考虑存储节点如何部署，也无需考虑背后的数据如何在存储设备中进行组织。因为这些都是云存储服务的提供商需要去考虑的事情。用户只需要享受云提供的存储服务即可。</p>
-<h2 id="2-云存储架构"><a href="#2-云存储架构" class="headerlink" title="2.云存储架构"></a>2.云存储架构</h2><p>云存储的架构这里指的是云存储设备的部署方式，分为传统的集中式存储与目前云存储主流的分布式系统。</p>
-<p><img src="/images/32/1680335522811.png" alt="1680335522811"></p>
-<h3 id="2-1-集中式存储"><a href="#2-1-集中式存储" class="headerlink" title="2.1 集中式存储"></a>2.1 集中式存储</h3><p>存储介质集中分布，采用双控或者多控的方式统一管理所有节点，控制器通常使用专业线缆或者网络为一台或多台服务器提供存储服务，需不断升级或更换存储设备来满足容量和性能的需求，数据可靠性与可用性依赖单个或少数存储设备。</p>
-<h3 id="2-2-分布式存储"><a href="#2-2-分布式存储" class="headerlink" title="2.2 分布式存储"></a>2.2 分布式存储</h3><p>存储介质分布到不同的地理位置，节点之间相互关联共同管理维护数据，通常使用标准的网络协议和接口，可为更多的服务器或互联网主机访问。通过增加存储节点提高容量和性能。数据可靠性和可用性依赖不同节点多副本备份与故障恢复机制，故障容忍性更强。</p>
-<h3 id="2-3-归纳总结"><a href="#2-3-归纳总结" class="headerlink" title="2.3 归纳总结"></a>2.3 归纳总结</h3><p>从这个表格中我们也可以看出分布式存储的优势，也就是为什么云存储现在更多的使用分布式存储的原因。</p>
-<p><img src="/images/32/1680335677836.png" alt="1680335677836"></p>
-<h2 id="3-云存储的服务类型"><a href="#3-云存储的服务类型" class="headerlink" title="3.云存储的服务类型"></a>3.云存储的服务类型</h2><p>云存储服务类型是从云存储给外界提供的服务形式上划分，主要分为三大类，块存储，文件存储与对象存储。</p>
-<h3 id="3-1块存储"><a href="#3-1块存储" class="headerlink" title="3.1块存储"></a>3.1块存储</h3><p><strong>块存储</strong>是较为底层的存储服务<strong>。</strong>将裸磁盘空间映射给主机使用，用户需要对磁盘进行分区和格式化，然后才能读写数据，类似物理硬盘。它的特点是可以提供高速的随机读写能力，适合IO密集型的高性能、低延迟的业务场景，如数据库、虚拟机等。但是扩展能力有限，不利于数据共享，且需要专业的线缆和网络设备支持。</p>
-<p><img src="/images/32/1680336179252.png" alt="1680336179252"></p>
-<h3 id="3-2文件存储"><a href="#3-2文件存储" class="headerlink" title="3.2文件存储"></a>3.2文件存储</h3><p><strong>文件存储</strong>是在文件系统一层对外提供服务，主机可以直接访问文件系统中的文件和目录，无需进行分区和格式化。文件存储服务支持多个主机同时访问同一个文件系统。相当于在块存储的基础上格式化了一个文件系统给用户去使用，这样大家都是用同一套文件系统。而不是提供一块裸空间，大家根据自己的需求去分区格式化自己的系统。所以文件系统的显著的特点就是方便实现数据共享和协作，只需通过网络对外提供访问文件系统的接口即可。但是读写速度受限于网络带宽和文件系统的处理速度，不适用于海量数据的存储和传输。</p>
-<p><img src="/images/32/1680336652684.png" alt="1680336652684"></p>
-<h3 id="3-3对象存储"><a href="#3-3对象存储" class="headerlink" title="3.3对象存储"></a>3.3对象存储</h3><p><strong>对象存储</strong>将数据以对象的形式存储在一个扁平的地址空间中，每个对象包含了数据和元数据。访问者可以通过对象标识来获取或修改对象。它的特点具有高可扩展性和高可靠性，可以支持海量数据的存储和传输，而且不受文件系统的限制。适合用于存储海量的非结构化数据，但是不支持文件的随机读写和在线修改。比如视频网站的视频，购物网站的商品图片都是使用对象存储。对象存储的访问过程大家也都比较熟悉，通用的以太网+http协议访问。</p>
-<p><img src="/images/32/1680337053266.png" alt="1680337053266"></p>
-<h3 id="3-4总结比较"><a href="#3-4总结比较" class="headerlink" title="3.4总结比较"></a>3.4总结比较</h3><p><img src="/images/32/1680337135081.png" alt="1680337135081"></p>
-<p>所以说三种服务类型并没有绝对的谁好谁坏 ，不管是商业的 还是开源的云存储系统，基本都会提供这三种用户可以应该针对不同的应用场景。</p>
-<p>学习来源：</p>
-<p><a target="_blank" rel="noopener" href="https://www.bilibili.com/video/BV1WE41177Kp/?spm_id_from=333.788.recommend_more_video.1&amp;vd_source=981cea5abbe570eed16fd93ab75067d7">块、文件、对象存储概述_哔哩哔哩_bilibili</a></p>
-<p>b站：新爷话数据</p>
-
-          
+<p>简单来讲，个人感觉只要，存储服务是远端存储设备提供的，就都可以称作是云存储。 用户无需考虑存储节点如何部署，也无需考虑背后的数据如何在存储设备中进行组织。因为这些都是云存储服务的提供商需要去考虑的事情。用户只需要享受云提供的存储服务即可。<br></p>
+          <!--noindex-->
+          <div class="post-button text-center">
+            <a class="btn" href="/2023/04/01/32-%E4%BA%91%E5%AD%98%E5%82%A8%E6%9C%89%E5%85%B3%E7%9A%84%E4%B8%80%E4%BA%9B%E7%AE%80%E5%8D%95%E6%A6%82%E5%BF%B5/#more" rel="contents">
+              阅读全文 &raquo;
+            </a>
+          </div>
+          <!--/noindex-->
         
       
     </div>
@@ -1558,37 +1316,21 @@
 
       
         
-          
-            <h1 id><a href="#" class="headerlink" title=" "></a> </h1><h2 id="0-总线、协议、接口"><a href="#0-总线、协议、接口" class="headerlink" title="0.总线、协议、接口"></a>0.总线<strong>、</strong>协议<strong>、</strong>接口</h2><p>首先，要搞清楚<strong>总线</strong>、<strong>协议</strong>、<strong>接口</strong>这三者之间的关系。</p>
+          <h1 id><a href="#" class="headerlink" title=" "></a> </h1><h2 id="0-总线、协议、接口"><a href="#0-总线、协议、接口" class="headerlink" title="0.总线、协议、接口"></a>0.总线<strong>、</strong>协议<strong>、</strong>接口</h2><p>首先，要搞清楚<strong>总线</strong>、<strong>协议</strong>、<strong>接口</strong>这三者之间的关系。</p>
 <ul>
 <li><p><strong>总线</strong>（BUS）就是不同设备之间交互数据的通路，且有一定的承载能力限制(总线带宽)。</p>
 </li>
 <li><p><strong>协议</strong>就是两个设备之间通信的规矩。两个设备之间只有使用同样的协议才能够进行通信。和网络协议是一样的，也规定了编码方式表示方式之类的。比如我一秒钟之内的通电断电代表什么意思，想想摩斯电码类似的。但是计算机内部的通信协议肯定比较复杂而且很妙，高效的协议也需要顶尖设备支持。</p>
 </li>
 <li><p><strong>接口</strong></p>
-<p>所以总的来说协议就是，用某种形式，以某种规格利用某种物体把数据传输出去。那么硬盘与其他设备进行沟通，就需要【数据协议】【传输总线作为媒介】【某种物理接口接入】。</p>
-</li>
-</ul>
-<h2 id="1-常见的总写协议以及接口"><a href="#1-常见的总写协议以及接口" class="headerlink" title="1.常见的总写协议以及接口"></a>1.常见的总写协议以及接口</h2><ul>
-<li><p>常见的数据协议，协议【<strong>IDE</strong>】是早期硬盘协议已被淘汰，剩下三种，民用的【<strong>AHCI</strong>】【<strong>NVMe</strong>】与服务器常用的【<strong>SCSI</strong>】</p>
-</li>
-<li><p>传输总线有三种民用的【<strong>SATA</strong>】【<strong>PCIe</strong>】和服务器常用的【<strong>SAS</strong>】</p>
-</li>
-<li><p>现在有了总线和协议，还需要物理接口讲硬盘接入到总线之上。这里面的关系就直接截视频里的图了。</p>
-</li>
-</ul>
-<p><img src="/images/31/1679654702940.png" alt="1679654702940"></p>
-<p>三者均限制数据传输的快慢。相辅相成。</p>
-<p>这里只是做简单科普，与研究相关性不大。参考链接：</p>
-<p><a target="_blank" rel="noopener" href="https://www.bilibili.com/video/BV1Qv411t7ZL/?spm_id_from=333.337.search-card.all.click&amp;vd_source=981cea5abbe570eed16fd93ab75067d7">【硬件科普】硬盘的SATA M.2 NGFF NVME是什么意思，详解硬盘的总线协议与接口_哔哩哔哩_bilibili</a></p>
-<h2 id="2-NVMe协议与NVMe驱动。"><a href="#2-NVMe协议与NVMe驱动。" class="headerlink" title="2.NVMe协议与NVMe驱动。"></a>2.NVMe协议与NVMe驱动。</h2><p>NVMe设备就是支持NVMe协议的设备，通常指代的都是NVMe SSD，也就是使用PCIe接口和NVMe协议的固态硬盘。NVMe设备相比于传统的SATA或SAS设备，具有更高的速度、更低的延迟、更多的并行性和更好的可扩展性等优点 。</p>
-<p>NVMe协议和NVMe驱动是两个不同的概念，但是它们都是为了提高闪存类存储的性能而设计的<a target="_blank" rel="noopener" href="https://www.zhihu.com/question/48972075">1</a>。</p>
-<p>NVMe协议是一种通信协议，它定义了如何在PCIe接口上发送和接收NVMe命令和数据。NVMe协议利用PCIe的高带宽和多队列特性，实现了高效的数据传输和并行处理<a target="_blank" rel="noopener" href="https://zhuanlan.zhihu.com/p/260522647">2</a><a target="_blank" rel="noopener" href="https://zhuanlan.zhihu.com/p/363589126">3</a>。</p>
-<p>NVMe驱动是一种软件，它实现了NVMe协议的功能，让操作系统能够识别和管理NVMe设备。NVMe驱动比传统的SATA或SAS驱动更简单和轻量，因为它直接与系统CPU通信，减少了不必要的步骤和延迟<a target="_blank" rel="noopener" href="https://zhuanlan.zhihu.com/p/74239027">4</a> 。</p>
-<p>简单来说，NVMe协议是一种规范，NVMe驱动是一种实现。它们都是为了让闪存类存储发挥更好的性能而设计的。</p>
-<p>SO！ NVMe协议就是 SSD与系统通信的一个规则  ，NVMe驱动就是这套规则的一个实现，我们高存储的根本不需要管这个东西，好那不看了。</p>
-
-          
+<p>所以总的来说协议就是，用某种形式，以某种规格利用某种物体把数据传输出去。那么硬盘与其他设备进行沟通，就需要【数据协议】【传输总线作为媒介】【某种物理接口接入】。</p></li></ul>
+          <!--noindex-->
+          <div class="post-button text-center">
+            <a class="btn" href="/2023/03/24/31-%E6%80%BB%E7%BA%BF%E5%8D%8F%E8%AE%AE%E4%B8%8E%E6%8E%A5%E5%8F%A3%EF%BC%88%E4%B8%8E%E5%AD%98%E5%82%A8%E7%A0%94%E7%A9%B6%E7%9B%B8%E5%85%B3%E6%80%A7%E4%B8%8D%E5%A4%A7)/#more" rel="contents">
+              阅读全文 &raquo;
+            </a>
+          </div>
+          <!--/noindex-->
         
       
     </div>
@@ -1734,7 +1476,8 @@
       
         
           
-            <h1 id="Day-1："><a href="#Day-1：" class="headerlink" title="Day 1："></a>Day 1：</h1><ol>
+            <span id="more"></span>
+<h1 id="Day-1："><a href="#Day-1：" class="headerlink" title="Day 1："></a>Day 1：</h1><ol>
 <li><p>两个栈可以实现队列，一个队列就可实现一个栈。</p>
 <p>两个栈实现队列的时候，只有在出队列时 ，如果 “出栈”栈为空，需要有  入栈栈到出栈栈的转移操作。</p>
 <p>一个队列实现栈时，每次入栈都需要将队列进行“翻转”（重新全部入队列，最终将队尾移动到对头）。</p>
@@ -2037,14 +1780,16 @@
 
       
         
-          
-            <p>文章代码来源:<a target="_blank" rel="noopener" href="https://github.com/gaojingcome/WebServer">高并发Web服务器</a></p>
+          <p>文章代码来源:<a target="_blank" rel="noopener" href="https://github.com/gaojingcome/WebServer">高并发Web服务器</a></p>
 <p>简单介绍（后面去其他博客搜刮一下补充一波）</p>
-<p>非阻塞同步IO所要用到的一个功能。这个项目中对这部分功能进行了很好的封装。简单介绍一下Epoll的作用。当服务器的负责监听的文件描述符发生改动，表示有连接进来。Epoll会将新的文件描述符与其对应事件加入，后面调用自身的一些方法，去监听这些连接文件描述符，有数据变动说明有数据进来，就返回这些有数据的文件描述符的列表。那么主线程通过列表中的这些文件描述符就可以拿到数据，然后分发给各个线程。</p>
-<h2 id="API及其具体实现如下："><a href="#API及其具体实现如下：" class="headerlink" title="API及其具体实现如下："></a>API及其具体实现如下：</h2><figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//epoll.h</span></span><br><span class="line"><span class="meta">#<span class="keyword">ifndef</span> EPOLLER_H</span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> EPOLLER_H</span></span><br><span class="line"></span><br><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;sys/epoll.h&gt;</span> <span class="comment">//epoll_ctl()</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;fcntl.h&gt;</span>  <span class="comment">// fcntl()</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;unistd.h&gt;</span> <span class="comment">// close()</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;assert.h&gt;</span> <span class="comment">// close()</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;vector&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;errno.h&gt;</span></span></span><br><span class="line"></span><br><span class="line"><span class="keyword">class</span> <span class="title class_">Epoller</span> &#123;</span><br><span class="line"><span class="keyword">public</span>:</span><br><span class="line">    <span class="function"><span class="keyword">explicit</span> <span class="title">Epoller</span><span class="params">(<span class="type">int</span> maxEvent = <span class="number">1024</span>)</span></span>;          <span class="comment">//最大检测到的Epoll数量</span></span><br><span class="line"></span><br><span class="line">    ~<span class="built_in">Epoller</span>();</span><br><span class="line">    <span class="function"><span class="type">bool</span> <span class="title">AddFd</span><span class="params">(<span class="type">int</span> fd, <span class="type">uint32_t</span> events)</span></span>;             <span class="comment">//添加要检测的事件</span></span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="type">bool</span> <span class="title">ModFd</span><span class="params">(<span class="type">int</span> fd, <span class="type">uint32_t</span> events)</span></span>;            <span class="comment">//修改</span></span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="type">bool</span> <span class="title">DelFd</span><span class="params">(<span class="type">int</span> fd)</span></span>;                             <span class="comment">//删除</span></span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="type">int</span> <span class="title">Wait</span><span class="params">(<span class="type">int</span> timeoutMs = <span class="number">-1</span>)</span></span>;                   <span class="comment">//让内核去检测</span></span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="type">int</span> <span class="title">GetEventFd</span><span class="params">(<span class="type">size_t</span> i)</span> <span class="type">const</span></span>;                 <span class="comment">//获取</span></span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="type">uint32_t</span> <span class="title">GetEvents</span><span class="params">(<span class="type">size_t</span> i)</span> <span class="type">const</span></span>;</span><br><span class="line">        </span><br><span class="line"><span class="keyword">private</span>:</span><br><span class="line">    <span class="type">int</span> epollFd_;                                     <span class="comment">//通过这个东西可以操作某个Epoller对象</span></span><br><span class="line"></span><br><span class="line">    std::vector&lt;<span class="keyword">struct</span> epoll_event&gt; events_;          <span class="comment">//检测到的事件集合</span></span><br><span class="line">&#125;;</span><br><span class="line"></span><br><span class="line"><span class="meta">#<span class="keyword">endif</span> <span class="comment">//EPOLLER_H</span></span></span><br></pre></td></tr></table></figure>
-<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//epoll.cpp</span></span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&quot;epoller.h&quot;</span></span></span><br><span class="line"></span><br><span class="line"><span class="comment">//创建和释放</span></span><br><span class="line">Epoller::<span class="built_in">Epoller</span>(<span class="type">int</span> maxEvent):<span class="built_in">epollFd_</span>(<span class="built_in">epoll_create</span>(<span class="number">512</span>)), <span class="built_in">events_</span>(maxEvent)&#123;</span><br><span class="line">    <span class="built_in">assert</span>(epollFd_ &gt;= <span class="number">0</span> &amp;&amp; events_.<span class="built_in">size</span>() &gt; <span class="number">0</span>);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">Epoller::~<span class="built_in">Epoller</span>() &#123;</span><br><span class="line">    <span class="built_in">close</span>(epollFd_);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">//文件描述符与事件 </span></span><br><span class="line"><span class="function"><span class="type">bool</span> <span class="title">Epoller::AddFd</span><span class="params">(<span class="type">int</span> fd, <span class="type">uint32_t</span> events)</span> </span>&#123;</span><br><span class="line">    <span class="keyword">if</span>(fd &lt; <span class="number">0</span>) <span class="keyword">return</span> <span class="literal">false</span>;</span><br><span class="line">    epoll_event ev = &#123;<span class="number">0</span>&#125;;</span><br><span class="line">    ev.data.fd = fd;</span><br><span class="line">    ev.events = events;</span><br><span class="line">    <span class="keyword">return</span> <span class="number">0</span> == <span class="built_in">epoll_ctl</span>(epollFd_, EPOLL_CTL_ADD, fd, &amp;ev);</span><br><span class="line">&#125;</span><br><span class="line"><span class="comment">//修改</span></span><br><span class="line"><span class="function"><span class="type">bool</span> <span class="title">Epoller::ModFd</span><span class="params">(<span class="type">int</span> fd, <span class="type">uint32_t</span> events)</span> </span>&#123;</span><br><span class="line">    <span class="keyword">if</span>(fd &lt; <span class="number">0</span>) <span class="keyword">return</span> <span class="literal">false</span>;</span><br><span class="line">    epoll_event ev = &#123;<span class="number">0</span>&#125;;</span><br><span class="line">    ev.data.fd = fd;</span><br><span class="line">    ev.events = events;</span><br><span class="line">    <span class="keyword">return</span> <span class="number">0</span> == <span class="built_in">epoll_ctl</span>(epollFd_, EPOLL_CTL_MOD, fd, &amp;ev);</span><br><span class="line">&#125;</span><br><span class="line"><span class="comment">//删除</span></span><br><span class="line"><span class="function"><span class="type">bool</span> <span class="title">Epoller::DelFd</span><span class="params">(<span class="type">int</span> fd)</span> </span>&#123;</span><br><span class="line">    <span class="keyword">if</span>(fd &lt; <span class="number">0</span>) <span class="keyword">return</span> <span class="literal">false</span>;</span><br><span class="line">    epoll_event ev = &#123;<span class="number">0</span>&#125;;</span><br><span class="line">    <span class="keyword">return</span> <span class="number">0</span> == <span class="built_in">epoll_ctl</span>(epollFd_, EPOLL_CTL_DEL, fd, &amp;ev);</span><br><span class="line">&#125;</span><br><span class="line"><span class="comment">//</span></span><br><span class="line"><span class="function"><span class="type">int</span> <span class="title">Epoller::Wait</span><span class="params">(<span class="type">int</span> timeoutMs)</span> </span>&#123;</span><br><span class="line">    <span class="keyword">return</span> <span class="built_in">epoll_wait</span>(epollFd_, &amp;events_[<span class="number">0</span>], <span class="built_in">static_cast</span>&lt;<span class="type">int</span>&gt;(events_.<span class="built_in">size</span>()), timeoutMs);</span><br><span class="line">&#125;</span><br><span class="line"><span class="comment">//获取所有的 有数据的 文件描述符  但是是根据索引获取指定的fd</span></span><br><span class="line"><span class="function"><span class="type">int</span> <span class="title">Epoller::GetEventFd</span><span class="params">(<span class="type">size_t</span> i)</span> <span class="type">const</span> </span>&#123;</span><br><span class="line">    <span class="built_in">assert</span>(i &lt; events_.<span class="built_in">size</span>() &amp;&amp; i &gt;= <span class="number">0</span>);</span><br><span class="line">    <span class="keyword">return</span> events_[i].data.fd;</span><br><span class="line">&#125;</span><br><span class="line"><span class="comment">//只是简单获取Events;</span></span><br><span class="line"><span class="function"><span class="type">uint32_t</span> <span class="title">Epoller::GetEvents</span><span class="params">(<span class="type">size_t</span> i)</span> <span class="type">const</span> </span>&#123;</span><br><span class="line">    <span class="built_in">assert</span>(i &lt; events_.<span class="built_in">size</span>() &amp;&amp; i &gt;= <span class="number">0</span>);</span><br><span class="line">    <span class="keyword">return</span> events_[i].events;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-          
+<p>非阻塞同步IO所要用到的一个功能。这个项目中对这部分功能进行了很好的封装。简单介绍一下Epoll的作用。当服务器的负责监听的文件描述符发生改动，表示有连接进来。Epoll会将新的文件描述符与其对应事件加入，后面调用自身的一些方法，去监听这些连接文件描述符，有数据变动说明有数据进来，就返回这些有数据的文件描述符的列表。那么主线程通过列表中的这些文件描述符就可以拿到数据，然后分发给各个线程。<br></p>
+          <!--noindex-->
+          <div class="post-button text-center">
+            <a class="btn" href="/2022/11/15/8-C-%E5%AE%9E%E6%88%98%E2%80%94%E2%80%94Epoll%E5%8A%9F%E8%83%BD%E7%9A%84%E5%B0%81%E8%A3%85/#more" rel="contents">
+              阅读全文 &raquo;
+            </a>
+          </div>
+          <!--/noindex-->
         
       
     </div>
@@ -2189,35 +1934,17 @@
 
       
         
-          
-            <h1 id="C-实战——线程池设计"><a href="#C-实战——线程池设计" class="headerlink" title="C++实战——线程池设计"></a>C++实战——线程池设计</h1><p>文章代码来源:<a target="_blank" rel="noopener" href="https://github.com/gaojingcome/WebServer">高并发Web服务器</a></p>
+          <h1 id="C-实战——线程池设计"><a href="#C-实战——线程池设计" class="headerlink" title="C++实战——线程池设计"></a>C++实战——线程池设计</h1><p>文章代码来源:<a target="_blank" rel="noopener" href="https://github.com/gaojingcome/WebServer">高并发Web服务器</a></p>
 <ol>
 <li><p>首先,在线程池的私有部分 定义结构体 <code>Pool</code> 并且实例化一个共享智能指针.另外可以看到任务队列实际上，就是一个参数为返回值为<code>void</code> ,参数为空的函数的队列。</p>
-<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">struct</span> <span class="title class_">Pool</span> </span><br><span class="line">&#123;</span><br><span class="line">    std::mutex mtx;                            <span class="comment">//互斥锁</span></span><br><span class="line">    std::condition_variable cond;              <span class="comment">//条件变量</span></span><br><span class="line">    <span class="type">bool</span> isClosed;                             <span class="comment">//是否关闭</span></span><br><span class="line">    std::queue&lt;std::function&lt;<span class="type">void</span>()&gt;&gt; tasks;   <span class="comment">//任务队列 </span></span><br><span class="line">&#125;;</span><br><span class="line">std::shared_ptr&lt;Pool&gt; pool_; </span><br></pre></td></tr></table></figure>
-</li>
-</ol>
-<ol>
-<li><p>显式实例化构造函数定义,在这之前需要先看看 std::thread的构造方法，</p>
-<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//强制显式实例化   放置A a = 8  必须 A a = new A(8); </span></span><br><span class="line"><span class="function"><span class="keyword">explicit</span> <span class="title">ThreadPool</span><span class="params">(<span class="type">size_t</span> threadCount = <span class="number">8</span>)</span>: pool_(std::make_shared&lt;Pool&gt;()) &#123;</span></span><br><span class="line">    <span class="built_in">assert</span>(threadCount &gt; <span class="number">0</span>);</span><br><span class="line"></span><br><span class="line">    <span class="comment">//创建8个子线程</span></span><br><span class="line">    <span class="keyword">for</span>(<span class="type">size_t</span> i = <span class="number">0</span>; i &lt; threadCount; i++) &#123;</span><br><span class="line">        <span class="comment">//创建线程表示不需要父线程对线程进行资源的释放</span></span><br><span class="line">        std::<span class="built_in">thread</span>([pool = pool_] &#123; ... &#125;).<span class="built_in">detach</span>();</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-<p>上述thread方法的 <code>...</code>为线程的具体要执行的命令内容。<code>.detach（）</code>代表线程不需要父线程释放资源，该方法会自动释放资源。</p>
-<p>具体命令内容如下，可以看到通过互斥锁实现对 <code>pool-&gt;tasks</code>队列的互斥访问，：</p>
-<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line">std::<span class="built_in">thread</span>([pool = pool_] &#123;                       </span><br><span class="line">    std::unique_lock&lt;std::mutex&gt; <span class="built_in">locker</span>(pool-&gt;mtx);  <span class="comment">//设置一个锁</span></span><br><span class="line"></span><br><span class="line">    <span class="keyword">while</span>(<span class="literal">true</span>) &#123;</span><br><span class="line">        <span class="comment">//从任务队列中取任务</span></span><br><span class="line">        <span class="keyword">if</span>(!pool-&gt;tasks.<span class="built_in">empty</span>()) &#123;</span><br><span class="line">            <span class="keyword">auto</span> task = std::<span class="built_in">move</span>(pool-&gt;tasks.<span class="built_in">front</span>());</span><br><span class="line">            pool-&gt;tasks.<span class="built_in">pop</span>();</span><br><span class="line">            <span class="comment">//开关锁</span></span><br><span class="line">            locker.<span class="built_in">unlock</span>();</span><br><span class="line">            <span class="built_in">task</span>();                        <span class="comment">//具体任务指定的代码 functional库里边的东西</span></span><br><span class="line">            locker.<span class="built_in">lock</span>();</span><br><span class="line">        &#125; </span><br><span class="line">        <span class="keyword">else</span> <span class="keyword">if</span>(pool-&gt;isClosed) <span class="keyword">break</span>;</span><br><span class="line">        <span class="keyword">else</span> pool-&gt;cond.<span class="built_in">wait</span>(locker);             <span class="comment">//条件变量使之阻塞</span></span><br><span class="line">    &#125;</span><br><span class="line">&#125;).<span class="built_in">detach</span>();<span class="comment">//设置线程分离？表示不需要父线程对线程进行资源的释放</span></span><br></pre></td></tr></table></figure>
-<p>另外上述代码中，使用条件变量在任务队列为空时讲线程阻塞，可以防止他一直不断的循环浪费资源</p>
-<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">pool-&gt;cond.<span class="built_in">wait</span>(locker);</span><br></pre></td></tr></table></figure>
-<p>与之相应的，向任务队列中添加任务后，通过条件变量将一个线程唤醒：</p>
-<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">template</span>&lt;<span class="keyword">class</span> F&gt;</span></span><br><span class="line"><span class="function">    <span class="type">void</span> <span class="title">AddTask</span><span class="params">(F&amp;&amp; task)</span> </span>&#123;</span><br><span class="line">        &#123;</span><br><span class="line">        <span class="function">std::lock_guard&lt;std::mutex&gt; <span class="title">locker</span><span class="params">(pool_-&gt;mtx)</span></span>;</span><br><span class="line">        pool_-&gt;tasks.<span class="built_in">emplace</span>(std::forward&lt;F&gt;(task));</span><br><span class="line">        &#125;</span><br><span class="line">    pool_-&gt;cond.<span class="built_in">notify_one</span>();                       <span class="comment">//条件变量去唤醒一个线程</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-</li>
-<li><p>析构函数  联系上部分的线程内容，将<code>pool-&gt;isClosed</code>置为真,并且唤醒所有线程，才会让线程执行完推出并自动释放资源。</p>
-<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">~<span class="built_in">ThreadPool</span>() &#123;</span><br><span class="line">    <span class="keyword">if</span>(<span class="built_in">static_cast</span>&lt;<span class="type">bool</span>&gt;(pool_)) &#123;</span><br><span class="line">        &#123;</span><br><span class="line">            <span class="function">std::lock_guard&lt;std::mutex&gt; <span class="title">locker</span><span class="params">(pool_-&gt;mtx)</span></span>;</span><br><span class="line">            pool_-&gt;isClosed = <span class="literal">true</span>;</span><br><span class="line">        &#125;</span><br><span class="line">    	pool_-&gt;cond.<span class="built_in">notify_all</span>();</span><br><span class="line">	&#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-</li>
-</ol>
-<ol>
-<li><p>整体上来看是一个生产者消费者模型，完整代码如下：</p>
-<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/*</span></span><br><span class="line"><span class="comment"> * @Author       : mark</span></span><br><span class="line"><span class="comment"> * @Date         : 2020-06-15</span></span><br><span class="line"><span class="comment"> * @copyleft Apache 2.0</span></span><br><span class="line"><span class="comment"> */</span> </span><br><span class="line"></span><br><span class="line"><span class="meta">#<span class="keyword">ifndef</span> THREADPOOL_H</span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> THREADPOOL_H</span></span><br><span class="line"></span><br><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;mutex&gt;</span>  <span class="comment">//锁</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;condition_variable&gt;</span><span class="comment">//条件变量</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;queue&gt;</span> <span class="comment">//队列</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;thread&gt;</span> <span class="comment">//线程库   c++的库</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;functional&gt;</span> <span class="comment">//</span></span></span><br><span class="line"><span class="keyword">class</span> <span class="title class_">ThreadPool</span> &#123;</span><br><span class="line"><span class="keyword">private</span>:</span><br><span class="line">    <span class="comment">//定义pool结构体</span></span><br><span class="line">    <span class="keyword">struct</span> <span class="title class_">Pool</span> &#123;</span><br><span class="line">        std::mutex mtx;                            <span class="comment">//互斥锁</span></span><br><span class="line">        std::condition_variable cond;              <span class="comment">//条件变量</span></span><br><span class="line">        <span class="type">bool</span> isClosed;                             <span class="comment">//是否关闭</span></span><br><span class="line">        std::queue&lt;std::function&lt;<span class="type">void</span>()&gt;&gt; tasks;   <span class="comment">//任务队列</span></span><br><span class="line">    &#125;;</span><br><span class="line">    std::shared_ptr&lt;Pool&gt; pool_;                   <span class="comment">//实例化一个pool指针 而且是共享指针</span></span><br><span class="line"><span class="keyword">public</span>:</span><br><span class="line">    <span class="comment">//显式实例化</span></span><br><span class="line">    <span class="function"><span class="keyword">explicit</span> <span class="title">ThreadPool</span><span class="params">(<span class="type">size_t</span> threadCount = <span class="number">8</span>)</span>: pool_(std::make_shared&lt;Pool&gt;()) &#123;</span></span><br><span class="line">            <span class="built_in">assert</span>(threadCount &gt; <span class="number">0</span>);</span><br><span class="line"></span><br><span class="line">            <span class="comment">//创建8个子线程</span></span><br><span class="line">            <span class="keyword">for</span>(<span class="type">size_t</span> i = <span class="number">0</span>; i &lt; threadCount; i++) &#123;</span><br><span class="line">                std::<span class="built_in">thread</span>([pool = pool_] &#123;                       <span class="comment">//花括号内为线程的具体任务</span></span><br><span class="line">                    </span><br><span class="line">                    std::unique_lock&lt;std::mutex&gt; <span class="built_in">locker</span>(pool-&gt;mtx);  <span class="comment">//设置一个锁</span></span><br><span class="line"></span><br><span class="line">                    <span class="keyword">while</span>(<span class="literal">true</span>) &#123;</span><br><span class="line">                        <span class="comment">//从任务队列中取任务</span></span><br><span class="line">                        <span class="keyword">if</span>(!pool-&gt;tasks.<span class="built_in">empty</span>()) &#123;</span><br><span class="line">                            <span class="keyword">auto</span> task = std::<span class="built_in">move</span>(pool-&gt;tasks.<span class="built_in">front</span>());</span><br><span class="line">                            pool-&gt;tasks.<span class="built_in">pop</span>();</span><br><span class="line">                            locker.<span class="built_in">unlock</span>();</span><br><span class="line">                            <span class="built_in">task</span>();                               <span class="comment">//具体任务指定的代码 functional库里边的东西</span></span><br><span class="line">                            locker.<span class="built_in">lock</span>();</span><br><span class="line">                        &#125; </span><br><span class="line">                        <span class="keyword">else</span> <span class="keyword">if</span>(pool-&gt;isClosed) <span class="keyword">break</span>;</span><br><span class="line">                        <span class="keyword">else</span> pool-&gt;cond.<span class="built_in">wait</span>(locker);             <span class="comment">//条件变量使之阻塞</span></span><br><span class="line">                    &#125;</span><br><span class="line">                &#125;).<span class="built_in">detach</span>();<span class="comment">//设置线程分离？表示不需要父线程对线程进行资源的释放</span></span><br><span class="line">            &#125;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="built_in">ThreadPool</span>() = <span class="keyword">default</span>;  <span class="comment">//无参用默认</span></span><br><span class="line"></span><br><span class="line">    <span class="built_in">ThreadPool</span>(ThreadPool&amp;&amp;) = <span class="keyword">default</span>;  <span class="comment">//没定义用默认</span></span><br><span class="line">    </span><br><span class="line">    ~<span class="built_in">ThreadPool</span>() &#123;</span><br><span class="line">        <span class="keyword">if</span>(<span class="built_in">static_cast</span>&lt;<span class="type">bool</span>&gt;(pool_)) &#123;</span><br><span class="line">            &#123;</span><br><span class="line">                <span class="function">std::lock_guard&lt;std::mutex&gt; <span class="title">locker</span><span class="params">(pool_-&gt;mtx)</span></span>;</span><br><span class="line">                pool_-&gt;isClosed = <span class="literal">true</span>;</span><br><span class="line">            &#125;</span><br><span class="line">            pool_-&gt;cond.<span class="built_in">notify_all</span>();</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">template</span>&lt;<span class="keyword">class</span> F&gt;</span></span><br><span class="line"><span class="function">    <span class="type">void</span> <span class="title">AddTask</span><span class="params">(F&amp;&amp; task)</span> </span>&#123;</span><br><span class="line">        &#123;</span><br><span class="line">            <span class="function">std::lock_guard&lt;std::mutex&gt; <span class="title">locker</span><span class="params">(pool_-&gt;mtx)</span></span>;</span><br><span class="line">            pool_-&gt;tasks.<span class="built_in">emplace</span>(std::forward&lt;F&gt;(task));</span><br><span class="line">        &#125;</span><br><span class="line">        pool_-&gt;cond.<span class="built_in">notify_one</span>();                       <span class="comment">//条件变量去唤醒一个线程</span></span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">&#125;;</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="meta">#<span class="keyword">endif</span> <span class="comment">//THREADPOOL_H</span></span></span><br></pre></td></tr></table></figure>
-</li>
-</ol>
-
-          
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">struct</span> <span class="title class_">Pool</span> </span><br><span class="line">&#123;</span><br><span class="line">    std::mutex mtx;                            <span class="comment">//互斥锁</span></span><br><span class="line">    std::condition_variable cond;              <span class="comment">//条件变量</span></span><br><span class="line">    <span class="type">bool</span> isClosed;                             <span class="comment">//是否关闭</span></span><br><span class="line">    std::queue&lt;std::function&lt;<span class="type">void</span>()&gt;&gt; tasks;   <span class="comment">//任务队列 </span></span><br><span class="line">&#125;;</span><br><span class="line">std::shared_ptr&lt;Pool&gt; pool_; </span><br></pre></td></tr></table></figure></li></ol>
+          <!--noindex-->
+          <div class="post-button text-center">
+            <a class="btn" href="/2022/11/14/7.C-%E5%AE%9E%E6%88%98%E2%80%94%E2%80%94%E7%BA%BF%E7%A8%8B%E6%B1%A0%E8%AE%BE%E8%AE%A1/#more" rel="contents">
+              阅读全文 &raquo;
+            </a>
+          </div>
+          <!--/noindex-->
         
       
     </div>

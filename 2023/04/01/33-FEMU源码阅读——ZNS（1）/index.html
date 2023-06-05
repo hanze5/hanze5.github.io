@@ -79,16 +79,16 @@
 
 
 
-<meta name="description" content="FEMU是弗吉尼亚理工学院的Huaicheng LI教授团队开发的一款SSD模拟器。基于QEMU，所以模拟出来的SSD设备可以被qemu使用。FEMU可用于模拟多种SSD，个人研究更关注ZNS SSD ，所以找到了相关部分的代码。 代码路径：FEMU&#x2F;hw&#x2F;femu&#x2F;zns 该路径中有两个文件：  0.需要明确的一些概念 Namespace是NVMe SSD中的一个概念，它是将闪存空间划分成若干个">
+<meta name="description" content="FEMU是弗吉尼亚理工学院的Huaicheng LI教授团队开发的一款SSD模拟器。基于QEMU，所以模拟出来的SSD设备可以被qemu使用。FEMU可用于模拟多种SSD，个人研究更关注ZNS SSD ，所以找到了相关部分的代码。 代码路径：FEMU&#x2F;hw&#x2F;femu&#x2F;zns 该路径中有两个文件：">
 <meta property="og:type" content="article">
 <meta property="og:title" content="FEMU源码阅读——ZNS（1）">
 <meta property="og:url" content="http://hanze5.github.io/2023/04/01/33-FEMU%E6%BA%90%E7%A0%81%E9%98%85%E8%AF%BB%E2%80%94%E2%80%94ZNS%EF%BC%881%EF%BC%89/index.html">
 <meta property="og:site_name" content="也许不会有人进来吧">
-<meta property="og:description" content="FEMU是弗吉尼亚理工学院的Huaicheng LI教授团队开发的一款SSD模拟器。基于QEMU，所以模拟出来的SSD设备可以被qemu使用。FEMU可用于模拟多种SSD，个人研究更关注ZNS SSD ，所以找到了相关部分的代码。 代码路径：FEMU&#x2F;hw&#x2F;femu&#x2F;zns 该路径中有两个文件：  0.需要明确的一些概念 Namespace是NVMe SSD中的一个概念，它是将闪存空间划分成若干个">
+<meta property="og:description" content="FEMU是弗吉尼亚理工学院的Huaicheng LI教授团队开发的一款SSD模拟器。基于QEMU，所以模拟出来的SSD设备可以被qemu使用。FEMU可用于模拟多种SSD，个人研究更关注ZNS SSD ，所以找到了相关部分的代码。 代码路径：FEMU&#x2F;hw&#x2F;femu&#x2F;zns 该路径中有两个文件：">
 <meta property="og:locale">
 <meta property="og:image" content="http://hanze5.github.io/images/33/1680349189919.png">
 <meta property="article:published_time" content="2023-04-01T13:55:26.000Z">
-<meta property="article:modified_time" content="2023-06-05T07:44:33.779Z">
+<meta property="article:modified_time" content="2023-06-05T07:56:42.273Z">
 <meta property="article:author" content="Dawnlake">
 <meta property="article:tag" content="ZNS SSD">
 <meta name="twitter:card" content="summary">
@@ -346,14 +346,15 @@
       
         <p>FEMU是弗吉尼亚理工学院的<strong>Huaicheng LI</strong>教授团队开发的一款SSD模拟器。基于QEMU，所以模拟出来的SSD设备可以被qemu使用。FEMU可用于模拟多种SSD，个人研究更关注ZNS SSD ，所以找到了相关部分的代码。</p>
 <p>代码路径：FEMU/hw/femu/zns</p>
-<p>该路径中有两个文件：</p>
+<p>该路径中有两个文件：<br><span id="more"></span></p>
 <p><img src="/images/33/1680349189919.png" alt="1680349189919"></p>
 <h2 id="0-需要明确的一些概念"><a href="#0-需要明确的一些概念" class="headerlink" title="0.需要明确的一些概念"></a>0.需要明确的一些概念</h2><ul>
 <li><strong>Namespace</strong>是NVMe SSD中的一个概念，它是将闪存空间划分成若干个独立的逻辑空间，每个空间逻辑块的地址范围为0到N-1（N是逻辑空间大小），这样划分的每个逻辑空间叫做Namespace。每个Namespace都有一个名称和ID，系统是通过NS的ID来区分不同的NS。</li>
 <li><strong>Zone</strong>，NVMe Zoned Namespaces是NVMe规范中的一套新命令集，该命令集暴露了一套接口（zoned block storage interface）给主机，该接口将其容量划分为多个Zone，在每个Zone内允许随机读，但只允许顺序写。每个Zone都有一段LBA (Logical Block Address, 逻辑地址空间)区间，这段区间只能顺序写，而且如果要覆盖写，则必须显示的进行一次擦除操作。在这套命令集中，NS由zone组成。似乎官方文档中并没有明确的说明同一NS中的zone大小必须一致。</li>
 </ul>
 <h2 id="1-头文件zns-h"><a href="#1-头文件zns-h" class="headerlink" title="1. 头文件zns.h"></a>1. 头文件zns.h</h2><p>该文件包含了许多与NVMe Zoned 命名空间的相关定义和结构。其中有很多结构的名称全面都加了一个宏<code>QEMU_PACKED</code>。该宏定义用于指定结构体的对齐方式。在使用QEMU时可以使用这个宏来指定结构体的对齐方式。</p>
-<h2 id="2-源文件zns-c"><a href="#2-源文件zns-c" class="headerlink" title="2. 源文件zns.c"></a>2. 源文件zns.c</h2>
+<h2 id="2-源文件zns-c"><a href="#2-源文件zns-c" class="headerlink" title="2. 源文件zns.c"></a>2. 源文件zns.c</h2><p>未完待续。。。。。</p>
+
       
     </div>
     

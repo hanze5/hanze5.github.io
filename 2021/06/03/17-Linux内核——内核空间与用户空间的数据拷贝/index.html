@@ -92,7 +92,7 @@
 <meta property="og:image" content="http://hanze5.github.io/images/17/1678070706739.png">
 <meta property="og:image" content="http://hanze5.github.io/images/17/1678070706739.png">
 <meta property="article:published_time" content="2021-06-03T05:22:25.000Z">
-<meta property="article:modified_time" content="2023-06-05T07:45:41.127Z">
+<meta property="article:modified_time" content="2023-06-05T07:59:09.120Z">
 <meta property="article:author" content="Dawnlake">
 <meta property="article:tag" content="Linux内核">
 <meta name="twitter:card" content="summary">
@@ -352,7 +352,7 @@
 <h2 id="1-32位系统内核空间和用户空间的默认大小"><a href="#1-32位系统内核空间和用户空间的默认大小" class="headerlink" title="1.32位系统内核空间和用户空间的默认大小"></a>1.32位系统内核空间和用户空间的默认大小</h2><p><img src="/images/17/1678066147846.png" alt="1678066147846"></p>
 <p>内核空间运行在高地址空间，用户空间在低地址空间。之所以要做这样的划分。出于安全考量，内核需要更高的权限，已屏蔽用户区的不安全操作。从软件设计思想来开，内核代码偏重于系统管理；用户空间的代码偏重于业务逻辑代码的实现。  注意这只是逻辑地址，并不是物理地址。这中间有一个映射的过程。</p>
 <p>陷入内核态一般有三种情况：</p>
-<p>​    <strong>系统调用，定时器中断，外设中断</strong>  处理完中断再返回用户空间的应用程序</p>
+<p>​    <strong>系统调用，定时器中断，外设中断</strong>  处理完中断再返回用户空间的应用程序<br><span id="more"></span></p>
 <h2 id="2-x86段页式内存管理荷叶表映射机制"><a href="#2-x86段页式内存管理荷叶表映射机制" class="headerlink" title="2.x86段页式内存管理荷叶表映射机制"></a>2.x86段页式内存管理荷叶表映射机制</h2><p><a target="_blank" rel="noopener" href="https://www.bilibili.com/read/cv8129309?spm_id_from=333.999.0.0">linux内核页表映射机制：线性地址如何转为物理地址？ - 哔哩哔哩 (bilibili.com)</a></p>
 <p>两步走，逻辑地址转化成线性地址，再转化成物理地址。部分架构逻辑地址就是线性地址，基址+offset 找到线性地址空间，通过把基址设为0来实现。那么从线性地址转化成逻辑地址就是我们说的页表映射。。</p>
 <p><img src="/images/17/1678079204392.png" alt="1678079204392"></p>

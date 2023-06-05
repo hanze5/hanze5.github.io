@@ -79,18 +79,18 @@
 
 
 
-<meta name="description" content="GCC编译  安装GCC编译器 1sudo apt intsall build-essential  GCC工作流程预处理阶段会去掉注释，再把头文件内容拷贝到cpp文件中，再替换宏。可用下面这个语句。查看对cpp文件预处理过后的文件-E选项意味着 预处理指定文件而不进行编译。 1gcc -E test.c -o test.i &#96;&#96;&#96; 代表着 编译指定源文件但是不进行汇编。123&#96;&#96;&#96;shellgc">
+<meta name="description" content="GCC编译  安装GCC编译器 1sudo apt intsall build-essential">
 <meta property="og:type" content="article">
 <meta property="og:title" content="makefile是个啥">
 <meta property="og:url" content="http://hanze5.github.io/2022/10/01/4.makefile%E6%98%AF%E4%B8%AA%E5%95%A5/index.html">
 <meta property="og:site_name" content="也许不会有人进来吧">
-<meta property="og:description" content="GCC编译  安装GCC编译器 1sudo apt intsall build-essential  GCC工作流程预处理阶段会去掉注释，再把头文件内容拷贝到cpp文件中，再替换宏。可用下面这个语句。查看对cpp文件预处理过后的文件-E选项意味着 预处理指定文件而不进行编译。 1gcc -E test.c -o test.i &#96;&#96;&#96; 代表着 编译指定源文件但是不进行汇编。123&#96;&#96;&#96;shellgc">
+<meta property="og:description" content="GCC编译  安装GCC编译器 1sudo apt intsall build-essential">
 <meta property="og:locale">
 <meta property="og:image" content="http://hanze5.github.io/images/4/1677748615935.png">
 <meta property="og:image" content="http://hanze5.github.io/images/4/1677750491136.png">
 <meta property="og:image" content="http://hanze5.github.io/images/4/1677751001217.png">
 <meta property="article:published_time" content="2022-10-01T10:07:00.000Z">
-<meta property="article:modified_time" content="2023-06-05T07:46:22.622Z">
+<meta property="article:modified_time" content="2023-06-05T07:59:56.943Z">
 <meta property="article:author" content="Dawnlake">
 <meta property="article:tag" content="随便看看">
 <meta name="twitter:card" content="summary">
@@ -350,7 +350,7 @@
 <ol>
 <li><p>安装GCC编译器</p>
 <figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">sudo apt intsall build-essential</span><br></pre></td></tr></table></figure>
-</li>
+<span id="more"></span></li>
 <li><p>GCC工作流程<img src="/images/4/1677748615935.png" alt="1677748615935">预处理阶段会去掉注释，再把头文件内容拷贝到cpp文件中，再替换宏。可用下面这个语句。查看对cpp文件预处理过后的文件<code>-E</code>选项意味着 预处理指定文件而不进行编译。</p>
 <figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">gcc -E test.c -o test.i</span><br></pre></td></tr></table></figure>
 <figure class="highlight plaintext"><figcaption><span>``` 代表着 编译指定源文件但是不进行汇编。</span></figcaption><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"></span><br><span class="line">```shell</span><br><span class="line">gcc -S test.c -o test.S</span><br></pre></td></tr></table></figure>

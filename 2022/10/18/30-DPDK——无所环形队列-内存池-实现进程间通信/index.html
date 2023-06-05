@@ -87,7 +87,7 @@
 <meta property="og:description" content="0.概括首先通信原理十分简单，先概括一下 首先创建一个内存池，内存池中是一块一块内存，大小由我们指定。作为我们传递消息的单位。 1234struct rte_mempool *message_pool &#x3D; rte_mempool_create(_MSG_POOL, pool_size,                                    STR_TOKEN_SIZE, pool">
 <meta property="og:locale">
 <meta property="article:published_time" content="2022-10-18T12:35:11.000Z">
-<meta property="article:modified_time" content="2023-06-05T07:44:51.224Z">
+<meta property="article:modified_time" content="2023-06-05T07:57:35.909Z">
 <meta property="article:author" content="Dawnlake">
 <meta property="article:tag" content="DPDK">
 <meta name="twitter:card" content="summary">
@@ -345,6 +345,7 @@
         <h1 id><a href="#" class="headerlink" title=" "></a> </h1><h3 id="0-概括"><a href="#0-概括" class="headerlink" title="0.概括"></a>0.概括</h3><p>首先通信原理十分简单，先概括一下</p>
 <p>首先创建一个内存池，内存池中是一块一块内存，大小由我们指定。作为我们传递消息的单位。</p>
 <figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">rte_mempool</span> *<span class="title">message_pool</span> =</span> rte_mempool_create(_MSG_POOL, pool_size,</span><br><span class="line">                                    STR_TOKEN_SIZE, pool_cache, priv_data_sz,</span><br><span class="line">                                    <span class="literal">NULL</span>, <span class="literal">NULL</span>, <span class="literal">NULL</span>, <span class="literal">NULL</span>,</span><br><span class="line">                                    rte_socket_id(), flags);</span><br></pre></td></tr></table></figure>
+<span id="more"></span>
 <p>我们需要指定内存池的名称，大小，元素大小，其他的不太重要看看，就好。首先由一个进程创建好这个缓冲池之后，另一个缓冲池要查找到这个缓冲池。通过下面的方式，</p>
 <figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">rte_mempool</span> *<span class="title">message_pool</span> <span class="title">message_pool</span> =</span> rte_mempool_lookup(_MSG_POOL);</span><br></pre></td></tr></table></figure>
 <p>也就是使用共享内存的方式进行通信，但是固定了每条信息的大小。我愿称之为，结合了共享内存与消息队列。</p>

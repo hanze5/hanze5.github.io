@@ -91,7 +91,7 @@
 <meta property="og:image" content="http://hanze5.github.io/images/15/1678022494911.png">
 <meta property="og:image" content="http://hanze5.github.io/images/15/1678022546541.png">
 <meta property="article:published_time" content="2021-05-23T13:54:41.000Z">
-<meta property="article:modified_time" content="2023-06-05T07:45:50.956Z">
+<meta property="article:modified_time" content="2023-06-05T07:59:19.816Z">
 <meta property="article:author" content="Dawnlake">
 <meta property="article:tag" content="Linux内核">
 <meta name="twitter:card" content="summary">
@@ -352,6 +352,7 @@
 <li><p>首先，驱动文件与一般的c文件不同，他有着自己独有的入口函数与出口函数，通过一下方式定义：</p>
 <figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">module_init(hello_init); <span class="comment">//入口函数 </span></span><br><span class="line">module_exit(hello_exit); <span class="comment">//出口函数 </span></span><br><span class="line">MODULE_LICENSE(<span class="string">&quot;GPL&quot;</span>);   <span class="comment">//版权</span></span><br></pre></td></tr></table></figure>
 <p>入口函数会在插入驱动<code>insmod</code>时执行，出口函数会在<code>rmmod</code>时执行。</p>
+<span id="more"></span>
 </li>
 <li><p>接下来看看，入口函数，出口函数也就是驱动插入删除时要做的事情。</p>
 <p><strong>入口函数 hello_init 。</strong></p>

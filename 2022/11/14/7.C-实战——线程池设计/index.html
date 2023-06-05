@@ -87,7 +87,7 @@
 <meta property="og:description" content="C++实战——线程池设计文章代码来源:高并发Web服务器  首先,在线程池的私有部分 定义结构体 Pool 并且实例化一个共享智能指针.另外可以看到任务队列实际上，就是一个参数为返回值为void ,参数为空的函数的队列。 12345678struct Pool &amp;#123;    std::mutex mtx;                            &#x2F;&#x2F;互斥锁    std::co">
 <meta property="og:locale">
 <meta property="article:published_time" content="2022-11-14T11:23:10.000Z">
-<meta property="article:modified_time" content="2023-06-05T07:46:11.973Z">
+<meta property="article:modified_time" content="2023-06-05T07:59:47.742Z">
 <meta property="article:author" content="Dawnlake">
 <meta property="article:tag" content="C++实战">
 <meta name="twitter:card" content="summary">
@@ -346,6 +346,7 @@
 <ol>
 <li><p>首先,在线程池的私有部分 定义结构体 <code>Pool</code> 并且实例化一个共享智能指针.另外可以看到任务队列实际上，就是一个参数为返回值为<code>void</code> ,参数为空的函数的队列。</p>
 <figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">struct</span> <span class="title class_">Pool</span> </span><br><span class="line">&#123;</span><br><span class="line">    std::mutex mtx;                            <span class="comment">//互斥锁</span></span><br><span class="line">    std::condition_variable cond;              <span class="comment">//条件变量</span></span><br><span class="line">    <span class="type">bool</span> isClosed;                             <span class="comment">//是否关闭</span></span><br><span class="line">    std::queue&lt;std::function&lt;<span class="type">void</span>()&gt;&gt; tasks;   <span class="comment">//任务队列 </span></span><br><span class="line">&#125;;</span><br><span class="line">std::shared_ptr&lt;Pool&gt; pool_; </span><br></pre></td></tr></table></figure>
+<span id="more"></span>
 </li>
 </ol>
 <ol>
