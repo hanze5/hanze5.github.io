@@ -1475,9 +1475,7 @@
 
       
         
-          
-            <span id="more"></span>
-<h1 id="Day-1："><a href="#Day-1：" class="headerlink" title="Day 1："></a>Day 1：</h1><ol>
+          <h1 id="Day-1："><a href="#Day-1：" class="headerlink" title="Day 1："></a>Day 1：</h1><ol>
 <li><p>两个栈可以实现队列，一个队列就可实现一个栈。</p>
 <p>两个栈实现队列的时候，只有在出队列时 ，如果 “出栈”栈为空，需要有  入栈栈到出栈栈的转移操作。</p>
 <p>一个队列实现栈时，每次入栈都需要将队列进行“翻转”（重新全部入队列，最终将队尾移动到对头）。</p>
@@ -1492,150 +1490,14 @@
 </li>
 <li><p>由于链表经常要用前一个值操作后一个值，所以经常要考虑边界值。</p>
 </li>
-<li><p>对于深度克隆，比如随机链表复制，无向图复制，要想到哈希表。</p>
-</li>
-</ol>
-<h1 id="Day-2："><a href="#Day-2：" class="headerlink" title="Day 2："></a>Day 2：</h1><ol>
-<li><strong>链表一定要考虑边界值啊！！</strong>第2次了。链表操作A-&gt;next的时候一定要考虑A是否为空；</li>
-<li><strong>非递减数列</strong>两数求和，别想那么多，先给大窗口，然后缩小，</li>
-<li>双指针，快慢双指针，左右双指针（中心扩张，两边收缩）</li>
-<li>如果有正负的情况，千万不要自作从聪明，将某个值设为0，不然比大小时候会出现bug。</li>
-<li>如果说写出的代码分为好多种情况，那么思路一定是错了。</li>
-<li>树的层序遍历需要用到队列。当需要记录层数时，需要用到额外的变量，并用到for循环</li>
-<li>动态规划问题的第一个性质：<strong>重叠子问题</strong> 。 设置备忘录。一般是哈希表。数组也可以。如果可以看出数组长度不会超过某个最大值，就可以用数组。但这是个稀疏数组。</li>
-</ol>
-<h1 id="Day-3："><a href="#Day-3：" class="headerlink" title="Day 3："></a>Day 3：</h1><ol>
-<li><p><strong>回溯代码框架</strong>，设最后返回的集合是res，res里面的元素是方案（路径）,路径中为节点，第一步我们要搞清，方案是什么，路径是什么，节点又是什么。（比如n皇后问题，方案是整个棋盘，选择是在第row行选择第col个点）所以backtrace的参数就是（棋盘，row）</p>
-</li>
-<li><p>回溯算法：</p>
-<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="type">void</span> <span class="title">backtrace</span><span class="params">(状态参数)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">	<span class="keyword">if</span>(设置结束条件)</span><br><span class="line">    &#123;</span><br><span class="line">        res.<span class="built_in">push_back</span>(路径)；</span><br><span class="line">		<span class="keyword">return</span>；</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="comment">//路径</span></span><br><span class="line">    </span><br><span class="line">    <span class="keyword">for</span>(<span class="type">int</span> )</span><br><span class="line">    &#123;</span><br><span class="line">        <span class="comment">//排除不合法选择 </span></span><br><span class="line">        <span class="keyword">if</span>(！is_valid（)）</span><br><span class="line">            <span class="keyword">continue</span>;</span><br><span class="line">        </span><br><span class="line">        选择();</span><br><span class="line">        进入下一层</span><br><span class="line">        退选择</span><br><span class="line">    &#125;</span><br><span class="line">		</span><br><span class="line">&#125;</span><br><span class="line"></span><br></pre></td></tr></table></figure>
-</li>
-<li><p>其实想想看，回溯算法和动态规划是不是有点像呢？我们在动态规划系列文章中多次强调，动态规划的三个需要明确的点就是「状态」「选择」和「base case」，是不是就对应着走过的「路径」，当前的「选择列表」和「结束条件」？</p>
-</li>
-<li><p>组合问题，给定数组自带顺序，且答案中[1,2] [2,1]算是相同结果的，甚至可以不用is_valid;因为仔细想一下，比如选择到2，那么1 一定选过了  ，3一定没选过。（自行理解其中奥义很简单）。</p>
-</li>
-<li><p>求 有重复数据的子集 要先排序。然后</p>
-<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">for</span>(<span class="type">int</span> i = start;i&lt;nums.<span class="built_in">size</span>();i++)</span><br><span class="line">&#123;</span><br><span class="line">    <span class="comment">//因为和上一个相同的话， 下一个back_trace(nums,k,i+1)会得到相同的结果</span></span><br><span class="line">    <span class="keyword">if</span> (i &gt; start &amp;&amp; nums[i] == nums[i - <span class="number">1</span>]) </span><br><span class="line">    	<span class="keyword">continue</span>;</span><br><span class="line"></span><br><span class="line">    subresult.<span class="built_in">push_back</span>(nums[i]);</span><br><span class="line">    <span class="built_in">back_trace</span>(nums,k,i+<span class="number">1</span>);</span><br><span class="line">    subresult.<span class="built_in">pop_back</span>();</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-</li>
-<li><p>BFS:  将问题抽象为一幅图  ，  找到节点 ，以及节点的邻居。那么算法的流程就是从初始节点开始。比如开密码锁，每个节点就是 密码锁当前的数字，那么邻居就是，转动一位得到的数字。</p>
-</li>
-</ol>
-<h1 id="Day-4"><a href="#Day-4" class="headerlink" title="Day 4 :"></a>Day 4 :</h1><ol>
-<li>搞不定边界就尽量不要使用双重二分。</li>
-<li><strong>检查是不是break和continue 用混了！！！！</strong></li>
-<li>动态寻找最大值最小值的时候要初始化一个结果！不能只声明。</li>
-<li>集合之间对比，要想到unordered_map</li>
-</ol>
-<h1 id="Day-5"><a href="#Day-5" class="headerlink" title="Day 5:"></a>Day 5:</h1><ol>
-<li>股票问题因为给的数组不是有序的，所以不能使用双指针法。</li>
-<li>动态规划超出时间限制就要反思是否有重叠子问题，设置备忘录解决。</li>
-<li>自顶向下的动归是递归，有可能会遇到重复子问题，自底向上的动归是迭代，但是空间复杂度高一点。</li>
-<li>如果动态规划的开始和末尾相互影响。就要分出情况。</li>
-<li>vector.end() 并不是最后一个元素的指针 而是最后一个元素的下一个指针</li>
-<li>回溯法毕竟是穷举，拥有极高的时间复杂度。如果有其他解法尽量不要用穷举。</li>
-<li>不该超出时间限制的时候超出时间限制，检查起始条件 ，终止条件，以及变化条件。</li>
-</ol>
-<h1 id="Day-6"><a href="#Day-6" class="headerlink" title="Day 6"></a>Day 6</h1><ol>
-<li>使用双指针时要确保指针移动啊。</li>
-<li>差分数组要多一位（其实也没必要，得看情况）。</li>
-</ol>
-<h1 id="Day-7"><a href="#Day-7" class="headerlink" title="Day 7"></a>Day 7</h1><ol>
-<li>二分搜索时候左右边界问题别搞错了啊。 左边界查看left==num.size()  右边界查看left-1&lt;0;</li>
-<li>二分搜索如果没找到不返回特殊值的话，左右边界还是很好写的。</li>
-<li>转换思路才能二分搜索。比如给定天数，让你求运输船最小承载。这个不好算，那就转换成给出承载，返回最小天数。这就可以用二分了。这个转变思路非常巧妙。</li>
-<li>无论是升序降序  左边界返回left 右边界返回left-1；</li>
-</ol>
-<h1 id="Day-8"><a href="#Day-8" class="headerlink" title="Day 8"></a>Day 8</h1><ol>
-<li>vector erase和遍历数组没有区别，时间复杂度很高。易超出时间限制</li>
-<li>排序的  比较函数  大于为真是降序  小于为真是升序</li>
-<li>unordered_set 是不支持随机存取的。所以要用unordered_map 与 vector实现随机读取；</li>
-<li>要分清出<strong>子序列</strong>与<strong>子串</strong>的区别，字串必须连续，子序列不必连续；</li>
-<li>都tm什么时候了还在 犯”=” 和 “==”的错误。现在还非常容易犯小错误</li>
-</ol>
-<h1 id="Day-9"><a href="#Day-9" class="headerlink" title="Day 9"></a>Day 9</h1><ol>
-<li>树的遍历中，如果遍历结果包含着空指针，那么不需要有别的遍历辅助，也能够确定一棵树。</li>
-<li><strong>stoi()</strong>可以把字符串转化成为数字。  <strong>to_string</strong> 可以将数字转化为字符串</li>
-<li>可以用  map用于关联字符串与节点, set用于检测字符串重复。</li>
-</ol>
-<h1 id="Day-10"><a href="#Day-10" class="headerlink" title="Day 10"></a>Day 10</h1><ol>
-<li>涉及到区间和  那就一定会有前缀和数组！！  而对区间进行统一操作，那就一定会有差分数组？</li>
-<li>归并排序的一个重要思想，凡是已经在同一部分里的，就一定发生过关系了。只有和另一部分的没有发生过关系。<strong>（非常重要的思想）</strong></li>
-<li>而且如果无序很难，但是发现有序很好做，那么可以去想想归并排序，  或者看到题目中有 数组的性质是， 当i&lt;j  </li>
-<li>前缀和 要思考 有没有</li>
-<li>BST 的中序遍历结果是有序的（升序）。  可以说遇到二叉搜索树，大概率是中序遍历</li>
-</ol>
-<h1 id="Day-11"><a href="#Day-11" class="headerlink" title="Day 11"></a>Day 11</h1><ol>
-<li><p>快速排序是 树的前序遍历     归并排序是树的后序遍历</p>
-</li>
-<li><p>快速排序为了达到稳定的快速，数组要是乱序。函数shuffle() 可以随机打乱</p>
-</li>
-<li><p>快速排序中</p>
-<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"> <span class="keyword">while</span>(cur&lt;=right &amp;&amp; nums[cur]&gt;=nums[p]) cur++;<span class="comment">//自己体会</span></span><br><span class="line"> <span class="comment">//而且需要特殊的交换操作</span></span><br><span class="line"><span class="built_in">swap</span>(nums[p],nums[cur]);  </span><br><span class="line"><span class="built_in">swap</span>(nums[p+<span class="number">1</span>],nums[cur])；<span class="comment">// 交换后这</span></span><br><span class="line">p+=<span class="number">1</span>;</span><br><span class="line">cur = p+<span class="number">1</span>;</span><br></pre></td></tr></table></figure>
-</li>
-<li><p>srand(time(0)); 生成随机树种子</p>
-</li>
-<li><p>堆是完全二叉树 ，然后再满足父节点大于等于 或小于等于子节点。所以插入的时候，先插入满足完全二叉树的位置，在满足第二个要求。删除的时候 先交换 再下降。</p>
-</li>
-<li><p><strong>完全二叉树用数组实现非常方便</strong>。  节点 i 的左子节点  2i  右子节点2i+1</p>
-</li>
-<li><p>优先级队列定义比较函数必须是静态成员函数的？</p>
-</li>
-<li><p><strong>判断完全二叉树是否是满二叉树</strong>，左节点一直找下去，右节点一直找下去，看看高度是否相同。</p>
-</li>
-<li><p>if 后面如果不是一句话 一定不要忘了加花括号啊</p>
-</li>
-</ol>
-<h1 id="Day-12"><a href="#Day-12" class="headerlink" title="Day 12"></a>Day 12</h1><ol>
-<li><p>图结构表示方法，如果目的不是要迅速判断两节点之间是否有边，那还是使用邻接表方便一点。</p>
-</li>
-<li><p>拓扑排序 需要额外的数组记录节点的入度；</p>
-</li>
-<li><p>int 类型的0   1  可以用逻辑运算符操作。</p>
-</li>
-<li><p>连通性使用 并查集</p>
-<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">class</span> <span class="title class_">UF</span> &#123;</span><br><span class="line"><span class="keyword">private</span>:</span><br><span class="line">    <span class="comment">// 记录连通分量</span></span><br><span class="line">    <span class="type">int</span> count;</span><br><span class="line">    <span class="comment">// 节点 x 的父节点是 parent[x]</span></span><br><span class="line">    vector&lt;<span class="type">int</span>&gt; parent;  </span><br><span class="line"></span><br><span class="line">    </span><br><span class="line">    <span class="function"><span class="type">int</span> <span class="title">find_root</span><span class="params">(<span class="type">int</span> x)</span> </span></span><br><span class="line"><span class="function">    </span>&#123;</span><br><span class="line">        <span class="comment">// 根节点的 parent[x] == x</span></span><br><span class="line">        <span class="keyword">if</span> (parent[x] != x) &#123;</span><br><span class="line">       		 parent[x] = <span class="built_in">find_root</span>(parent[x]);</span><br><span class="line">    	&#125;    </span><br><span class="line">        <span class="keyword">return</span> parent[x];</span><br><span class="line">	&#125;</span><br><span class="line"><span class="keyword">public</span>:</span><br><span class="line">    <span class="comment">/* 构造函数，n 为图的节点总数 */</span></span><br><span class="line">    <span class="built_in">UF</span>(<span class="type">int</span> n)</span><br><span class="line">    &#123;</span><br><span class="line">        <span class="comment">// 一开始互不连通 联通分量等于节点数</span></span><br><span class="line">        count = n;</span><br><span class="line">        <span class="comment">// 父节点指针初始指向自己</span></span><br><span class="line">        <span class="comment">//尺寸全部初始化为1</span></span><br><span class="line">        parent.<span class="built_in">resize</span>(n);</span><br><span class="line">        <span class="keyword">for</span> (<span class="type">int</span> i = <span class="number">0</span>; i &lt; n; i++)</span><br><span class="line">        &#123;</span><br><span class="line">            parent[i] = i;</span><br><span class="line">        &#125;            </span><br><span class="line">    &#125;</span><br><span class="line">    <span class="comment">/* 其他函数 */</span></span><br><span class="line">    <span class="function"><span class="type">void</span> <span class="title">union_</span><span class="params">(<span class="type">int</span> p, <span class="type">int</span> q)</span></span></span><br><span class="line"><span class="function">    </span>&#123;</span><br><span class="line">        <span class="type">int</span> rootP = <span class="built_in">find_root</span>(p);</span><br><span class="line">        <span class="type">int</span> rootQ = <span class="built_in">find_root</span>(q);</span><br><span class="line">        <span class="keyword">if</span> (rootP == rootQ)</span><br><span class="line">            <span class="keyword">return</span>;</span><br><span class="line">        <span class="comment">// 将两棵树合并为一棵 以下二者选一即可</span></span><br><span class="line">        &#123;</span><br><span class="line">            parent[rootQ] = rootP;</span><br><span class="line">            parent[rootP] = rootQ;</span><br><span class="line">        &#125;</span><br><span class="line">        count--; <span class="comment">// 两个分量合二为一</span></span><br><span class="line">	&#125;</span><br><span class="line">    </span><br><span class="line">    <span class="function"><span class="type">int</span> <span class="title">getcount</span><span class="params">()</span> </span>&#123; </span><br><span class="line">    	<span class="keyword">return</span> count;</span><br><span class="line">	&#125;</span><br><span class="line">    </span><br><span class="line">    <span class="function"><span class="type">bool</span> <span class="title">connected</span><span class="params">(<span class="type">int</span> p, <span class="type">int</span> q)</span></span></span><br><span class="line"><span class="function">    </span>&#123;</span><br><span class="line">        <span class="type">int</span> rootP = <span class="built_in">find_root</span>(p);</span><br><span class="line">        <span class="type">int</span> rootQ = <span class="built_in">find_root</span>(q);</span><br><span class="line">        <span class="keyword">return</span> rootP == rootQ;</span><br><span class="line"></span><br><span class="line">    &#125;</span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
-</li>
-<li><p>并查集可以建立虚拟头部，从而排除异己。</p>
-</li>
-<li><p>在二位坐标中控制方向常用方法。</p>
-<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">vector&lt;vector&lt;<span class="type">int</span>&gt;&gt; dir = &#123;&#123;<span class="number">1</span>,<span class="number">0</span>&#125;,&#123;<span class="number">0</span>,<span class="number">1</span>&#125;,&#123;<span class="number">-1</span>,<span class="number">0</span>&#125;,&#123;<span class="number">0</span>,<span class="number">-1</span>&#125;&#125; <span class="comment">//对应下 右 上 左</span></span><br></pre></td></tr></table></figure>
-</li>
-<li><p>类的后面要加；</p>
-</li>
-<li><p>只有判断无向图是否带环时才能用并查集。</p>
-</li>
-<li><p>克鲁斯卡尔算法 Kruskal 算法  就是无向有权图 按权重大小一次加边；</p>
-</li>
-<li><p>并查集的时间复杂度是0(1);</p>
-</li>
-<li><p>无向有权图的最小生成树算法 prim算法需要转换成图的邻接表格式。 Kruskal 不用 ，给的如果是边的集合 就krusal 如果是 graph prim。</p>
-</li>
-</ol>
-<h1 id="Day-13"><a href="#Day-13" class="headerlink" title="Day 13"></a>Day 13</h1><ol>
-<li>dijkstra 算法： 优先级队列里存放边   因为这样可以通过边的权重来知晓</li>
-</ol>
-<h1 id="Day-14"><a href="#Day-14" class="headerlink" title="Day 14"></a>Day 14</h1><ol>
-<li><p>前缀树</p>
-<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//力扣667</span></span><br><span class="line"><span class="keyword">class</span> <span class="title class_">TrieNode</span> &#123;</span><br><span class="line"><span class="keyword">public</span>:</span><br><span class="line">    <span class="type">int</span> val;</span><br><span class="line">    vector&lt;TrieNode *&gt; next;</span><br><span class="line">    <span class="built_in">TrieNode</span>():<span class="built_in">val</span>(<span class="number">0</span>),<span class="built_in">next</span>(<span class="number">26</span>) &#123;</span><br><span class="line">        <span class="keyword">for</span> (<span class="type">int</span> i = <span class="number">0</span>; i &lt; <span class="number">26</span>; ++i) &#123;</span><br><span class="line">            next[i] = <span class="literal">nullptr</span>;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;;</span><br><span class="line"></span><br><span class="line"><span class="keyword">class</span> <span class="title class_">MapSum</span> &#123;</span><br><span class="line"><span class="keyword">private</span>:</span><br><span class="line">    TrieNode * root;</span><br><span class="line">    unordered_map&lt;string, <span class="type">int</span>&gt; cnt;</span><br><span class="line"><span class="keyword">public</span>:</span><br><span class="line">    <span class="built_in">MapSum</span>() &#123;</span><br><span class="line">        root = <span class="keyword">new</span> <span class="built_in">TrieNode</span>();</span><br><span class="line">    &#125;</span><br><span class="line">    </span><br><span class="line">    <span class="function"><span class="type">void</span> <span class="title">insert</span><span class="params">(string key, <span class="type">int</span> val)</span> </span>&#123;</span><br><span class="line">        </span><br><span class="line">        <span class="type">int</span> delta = val;</span><br><span class="line">        <span class="comment">//如果之前存在 算出两数值差好做修改</span></span><br><span class="line">        <span class="keyword">if</span> (cnt.<span class="built_in">count</span>(key)) &#123;</span><br><span class="line">            delta -= cnt[key];</span><br><span class="line">        &#125;</span><br><span class="line">        cnt[key] = val;</span><br><span class="line">        </span><br><span class="line">        TrieNode * node = root;</span><br><span class="line">        <span class="keyword">for</span> (<span class="keyword">auto</span> c : key) &#123;</span><br><span class="line">            <span class="keyword">if</span> (node-&gt;next[c - <span class="string">&#x27;a&#x27;</span>] == <span class="literal">nullptr</span>) &#123;</span><br><span class="line">                node-&gt;next[c - <span class="string">&#x27;a&#x27;</span>] = <span class="keyword">new</span> <span class="built_in">TrieNode</span>();</span><br><span class="line">            &#125;</span><br><span class="line">            node = node-&gt;next[c - <span class="string">&#x27;a&#x27;</span>];</span><br><span class="line">            node-&gt;val += delta;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">    </span><br><span class="line">    <span class="function"><span class="type">int</span> <span class="title">sum</span><span class="params">(string prefix)</span> </span>&#123;</span><br><span class="line">        TrieNode * node = root;</span><br><span class="line">        <span class="keyword">for</span> (<span class="keyword">auto</span> c : prefix) &#123;</span><br><span class="line">            <span class="keyword">if</span> (node-&gt;next[c - <span class="string">&#x27;a&#x27;</span>] == <span class="literal">nullptr</span>) &#123;</span><br><span class="line">                <span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">            &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">                node = node-&gt;next[c - <span class="string">&#x27;a&#x27;</span>];</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">return</span> node-&gt;val;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
-</li>
-<li><p>真不能上来直接写，一定要先想好各种情况。</p>
-</li>
-</ol>
-<h1 id="Day-15"><a href="#Day-15" class="headerlink" title="Day 15"></a>Day 15</h1><ol>
-<li><p>优先级队列设置升序降序，less代表降序 ，greater代表升序</p>
-</li>
-<li><p>单调栈，要把它想象成，个子高挡住个子矮的。从一个方向上望过去，是单调递增做递减的。</p>
-</li>
-<li><p>单调栈不一定存放数值，也可以存放索引，反正可以通过索引来找值。</p>
-</li>
-<li><p>for循环一定要检查是i++ 还是 i—</p>
-</li>
-<li><p>单调栈 找比自己大的  那栈顶就是栈里最小的。好好理解一下。</p>
-<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//力扣503</span></span><br><span class="line"><span class="keyword">class</span> <span class="title class_">Solution</span> &#123;</span><br><span class="line"><span class="keyword">public</span>:</span><br><span class="line">    <span class="function">vector&lt;<span class="type">int</span>&gt; <span class="title">nextGreaterElements</span><span class="params">(vector&lt;<span class="type">int</span>&gt;&amp; nums)</span> </span>&#123;</span><br><span class="line">        stack&lt;<span class="type">int</span>&gt; st;</span><br><span class="line">        <span class="type">int</span> n = nums.<span class="built_in">size</span>();</span><br><span class="line"></span><br><span class="line">        <span class="function">vector&lt;<span class="type">int</span>&gt; <span class="title">result</span><span class="params">(nums.size())</span></span>;</span><br><span class="line"></span><br><span class="line">        <span class="keyword">for</span>(<span class="type">int</span> i =<span class="number">2</span>*n<span class="number">-1</span>;i&gt;=<span class="number">0</span>;i--)</span><br><span class="line">        &#123;</span><br><span class="line">            <span class="comment">//找到第一个大于自己的元素 </span></span><br><span class="line">            <span class="keyword">while</span>(!st.<span class="built_in">empty</span>() &amp;&amp; st.<span class="built_in">top</span>()&lt;=nums[i%n]) st.<span class="built_in">pop</span>();</span><br><span class="line">            <span class="comment">//没找到  那自己就是最大的</span></span><br><span class="line">            <span class="keyword">if</span>(st.<span class="built_in">empty</span>()) result[i%n] = <span class="number">-1</span>;</span><br><span class="line">            <span class="comment">//找到了保存结果 </span></span><br><span class="line">            <span class="keyword">else</span> result[i%n] = st.<span class="built_in">top</span>();</span><br><span class="line">            <span class="comment">//把自己放进去</span></span><br><span class="line">            st.<span class="built_in">push</span>( nums[i%n]);</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        <span class="keyword">return</span> result;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
-</li>
-</ol>
-
-          
+<li><p>对于深度克隆，比如随机链表复制，无向图复制，要想到哈希表。</p></li></ol>
+          <!--noindex-->
+          <div class="post-button text-center">
+            <a class="btn" href="/2023/02/13/%E5%8A%9B%E6%89%A3%E7%BB%8F%E9%AA%8C%E6%95%99%E8%AE%AD/#more" rel="contents">
+              阅读全文 &raquo;
+            </a>
+          </div>
+          <!--/noindex-->
         
       
     </div>
